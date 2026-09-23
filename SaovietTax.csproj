@@ -1,0 +1,1047 @@
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PackageReference Include="AForge.Video">
+      <Version>2.2.5</Version>
+    </PackageReference>
+    <PackageReference Include="AForge.Video.DirectShow">
+      <Version>2.2.5</Version>
+    </PackageReference>
+    <PackageReference Include="AutoMapper">
+      <Version>15.1.0</Version>
+    </PackageReference>
+    <PackageReference Include="BarcodeLib">
+      <Version>3.1.5</Version>
+    </PackageReference>
+    <PackageReference Include="BrotliSharpLib">
+      <Version>0.3.3</Version>
+    </PackageReference>
+    <PackageReference Include="ClosedXML">
+      <Version>0.105.0</Version>
+    </PackageReference>
+    <PackageReference Include="ClosedXML.Parser">
+      <Version>2.0.0</Version>
+    </PackageReference>
+    <PackageReference Include="Emgu.CV">
+      <Version>4.13.0.5924</Version>
+    </PackageReference>
+    <PackageReference Include="Emgu.CV.runtime.windows">
+      <Version>4.13.0.5924</Version>
+    </PackageReference>
+    <PackageReference Include="ExcelDataReader">
+      <Version>3.7.0</Version>
+    </PackageReference>
+    <PackageReference Include="FastText.NetWrapper">
+      <Version>1.3.1</Version>
+    </PackageReference>
+    <PackageReference Include="FuzzySharp">
+      <Version>2.0.2</Version>
+    </PackageReference>
+    <PackageReference Include="HtmlAgilityPack">
+      <Version>1.12.2</Version>
+    </PackageReference>
+    <PackageReference Include="itext7">
+      <Version>9.2.0</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.ML">
+      <Version>4.0.2</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.ML.DataView">
+      <Version>4.0.2</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime">
+      <Version>1.26.0</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.ML.Tokenizers">
+      <Version>2.0.0</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Playwright">
+      <Version>1.62.0</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications">
+      <Version>7.1.3</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Web.WebView2">
+      <Version>1.0.3856.49</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
+    <PackageReference Include="PdfPig">
+      <Version>0.1.15</Version>
+    </PackageReference>
+    <PackageReference Include="PdfSharp">
+      <Version>6.2.0</Version>
+    </PackageReference>
+    <PackageReference Include="Pkcs11Interop">
+      <Version>5.0.1</Version>
+    </PackageReference>
+    <PackageReference Include="QRCoder">
+      <Version>1.8.0</Version>
+    </PackageReference>
+    <PackageReference Include="Selenium.Support">
+      <Version>4.43.0</Version>
+    </PackageReference>
+    <PackageReference Include="Selenium.WebDriver.ChromeDriver">
+      <Version>152.0.7977.6400</Version>
+    </PackageReference>
+    <PackageReference Include="SimMetrics.Net">
+      <Version>1.0.5</Version>
+    </PackageReference>
+    <PackageReference Include="Svg">
+      <Version>3.4.7</Version>
+    </PackageReference>
+    <PackageReference Include="System.Data.SQLite">
+      <Version>2.0.1</Version>
+    </PackageReference>
+    <PackageReference Include="TensorFlow.NET">
+      <Version>0.150.0</Version>
+    </PackageReference>
+    <PackageReference Include="Tesseract">
+      <Version>5.2.0</Version>
+    </PackageReference>
+    <PackageReference Include="toastr">
+      <Version>2.1.1</Version>
+    </PackageReference>
+    <PackageReference Include="WebDriverManager">
+      <Version>2.17.6</Version>
+    </PackageReference>
+  </ItemGroup>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{8AF139FF-0A5B-49C4-A924-156D864BF98B}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>SaovietTax</RootNamespace>
+    <AssemblyName>SaovietTax</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <PublishUrl>C:\Users\Admin\Desktop\New folder\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>2</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <PublishWizardCompleted>true</PublishWizardCompleted>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ManifestCertificateThumbprint>F31CE85B26E092C73837026222659B6BA5CC5170</ManifestCertificateThumbprint>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ManifestKeyFile>SaovietTax_TemporaryKey.pfx</ManifestKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <GenerateManifests>true</GenerateManifests>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignManifests>false</SignManifests>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemGroup>
+    <Reference Include="ClosedXML, Version=0.104.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ClosedXML.0.104.2\lib\netstandard2.0\ClosedXML.dll</HintPath>
+    </Reference>
+    <Reference Include="ClosedXML.Parser, Version=1.0.0.0, Culture=neutral, PublicKeyToken=1d5f7376574c51ec, processorArchitecture=MSIL">
+      <HintPath>..\packages\ClosedXML.Parser.1.2.0\lib\netstandard2.0\ClosedXML.Parser.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.BonusSkins.v22.1" />
+    <Reference Include="DevExpress.Charts.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.CodeParser.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.Dashboard.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.Dashboard.v22.1.Win, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.Data.Desktop.v22.1" />
+    <Reference Include="DevExpress.Data.v22.1" />
+    <Reference Include="DevExpress.DataAccess.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.DataAccess.v22.1.UI, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.DataVisualization.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.Diagram.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.Drawing.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.Map.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.Office.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.Pdf.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.Pdf.v22.1.Drawing, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.PivotGrid.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.RichEdit.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.RichEdit.v22.1.Export, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.Spreadsheet.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.TreeMap.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.Utils.v22.1" />
+    <Reference Include="DevExpress.Sparkline.v22.1.Core" />
+    <Reference Include="DevExpress.Utils.v22.1.UI, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.Xpo.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraBars.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraCharts.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraCharts.v22.1.Extensions, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraCharts.v22.1.UI, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraCharts.v22.1.Wizard, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraDiagram.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraEditors.v22.1" />
+    <Reference Include="DevExpress.Printing.v22.1.Core" />
+    <Reference Include="DevExpress.XtraGauges.v22.1.Core, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraGauges.v22.1.Presets, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraGauges.v22.1.Win, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraGrid.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraLayout.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraMap.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraNavBar.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraPivotGrid.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraPrinting.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraReports.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraReports.v22.1.Extensions, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraRichEdit.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraSpreadsheet.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraTreeList.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraTreeMap.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraTreeMap.v22.1.UI, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DevExpress.XtraVerticalGrid.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
+    <Reference Include="DocumentFormat.OpenXml, Version=3.1.1.0, Culture=neutral, PublicKeyToken=8fb06cb64d019a17, processorArchitecture=MSIL">
+      <HintPath>..\packages\DocumentFormat.OpenXml.3.1.1\lib\net46\DocumentFormat.OpenXml.dll</HintPath>
+    </Reference>
+    <Reference Include="DocumentFormat.OpenXml.Framework, Version=3.1.1.0, Culture=neutral, PublicKeyToken=8fb06cb64d019a17, processorArchitecture=MSIL">
+      <HintPath>..\packages\DocumentFormat.OpenXml.Framework.3.1.1\lib\net46\DocumentFormat.OpenXml.Framework.dll</HintPath>
+    </Reference>
+    <Reference Include="ExcelNumberFormat, Version=1.1.0.0, Culture=neutral, PublicKeyToken=23c6f5d73be07eca, processorArchitecture=MSIL">
+      <HintPath>..\packages\ExcelNumberFormat.1.1.0\lib\net20\ExcelNumberFormat.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Configuration, Version=9.0.0.4, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Configuration.9.0.4\lib\net462\Microsoft.Extensions.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Configuration.Abstractions, Version=9.0.0.4, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Configuration.Abstractions.9.0.4\lib\net462\Microsoft.Extensions.Configuration.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Primitives, Version=9.0.0.4, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Primitives.9.0.4\lib\net462\Microsoft.Extensions.Primitives.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenQA.Selenium.Chrome.ChromeDriverExtensions, Version=1.2.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\OpenQA.Selenium.Chrome.ChromeDriverExtensions.1.2.0\lib\netstandard2.0\OpenQA.Selenium.Chrome.ChromeDriverExtensions.dll</HintPath>
+    </Reference>
+    <Reference Include="RBush, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\RBush.4.0.0\lib\net47\RBush.dll</HintPath>
+    </Reference>
+    <Reference Include="SixLabors.Fonts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=d998eea7b14cab13, processorArchitecture=MSIL">
+      <HintPath>..\packages\SixLabors.Fonts.1.0.0\lib\netstandard2.0\SixLabors.Fonts.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data.OracleClient" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.Drawing.Design" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.IO.Compression.ZipFile, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.IO.Compression.ZipFile.4.3.0\lib\net46\System.IO.Compression.ZipFile.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Runtime.Serialization.Formatters.Soap" />
+    <Reference Include="System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encodings.Web.8.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Json, Version=8.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Json.8.0.5\lib\net462\System.Text.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WebDriver, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Selenium.WebDriver.4.31.0\lib\netstandard2.0\WebDriver.dll</HintPath>
+    </Reference>
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="APIInvoice.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="APIInvoice.Designer.cs">
+      <DependentUpon>APIInvoice.cs</DependentUpon>
+    </Compile>
+    <Compile Include="BankReader\AcbPdfReader.cs" />
+    <Compile Include="BankReader\VibPdfReader.cs" />
+    <Compile Include="BkavInvoice.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="BkavInvoice.Designer.cs">
+      <DependentUpon>BkavInvoice.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ctrlF.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ctrlF.Designer.cs">
+      <DependentUpon>ctrlF.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data.cs" />
+    <Compile Include="Database\ClassChung.cs" />
+    <Compile Include="Database\DataTableExtensions.cs" />
+    <Compile Include="Database\TrainniningData.cs" />
+    <Compile Include="DiagramHD.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DiagramHD.Designer.cs">
+      <DependentUpon>DiagramHD.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DTO\BankStatementReader.cs" />
+    <Compile Include="DTO\Daura_maytinhtien.cs" />
+    <Compile Include="DTO\FuzzySharpSimilarity.cs" />
+    <Compile Include="DTO\Kiemtravattu.cs" />
+    <Compile Include="DTO\Matdinhnganhang.cs" />
+    <Compile Include="DTO\Rootclass.cs" />
+    <Compile Include="DTO\RootDetail.cs" />
+    <Compile Include="DTO\ScheduleHelper.cs" />
+    <Compile Include="DTO\SvgCaptchaSolver.cs" />
+    <Compile Include="DTO\TextSimilarityCalculator.cs" />
+    <Compile Include="DTO\VatTu.cs" />
+    <Compile Include="DTO\VietnameseProductMatcher.cs" />
+    <Compile Include="DTO\VietQRService.cs" />
+    <Compile Include="DTO\ViettelInvoiceService.cs" />
+    <Compile Include="ExportExcelBC.cs" />
+    <Compile Include="ExportExcelBC.Designer.cs">
+      <DependentUpon>ExportExcelBC.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Form1.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form1.Designer.cs">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Form2.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form2.Designer.cs">
+      <DependentUpon>Form2.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Form3.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form3.Designer.cs">
+      <DependentUpon>Form3.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Form4.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form4.Designer.cs">
+      <DependentUpon>Form4.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormMain.Designer.cs">
+      <DependentUpon>FormMain.cs</DependentUpon>
+    </Compile>
+    <Compile Include="formtest.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="formtest.Designer.cs">
+      <DependentUpon>formtest.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmAutoTai.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmAutoTai.Designer.cs">
+      <DependentUpon>frmAutoTai.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmAutotaiNew.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmAutotaiNew.Designer.cs">
+      <DependentUpon>frmAutotaiNew.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmAutoTaiSetting.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmAutoTaiSetting.Designer.cs">
+      <DependentUpon>FrmAutoTaiSetting.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmCamera.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmCamera.Designer.cs">
+      <DependentUpon>frmCamera.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmCongtrinh.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmCongtrinh.Designer.cs">
+      <DependentUpon>frmCongtrinh.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmDinhdanh.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmDinhdanh.Designer.cs">
+      <DependentUpon>frmDinhdanh.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmDocnganhang.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmDocnganhang.Designer.cs">
+      <DependentUpon>frmDocnganhang.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmHangHoa.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmHangHoa.Designer.cs">
+      <DependentUpon>frmHangHoa.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmHangHoa2026.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmHangHoa2026.Designer.cs">
+      <DependentUpon>frmHangHoa2026.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmKhachhang.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmKhachhang.Designer.cs">
+      <DependentUpon>frmKhachhang.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmKiemtrahethong.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmKiemtrahethong.Designer.cs">
+      <DependentUpon>frmKiemtrahethong.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmKiemtraUpdate.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmKiemtraUpdate.Designer.cs">
+      <DependentUpon>frmKiemtraUpdate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmLichsu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmLichsu.Designer.cs">
+      <DependentUpon>frmLichsu.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmLoading.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmLoading.Designer.cs">
+      <DependentUpon>frmLoading.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmMatdinhNganHang.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmMatdinhNganHang.Designer.cs">
+      <DependentUpon>frmMatdinhNganHang.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmMessage.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmMessage.Designer.cs">
+      <DependentUpon>FrmMessage.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmQrcode.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmQrcode.Designer.cs">
+      <DependentUpon>frmQrcode.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmSetting.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmSetting.Designer.cs">
+      <DependentUpon>frmSetting.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmSplash.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmSplash.Designer.cs">
+      <DependentUpon>frmSplash.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmStatusAuto.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmStatusAuto.Designer.cs">
+      <DependentUpon>frmStatusAuto.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmTaiCoQuanThue.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmTaiCoQuanThue.Designer.cs">
+      <DependentUpon>frmTaiCoQuanThue.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmTaihoadonvb.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmTaihoadonvb.Designer.cs">
+      <DependentUpon>frmTaihoadonvb.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmTaikhoan.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmTaikhoan.Designer.cs">
+      <DependentUpon>frmTaikhoan.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmTinhGiaVon.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmTinhGiaVon.Designer.cs">
+      <DependentUpon>frmTinhGiaVon.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmTuKhoaHang.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmTuKhoaHang.Designer.cs">
+      <DependentUpon>frmTuKhoaHang.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmWebbrowser.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmWebbrowser.Designer.cs">
+      <DependentUpon>frmWebbrowser.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmXemhoadonInvoicse.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmXemhoadonInvoicse.Designer.cs">
+      <DependentUpon>frmXemhoadonInvoicse.cs</DependentUpon>
+    </Compile>
+    <Compile Include="HanghoaControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="HanghoaControl.Designer.cs">
+      <DependentUpon>HanghoaControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Helper.cs" />
+    <Compile Include="KhachHangControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="KhachHangControl.Designer.cs">
+      <DependentUpon>KhachHangControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="KTHT.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="KTHT.Designer.cs">
+      <DependentUpon>KTHT.cs</DependentUpon>
+    </Compile>
+    <Compile Include="NCC\ViettelInvoiceDownloader.cs" />
+    <Compile Include="Nguyenlieutp.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Nguyenlieutp.Designer.cs">
+      <DependentUpon>Nguyenlieutp.cs</DependentUpon>
+    </Compile>
+    <Compile Include="NhapFileExcel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="NhapFileExcel.Designer.cs">
+      <DependentUpon>NhapFileExcel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OllamaProductChecker.cs" />
+    <Compile Include="PersistentClass1.cs" />
+    <Compile Include="PersistentClass2.cs" />
+    <Compile Include="PopupTaikhoan.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="PopupTaikhoan.Designer.cs">
+      <DependentUpon>PopupTaikhoan.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Resource1.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resource1.resx</DependentUpon>
+    </Compile>
+    <Compile Include="RuntimeDesigner.cs" />
+    <Compile Include="Saoviet_main.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Saoviet_main.Designer.cs">
+      <DependentUpon>Saoviet_main.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SettingTaiCQT.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SettingTaiCQT.Designer.cs">
+      <DependentUpon>SettingTaiCQT.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SmartPDFReader.cs" />
+    <Compile Include="SuggestionControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="SuggestionControl.Designer.cs">
+      <DependentUpon>SuggestionControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SuggestVattu.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="SuggestVattu.Designer.cs">
+      <DependentUpon>SuggestVattu.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TendoInvoice.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TendoInvoice.Designer.cs">
+      <DependentUpon>TendoInvoice.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Tests.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Tests.Designer.cs">
+      <DependentUpon>Tests.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Updater.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Updater.Designer.cs">
+      <DependentUpon>Updater.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Vanguard.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Vanguard.Designer.cs">
+      <DependentUpon>Vanguard.cs</DependentUpon>
+    </Compile>
+    <Compile Include="VattuControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="VattuControl.Designer.cs">
+      <DependentUpon>VattuControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="vb6Xemhoadon.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="vb6Xemhoadon.Designer.cs">
+      <DependentUpon>vb6Xemhoadon.cs</DependentUpon>
+    </Compile>
+    <Compile Include="VNPTInvoice.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="VNPTInvoice.Designer.cs">
+      <DependentUpon>VNPTInvoice.cs</DependentUpon>
+    </Compile>
+    <Compile Include="XtraForm1.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="XtraForm1.Designer.cs">
+      <DependentUpon>XtraForm1.cs</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="APIInvoice.resx">
+      <DependentUpon>APIInvoice.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="BkavInvoice.resx">
+      <DependentUpon>BkavInvoice.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ctrlF.resx">
+      <DependentUpon>ctrlF.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DiagramHD.resx">
+      <DependentUpon>DiagramHD.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ExportExcelBC.resx">
+      <DependentUpon>ExportExcelBC.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Form2.resx">
+      <DependentUpon>Form2.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Form3.resx">
+      <DependentUpon>Form3.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormMain.resx">
+      <DependentUpon>FormMain.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="formtest.resx">
+      <DependentUpon>formtest.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmAutoTai.resx">
+      <DependentUpon>frmAutoTai.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmAutotaiNew.resx">
+      <DependentUpon>frmAutotaiNew.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmAutoTaiSetting.resx">
+      <DependentUpon>FrmAutoTaiSetting.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmCamera.resx">
+      <DependentUpon>frmCamera.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmCongtrinh.resx">
+      <DependentUpon>frmCongtrinh.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmDinhdanh.resx">
+      <DependentUpon>frmDinhdanh.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmDocnganhang.resx">
+      <DependentUpon>frmDocnganhang.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmHangHoa.resx">
+      <DependentUpon>frmHangHoa.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmHangHoa2026.resx">
+      <DependentUpon>frmHangHoa2026.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmKhachhang.resx">
+      <DependentUpon>frmKhachhang.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmKiemtrahethong.resx">
+      <DependentUpon>frmKiemtrahethong.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmKiemtraUpdate.resx">
+      <DependentUpon>frmKiemtraUpdate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmLichsu.resx">
+      <DependentUpon>frmLichsu.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmMatdinhNganHang.resx">
+      <DependentUpon>frmMatdinhNganHang.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmMessage.resx">
+      <DependentUpon>FrmMessage.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmQrcode.resx">
+      <DependentUpon>frmQrcode.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmSetting.resx">
+      <DependentUpon>frmSetting.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmSplash.resx">
+      <DependentUpon>frmSplash.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmStatusAuto.resx">
+      <DependentUpon>frmStatusAuto.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmTaiCoQuanThue.resx">
+      <DependentUpon>frmTaiCoQuanThue.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmTaihoadonvb.resx">
+      <DependentUpon>frmTaihoadonvb.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmTaikhoan.resx">
+      <DependentUpon>frmTaikhoan.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmTinhGiaVon.resx">
+      <DependentUpon>frmTinhGiaVon.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmTuKhoaHang.resx">
+      <DependentUpon>frmTuKhoaHang.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmWebbrowser.resx">
+      <DependentUpon>frmWebbrowser.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmXemhoadonInvoicse.resx">
+      <DependentUpon>frmXemhoadonInvoicse.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="HanghoaControl.resx">
+      <DependentUpon>HanghoaControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="KhachHangControl.resx">
+      <DependentUpon>KhachHangControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="KTHT.resx">
+      <DependentUpon>KTHT.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Nguyenlieutp.resx">
+      <DependentUpon>Nguyenlieutp.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="NhapFileExcel.resx">
+      <DependentUpon>NhapFileExcel.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PopupTaikhoan.resx">
+      <DependentUpon>PopupTaikhoan.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\licenses.licx" />
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <EmbeddedResource Include="Resource1.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resource1.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Saoviet_main.resx">
+      <DependentUpon>Saoviet_main.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SettingTaiCQT.resx">
+      <DependentUpon>SettingTaiCQT.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SuggestionControl.resx">
+      <DependentUpon>SuggestionControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SuggestVattu.resx">
+      <DependentUpon>SuggestVattu.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TendoInvoice.resx">
+      <DependentUpon>TendoInvoice.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Tests.resx">
+      <DependentUpon>Tests.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Updater.resx">
+      <DependentUpon>Updater.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Vanguard.resx">
+      <DependentUpon>Vanguard.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="VattuControl.resx">
+      <DependentUpon>VattuControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="vb6Xemhoadon.resx">
+      <DependentUpon>vb6Xemhoadon.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="VNPTInvoice.resx">
+      <DependentUpon>VNPTInvoice.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="XtraForm1.resx">
+      <DependentUpon>XtraForm1.cs</DependentUpon>
+    </EmbeddedResource>
+    <None Include="App.config" />
+    <None Include="config\acb.json" />
+    <None Include="NGÂN HÀNG BIVD.pdf" />
+    <None Include="packages.config" />
+    <None Include="Properties\DataSources\frmAutotaiNew.HoadonTai.datasource" />
+    <None Include="Properties\DataSources\frmDinhdanh.PhanLoaiVattu.datasource" />
+    <None Include="Properties\DataSources\frmKiemtrahethong.KTHeThong.datasource" />
+    <None Include="Properties\DataSources\frmMain.FileImport.datasource" />
+    <None Include="Properties\DataSources\frmMain.FileImportDetail.datasource" />
+    <None Include="Properties\DataSources\frmMain.Hoadon.datasource" />
+    <None Include="Properties\DataSources\frmMain.Nganhang.datasource" />
+    <None Include="Properties\DataSources\frmMain.Nhapkhotp.datasource" />
+    <None Include="Properties\DataSources\frmMain.Vattugoiy.datasource" />
+    <None Include="Properties\DataSources\frmNguyenlieuTP.ThanhPham.datasource" />
+    <None Include="Properties\DataSources\frmTaiCoQuanThue.QLHD.datasource" />
+    <None Include="Properties\DataSources\KTHT.clsKTHT.datasource" />
+    <None Include="Properties\DataSources\KTHT.ThongKe.datasource" />
+    <None Include="Properties\DataSources\SaovietTax.DTO.Matdinhnganhang.datasource" />
+    <None Include="Properties\DataSources\SuggestVattu.datasource" />
+    <None Include="Properties\DataSources\Vanguard.WarningData.datasource" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <None Include="SaovietTax_TemporaryKey.pfx" />
+    <None Include="tessdata\eng.traineddata" />
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="ADOX">
+      <Guid>{00000600-0000-0010-8000-00AA006D2EA4}</Guid>
+      <VersionMajor>6</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\cancel_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\removesheetrows_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\exporttoxls.svg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\sendxls_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\close_16x16.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\exporttoxlsx_16x16.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.8">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.8 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\download_16x16.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\actions_zoom.svg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\find_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\actions_zoom1.svg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\bouser_16x16.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\tag_16x16.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Formnews\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\allowuserstoeditranges_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\drilldownonseries_chart_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\sendxls_32x321.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\next_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\refresh_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\sendpdf_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\projectfile_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\copy_32x32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Hoadon\invoice.txt" />
+    <None Include="Resources\refreshallpivottable_32x32.png" />
+    <None Include="Resources\import.svg" />
+    <None Include="Resources\lowimportance.svg" />
+    <None Include="Resources\WinTechico.png" />
+    <None Include="Resources\minvoiceicon.png" />
+    <None Include="Resources\vnpticon.png" />
+    <None Include="Resources\misaicon.png" />
+    <None Include="Resources\viettelicon.png" />
+    <None Include="Resources\save.svg" />
+    <None Include="Resources\insertgroupfooter.svg" />
+    <None Include="Resources\next1.svg" />
+    <None Include="Resources\next_32x321.png" />
+    <None Include="Resources\next_16x162.png" />
+    <None Include="Resources\movedown.svg" />
+    <None Include="Resources\up.svg" />
+    <None Include="Resources\next_16x161.png" />
+    <None Include="Resources\selecttable_16x16.png" />
+    <None Include="Resources\charttype_bar.svg" />
+    <None Include="Resources\charttype_barstacked100.svg" />
+    <None Include="Resources\bo_customer.svg" />
+    <None Include="Resources\clearheaderandfooter.svg" />
+    <None Include="Resources\documentpdf.svg" />
+    <None Include="Resources\clearheaderandfooter1.svg" />
+    <None Include="Resources\delete_32x32.png" />
+    <None Include="Resources\customerprofilereport.svg" />
+    <None Include="Resources\del.svg" />
+    <None Include="Resources\bkavicon.png" />
+    <None Include="Resources\fasticon.png" />
+    <Content Include="Resources\favicon.ico" />
+    <None Include="Resources\next.svg" />
+    <None Include="Resources\next_16x16.png" />
+    <None Include="Resources\print_32x32.png" />
+    <None Include="Resources\qr-code.png" />
+    <None Include="Resources\find_16x16.png" />
+    <None Include="Resources\filterbyseries_pie_16x16.png" />
+    <None Include="Resources\69d8e99d154e94b3b5dcedb68edbcaa6.png" />
+    <None Include="Resources\properties_16x16.png" />
+    <None Include="Resources\lookup&amp;reference_16x16.png" />
+    <None Include="Resources\add_16x16.png" />
+    <None Include="Resources\saveto_16x16.png" />
+    <None Include="Resources\loadfrom_16x16.png" />
+    <None Include="Resources\cancel_16x16.png" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\packages\Selenium.WebDriver.ChromeDriver.135.0.7049.8400\build\Selenium.WebDriver.ChromeDriver.targets" Condition="Exists('..\packages\Selenium.WebDriver.ChromeDriver.135.0.7049.8400\build\Selenium.WebDriver.ChromeDriver.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Selenium.WebDriver.ChromeDriver.135.0.7049.8400\build\Selenium.WebDriver.ChromeDriver.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Selenium.WebDriver.ChromeDriver.135.0.7049.8400\build\Selenium.WebDriver.ChromeDriver.targets'))" />
+    <Error Condition="!Exists('..\packages\Selenium.WebDriver.4.31.0\build\Selenium.WebDriver.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Selenium.WebDriver.4.31.0\build\Selenium.WebDriver.targets'))" />
+    <Error Condition="!Exists('..\packages\Selenium.WebDriver.GeckoDriver.Win64.0.36.0\build\Selenium.WebDriver.GeckoDriver.Win64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Selenium.WebDriver.GeckoDriver.Win64.0.36.0\build\Selenium.WebDriver.GeckoDriver.Win64.targets'))" />
+    <Error Condition="!Exists('..\packages\Selenium.WebDriver.GeckoDriver.0.36.0\build\Selenium.WebDriver.GeckoDriver.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Selenium.WebDriver.GeckoDriver.0.36.0\build\Selenium.WebDriver.GeckoDriver.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets'))" />
+    <Error Condition="!Exists('..\packages\System.Runtime.WindowsRuntime.4.6.0\build\net461\System.Runtime.WindowsRuntime.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\System.Runtime.WindowsRuntime.4.6.0\build\net461\System.Runtime.WindowsRuntime.targets'))" />
+    <Error Condition="!Exists('..\packages\System.Runtime.WindowsRuntime.UI.Xaml.4.6.0\build\net461\System.Runtime.WindowsRuntime.UI.Xaml.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\System.Runtime.WindowsRuntime.UI.Xaml.4.6.0\build\net461\System.Runtime.WindowsRuntime.UI.Xaml.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Windows.SDK.Contracts.10.0.19041.1\build\Microsoft.Windows.SDK.Contracts.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.SDK.Contracts.10.0.19041.1\build\Microsoft.Windows.SDK.Contracts.props'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Windows.SDK.Contracts.10.0.19041.1\build\Microsoft.Windows.SDK.Contracts.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.SDK.Contracts.10.0.19041.1\build\Microsoft.Windows.SDK.Contracts.targets'))" />
+  </Target>
+  <Import Project="..\packages\Selenium.WebDriver.4.31.0\build\Selenium.WebDriver.targets" Condition="Exists('..\packages\Selenium.WebDriver.4.31.0\build\Selenium.WebDriver.targets')" />
+  <Import Project="..\packages\Selenium.WebDriver.GeckoDriver.Win64.0.36.0\build\Selenium.WebDriver.GeckoDriver.Win64.targets" Condition="Exists('..\packages\Selenium.WebDriver.GeckoDriver.Win64.0.36.0\build\Selenium.WebDriver.GeckoDriver.Win64.targets')" />
+  <Import Project="..\packages\Selenium.WebDriver.GeckoDriver.0.36.0\build\Selenium.WebDriver.GeckoDriver.targets" Condition="Exists('..\packages\Selenium.WebDriver.GeckoDriver.0.36.0\build\Selenium.WebDriver.GeckoDriver.targets')" />
+  <Import Project="..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets" Condition="Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" />
+  <Import Project="..\packages\System.Runtime.WindowsRuntime.4.6.0\build\net461\System.Runtime.WindowsRuntime.targets" Condition="Exists('..\packages\System.Runtime.WindowsRuntime.4.6.0\build\net461\System.Runtime.WindowsRuntime.targets')" />
+  <Import Project="..\packages\System.Runtime.WindowsRuntime.UI.Xaml.4.6.0\build\net461\System.Runtime.WindowsRuntime.UI.Xaml.targets" Condition="Exists('..\packages\System.Runtime.WindowsRuntime.UI.Xaml.4.6.0\build\net461\System.Runtime.WindowsRuntime.UI.Xaml.targets')" />
+  <Import Project="..\packages\Microsoft.Windows.SDK.Contracts.10.0.19041.1\build\Microsoft.Windows.SDK.Contracts.targets" Condition="Exists('..\packages\Microsoft.Windows.SDK.Contracts.10.0.19041.1\build\Microsoft.Windows.SDK.Contracts.targets')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

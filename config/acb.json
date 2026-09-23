@@ -1,0 +1,10 @@
+{
+  "columns": ["Date", "TransactionNo", "Details", "Debit", "Balance"],
+  "rules": {
+    "Date": "date",
+    "TransactionNo": "word:1",
+    "Details": "text",
+    "Debit": "num:-2",
+    "Balance": "num:-1"
+  }
+}

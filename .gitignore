@@ -1,0 +1,32 @@
+# ===== Build output =====
+bin/
+obj/
+Tools/Debug/
+packages/
+
+# ===== Visual Studio =====
+.vs/
+*.user
+*.suo
+*.pdb
+*.dll
+*.exe
+*.cache
+
+# ===== Playwright / Selenium =====
+.playwright/
+selenium-manager/
+chromedriver.exe
+TendooProfile/
+
+# ===== Test data =====
+tessdata/
+*.traineddata
+
+# ===== VB6 =====
+*.vbw
+*.oca
+*.vbp.bak
+
+# ===== Logs =====
+*.log
