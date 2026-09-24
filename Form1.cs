@@ -1799,7 +1799,7 @@ new OleDbParameter("?", dtDenngay.DateTime.Date) // End date
 
                         FileImport fileImport = null;
                         string path = item["Path"].ToString();
-                        string shDon = item["SHDon"].ToString();
+                        string shDon = RemoveLeadingZeros(item["SHDon"].ToString());
                         if (Isrunning )
                         {
                             if (chkDauvao.Checked)
@@ -14142,8 +14142,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             if (Mst == "KL")
                 Mst = "00";
             if (Mst.Length < 10)
-                return lookupHoaDonCT.Any(m => m.SoHD == SoHD && m.KyHieu == KyHieu && m.NLap == NLap && m.Type == type);
-            return lookupHoaDonCT.Contains((Mst, SoHD, KyHieu, NLap, tpye));
+                return lookupHoaDonCT.Any(m => RemoveLeadingZeros(m.SoHD) == RemoveLeadingZeros(SoHD) && m.KyHieu == KyHieu && m.NLap == NLap && m.Type == type);
+            return lookupHoaDonCT.Contains((Mst, RemoveLeadingZeros(SoHD), KyHieu, NLap, tpye));
         }
         public class VatTuInfo
         {

@@ -971,6 +971,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Hoadon\invoice.txt" />
+    <None Include="Resources\viewmergeddata.svg" />
     <None Include="Resources\refreshallpivottable_32x32.png" />
     <None Include="Resources\import.svg" />
     <None Include="Resources\lowimportance.svg" />

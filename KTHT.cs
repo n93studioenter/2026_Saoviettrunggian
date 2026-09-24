@@ -80,6 +80,7 @@ namespace SaovietTax
             public bool Checked { get; set; }
             public string Path { get; set; }
             public int Khautruthue { get; set; }    
+            public int Statustype { get; set; }
         }
         List<clsKTHT> clsKTHTs = new List<clsKTHT>();
         int DV1, DV2, DV3;
@@ -331,7 +332,8 @@ namespace SaovietTax
                 }
                    
             }
-            LoadDanhsachExcel();
+            Dohoadon();
+            // LoadDanhsachExcel();
             progressPanel1.Visible=false;
         }
         double TongTienExcel = 0;
@@ -1364,6 +1366,7 @@ namespace SaovietTax
         private string myTokken = "";
         bool needLogin = true;
         public string tokken { get; set; } = "";
+        public int trylogin = 3;
         private async void Getttoken()
         {
             progressPanel1.Visible = true;
@@ -1477,7 +1480,19 @@ namespace SaovietTax
 
                         SvgCaptchaSolver solver = new SvgCaptchaSolver();
                         string cvalue = solver.SolveCaptcha(svgPath)?.Trim() ?? "";
-
+                        if (cvalue.Length <= 5)
+                        {
+                            if (trylogin > 1)
+                            {
+                                trylogin -= 1;
+                                Getttoken();
+                            }
+                            else
+                            {
+                                XtraMessageBox.Show("Không thể tải file Excel trong thời điểm này, vui lòng thử lại sau!");
+                            }
+                           
+                        }
                         if (string.IsNullOrEmpty(cvalue) || cvalue.Length < 4)
                         {
                             XtraMessageBox.Show("Không giải được captcha");
@@ -1897,9 +1912,26 @@ namespace SaovietTax
 
         }
         int slcoquanthue = 0;
+        int slvb6 = 0;
+        double cqt_tongtien, cqt_tientrcthue, cqt_tienthue = 0;
+        double vb6_tongtien, vb6_tientrcthue, vb6_tienthue = 0;
+        int slhangchuanhapma = 0;
+        int slhangchuaiport = 0;
+        int lshoadonloi = 0;
         private void Dohoadon()
         {
             slcoquanthue = 0;
+            slvb6 = 0;
+            cqt_tongtien = 0;
+            cqt_tientrcthue = 0;
+            cqt_tienthue = 0;
+            vb6_tongtien = 0;
+            vb6_tientrcthue = 0;
+            vb6_tienthue = 0;
+            slhangchuanhapma = 0;
+            slhangchuaiport = 0;
+            lshoadonloi = 0;
+
             progressPanel1.Visible = true;
             progressPanel1.Caption = "Đang xử lý dữ liệu";
             Application.DoEvents();
@@ -1908,6 +1940,46 @@ namespace SaovietTax
             int denthang = int.Parse(cbbDenthang.Text.Replace("Tháng ", ""));
             string typeHD = "";
             typeHD = radDauvao.Checked ? "HDVao" : "HDRa";
+
+            // === Đặt ở đầu hàm Dohoadon(), trước khi vòng lặp ===
+
+            // 1. Dictionary để tìm hóa đơn nhanh (thay cho FirstOrDefault)
+            var dictChungTu = new Dictionary<string, ChungTuHD>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in lstChungTuHD)
+            {
+                // Key: Ngày + Số HĐ đã bỏ số 0 đầu + Ký hiệu
+                string key = $"{item.NgayCT:yyyyMMdd}|{Helpers.RemoveLeadingZeros(item.SoHieu).TrimEnd('.')}|{item.KHHD}";
+
+                if (!dictChungTu.ContainsKey(key))
+                    dictChungTu[key] = item;
+            }
+
+            // 2. Dictionary để kiểm tra mặt hàng trống (thay cho Where + foreach)
+            var dictMaCT_HasEmpty = new Dictionary<string, bool>();
+
+            if (gettbChungtu != null && gettbChungtu.Rows.Count > 0)
+            {
+                var groups = gettbChungtu.AsEnumerable()
+                    .GroupBy(r => r["MaCT"].ToString());
+
+                foreach (var g in groups)
+                {
+                    bool hasEmpty = g.Any(r =>
+                        r["MaVattu"].ToString() == "0" &&
+                        r["MaTKTCNo"].ToString() != "5108" &&
+                        r["MaTKTCCo"].ToString() != "14038" &&
+                        r["MaTKTCNo"].ToString() != "160" &&
+                         r["MaTKTCNo"].ToString() != "82" &&
+                          r["MaTKTCCo"].ToString() != "82" &&
+                            r["MaTKTCNo"].ToString() != "169" &&
+                          r["MaTKTCCo"].ToString() != "169" &&
+                        r["MaTKTCNo"].ToString() != "161");
+
+                    dictMaCT_HasEmpty[g.Key] = hasEmpty;
+                }
+            }
+
             for (int i = tuthang; i <= denthang; i++)
             {
                 string CurrentYear = $"HD{cbbNam.EditValue}";
@@ -1917,7 +1989,7 @@ namespace SaovietTax
                 var excelFiles = Directory.EnumerateFiles(directoryPath, "*.xlsx", SearchOption.AllDirectories)
                                          .Where(f => f.Contains(mstcongty) || f.Contains(CCCD))
                                          .ToList();
-
+                int stt = 1;
                 foreach (var excelFile in excelFiles)
                 {
                     using (var workbook = new XLWorkbook(excelFile))
@@ -1932,8 +2004,13 @@ namespace SaovietTax
                                 slcoquanthue += 1;
                                 clsKTHT.KHMS = GetCellValue(row.Cell("B"));
                                 clsKTHT.KHHD = GetCellValue(row.Cell("C"));
-                                clsKTHT.SoHD = GetCellValue(row.Cell("D"));
-                                 
+                                clsKTHT.SoHD = GetCellValue(row.Cell("D")); 
+                                if (radDauvao.Checked)
+                                    clsKTHT.Type = 1;
+                                if (radDaura.Checked)
+                                    clsKTHT.Type = 2;
+                                clsKTHT.STT = stt;
+                                stt += 1;
                                 if (clsKTHT.SoHD == "218288")
                                 {
                                     int a = 10;
@@ -1974,6 +2051,8 @@ namespace SaovietTax
                                     {
                                         clsKTHT.TienTrcThue = clsKTHT.TongTienTT;
                                     }
+                                    cqt_tientrcthue += clsKTHT.TienTrcThue;
+                                    cqt_tienthue += clsKTHT.TienThue;
                                 }
                                 else
                                 {
@@ -1989,14 +2068,28 @@ namespace SaovietTax
                                     {
                                         clsKTHT.TienTrcThue = clsKTHT.TongTienTT;
                                     }
+                                    cqt_tientrcthue += clsKTHT.TienTrcThue;
+                                    cqt_tienthue += clsKTHT.TienThue;
                                 }
                                 //Tìm thông tin trên list chung từ tổng hợp
                                 ChungTuHD findhoadon = new ChungTuHD();
                                 if (radDauvao.Checked)
-                                    //findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == clsKTHT.NgayLap && m.SoHieu == clsKTHT.SoHD && m.KHHD == clsKTHT.KHHD && m.MST == clsKTHT.MST);
-                                    findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == clsKTHT.NgayLap && m.SoHieu == clsKTHT.SoHD && m.KHHD == clsKTHT.KHHD );
+                                {
+                                    findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == clsKTHT.NgayLap && Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(clsKTHT.SoHD).TrimEnd('.') && m.KHHD == clsKTHT.KHHD);
+                                    //Kiểm tra cho trường hợp sai ngày, đúng mst
+                                    if(findhoadon == null)
+                                    {
+                                        findhoadon= lstChungTuHD.FirstOrDefault(m => Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(clsKTHT.SoHD).TrimEnd('.') && m.KHHD == clsKTHT.KHHD && m.MST== clsKTHT.MST);
+                                        if(findhoadon != null)
+                                        {
+                                            clsKTHT.GhiChu += $"Hoá đơn sai ngày chứng từ {findhoadon.NgayCT.ToShortDateString()}";
+                                            clsKTHT.Statustype = 2;
+                                            lshoadonloi += 1;
+                                        }
+                                    }
+                                }
                                 else
-                                    findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == clsKTHT.NgayLap && m.SoHieu == clsKTHT.SoHD && m.KHHD == clsKTHT.KHHD);
+                                    findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == clsKTHT.NgayLap && Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(clsKTHT.SoHD).TrimEnd('.')  && m.KHHD == clsKTHT.KHHD);
 
                                 if (findhoadon != null)
                                 {
@@ -2006,11 +2099,26 @@ namespace SaovietTax
                                     clsKTHT.TienTrcThueHD = findhoadon.TienTrcThue;
                                     clsKTHT.TienThueHD = findhoadon.TienThue;
                                     clsKTHT.TongTienTTHD = findhoadon.TongTien;
+                                    clsKTHT.Checked = true;
+                                    vb6_tienthue += clsKTHT.TienThueHD;
+                                    vb6_tientrcthue += clsKTHT.TienTrcThueHD;
                                     Thietlapghichu(clsKTHT);
+                                    var getlistkt = gettbChungtu.AsEnumerable().Where(m => m["MaCT"].ToString() == findhoadon.MaCT.ToString());
+                                    //Kiểm tra xem có mặt hàng nào bỏ trống không
+                                    if (dictMaCT_HasEmpty.TryGetValue(findhoadon.MaCT.ToString(), out bool hasEmpty) && hasEmpty)
+                                    {
+                                        clsKTHT.GhiChu += "Có hàng chưa nhập mã";
+                                        slhangchuanhapma += 1;
+                                        clsKTHT.Statustype = 3;
+                                    }
+                                    slvb6 += 1;
                                 }
                                 else
                                 {
+                                    clsKTHT.Checked = false;
                                     clsKTHT.GhiChu = "Hoá đơn chưa được nhập";
+                                    slhangchuaiport += 1;
+                                    clsKTHT.Statustype = 1;
                                 }
                                
                                 clsKTHTs.Add(clsKTHT);
@@ -2026,33 +2134,70 @@ namespace SaovietTax
                 }
 
                 //Rán datasource
-                gridControl1.DataSource = clsKTHTs;
+                LoadDatasource();
+               
             }
             progressPanel1.Caption = "";
             progressPanel1.Visible = false;
 
             //Gán thông số
             lbltshd2.Text = slcoquanthue.ToString();
+            lbltshd1.Text = slvb6.ToString();
+            lblResult2.Text = $"{cqt_tientrcthue.ToString("N0")}"; 
+            labelControl5.Text= $"{cqt_tienthue.ToString("N0")}";
+            lblResult3.Text= $"{vb6_tientrcthue.ToString("N0")}";
+            labelControl4.Text= $"{vb6_tienthue.ToString("N0")}";
+            lblwarning1.Text = slhangchuaiport.ToString();
+            lblwarning2.Text = lshoadonloi.ToString();
+            lblwarning3.Text=slhangchuanhapma.ToString();
+        }
+        private void LoadDatasource()
+        {
+            var orgiginlist = clsKTHTs;
+            if (chkhoadonchuanhap.Checked)
+            {
+                orgiginlist = orgiginlist.Where(m => m.Statustype == 1).ToList();
+            }
+            if (chkhoadonsaitt.Checked)
+            {
+                orgiginlist = orgiginlist.Where(m => m.Statustype == 2).ToList();
+            }
+            if (chkhoadonthieuhang.Checked)
+            {
+                orgiginlist = orgiginlist.Where(m => m.Statustype == 3).ToList();
+            }
+            gridControl1.DataSource = orgiginlist;
         }
         private void Thietlapghichu(clsKTHT clsKTHT)
         {
+            bool haserro = false;
             if (string.IsNullOrEmpty(clsKTHT.MST))
                 clsKTHT.MST = "00";
+            
             if (clsKTHT.MST!= clsKTHT.MSTHD)
             {
                 clsKTHT.GhiChu += "MST không khớp , ";
+                haserro = true;
             }
             if (clsKTHT.TienTrcThue != clsKTHT.TienTrcThueHD)
             {
                 clsKTHT.GhiChu += "Tiền trước thuế bị lệch , ";
+                haserro |= true;
             }
             if (clsKTHT.TienThue != clsKTHT.TienThueHD)
             {
                 clsKTHT.GhiChu += "Tiền thuế bị lệch , ";
+                haserro |= true;
             }
             if (clsKTHT.TongTienTT != clsKTHT.TongTienTTHD)
             {
                 clsKTHT.GhiChu += "Tổng tiền bị lệch , ";
+                haserro |= true;
+            }
+            if (haserro)
+            {
+                clsKTHT.Statustype = 2;
+                lshoadonloi += 1;
             }
         }
         private void simpleButton2_Click(object sender, EventArgs e)
@@ -2265,11 +2410,66 @@ namespace SaovietTax
             }
         }
         List<ChungTuHD> lstChungTuHD = new List<ChungTuHD>();
+
+        private void chkhoadonchuanhap_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkhoadonchuanhap.Checked)
+            {
+                chkhoadonsaitt.Checked = false;
+                chkhoadonthieuhang.Checked = false;
+            }
+           
+            LoadDatasource();
+        }
+
+        private void chkhoadonsaitt_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkhoadonsaitt.Checked)
+            {
+                chkhoadonchuanhap.Checked = false;
+                chkhoadonthieuhang.Checked = false;
+            }
+            LoadDatasource();
+        }
+
+        private void chkhoadonthieuhang_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkhoadonthieuhang.Checked)
+            {
+                chkhoadonchuanhap.Checked = false;
+                chkhoadonsaitt.Checked = false;
+            }
+            LoadDatasource();
+        }
+
+        private void btnXemchitiet_Click(object sender, EventArgs e)
+        {
+            string path = savedPath + @"\invoice.txt";
+            int index = gridView1.FocusedRowHandle;
+            string sohd = gridView1.GetRowCellValue(index, "SoHD").ToString();
+            string ngaylap = DateTime.Parse(gridView1.GetRowCellValue(index, "NgayLap").ToString()).ToShortDateString();
+
+            string content = $"{sohd}_{ngaylap}";
+            // Ghi đè (nếu file đã tồn tại sẽ bị ghi đè)
+            File.WriteAllText(path, content, Encoding.UTF8);
+
+            // Ghi thêm vào cuối file (Append)
+            File.AppendAllText(path, content + Environment.NewLine, Encoding.UTF8);
+
+            string qrupdate = $"UPDATE tbResponse SET Status = ?";
+            var paramss = new OleDbParameter[]
+            {
+                    new OleDbParameter("?", "1"), 
+            };
+            int rrf = ExecuteQueryResult(qrupdate, paramss);
+        }
+
+        DataTable gettbChungtu;
         private void KTHT_Load(object sender, EventArgs e)
         {
             this.KeyPreview = true;
 
-            ThietLapControl();
+           // ThietLapControl();
             LoadComboBoxYear();
             progressPanel1.Description = "";
             LoadData();
@@ -2299,7 +2499,7 @@ namespace SaovietTax
             progressPanel1.Visible = false;
 
             // 1. Query (nên chỉ lấy cột cần thiết)
-            DataTable tbChungtu = ExecuteQuery("SELECT MaCT, MaLoai, SoHieu, MaTKTCNo,MaTKTCCo, SoPS,NgayImport FROM ChungTu", null);
+            gettbChungtu = ExecuteQuery("SELECT MaCT, MaLoai, SoHieu, MaTKTCNo,MaTKTCCo, SoPS,SoPS2No,SoPS2Co,NgayImport,MaVattu FROM ChungTu", null);
             DataTable tbHoadon = ExecuteQuery("SELECT Maso, MaSo, KyHieu, NgayPH, MaKhachHang FROM HoaDon", null);
             DataTable tbKhachHang = ExecuteQuery("SELECT MaSo, MST, Ten FROM KhachHang", null);
 
@@ -2320,7 +2520,7 @@ namespace SaovietTax
 
             // 3. Group ChungTu theo MaCT
             Dictionary<int, List<DataRow>> chungTuGroups = new Dictionary<int, List<DataRow>>();
-            foreach (DataRow r in tbChungtu.Rows)
+            foreach (DataRow r in gettbChungtu.Rows)
             {
                 int maCT = Convert.ToInt32(r["MaCT"]);
                 if (!chungTuGroups.ContainsKey(maCT))
@@ -2331,7 +2531,7 @@ namespace SaovietTax
 
             // 4. Query join
             DataTable tonghop = ExecuteQuery(@"
-    SELECT c.MaCT, c.MaLoai,c.NgayCT,c.ThangCT, c.SoHieu,c.NgayImport, h.MaKhachHang,h.KyHieu
+    SELECT c.MaCT, c.MaLoai,c.NgayCT,c.NgayGS,c.ThangCT, c.SoHieu,c.NgayImport, h.MaKhachHang,h.KyHieu
     FROM ChungTu c
     INNER JOIN HoaDon h ON c.Maso = h.Maso", null);
 
@@ -2353,7 +2553,7 @@ namespace SaovietTax
                 item.MaCT = mact;
                 item.SoHieu = row["SoHieu"].ToString();
                 item.NgayImport= DateTime.Parse(row["NgayImport"].ToString());
-                if (item.SoHieu == "35")
+                if (item.SoHieu == "79831")
                 {
                     int test = 10;
                 }
@@ -2387,11 +2587,22 @@ namespace SaovietTax
                         DataRow r = rows[i];
                         double soPS = Convert.ToDouble(r["SoPS"]);
                         string maTK = r["MaTKTCCo"].ToString();
-
+                        string matkno = r["MaTKTCNo"].ToString();
+                        double SoPS2Co = Convert.ToDouble(r["SoPS2Co"]);
                         if (maTK == "14038")
                             tienThue += soPS;
                         else
-                            tienTrcThue += soPS;
+                        {
+                            if (soPS > 0)
+                            {
+                                if (matkno != "169" && SoPS2Co>0)
+                                {
+                                    tienTrcThue += soPS;
+                                }
+                            }
+                               
+                           
+                        }
                     }
 
                     item.TienTrcThue = tienTrcThue;
@@ -2409,11 +2620,32 @@ namespace SaovietTax
                         DataRow r = rows[i];
                         double soPS = Convert.ToDouble(r["SoPS"]);
                         string maTK = r["MaTKTCNo"].ToString();
-
+                        string matkco= r["MaTKTCCo"].ToString();
+                        double SoPS2No = Convert.ToDouble(r["SoPS2No"]);
                         if (maTK == "5108")
                             tienThue += soPS;
                         else
-                            tienTrcThue += soPS;
+                        {
+                            if(soPS > 0)
+                            {
+                                if (matkco != "169" && (SoPS2No > 0))
+                                {
+                                    tienTrcThue += soPS;
+                                }
+                                else
+                                {
+                                    if (maTK == "161" || maTK == "160")
+                                    {
+                                        tienTrcThue += soPS;
+                                    }
+                                }
+                                if (matkco == "169")
+                                {
+                                    tienTrcThue -= soPS;
+                                }
+                            }
+                           
+                        }
                     }
 
                     item.TienTrcThue = tienTrcThue;
@@ -2455,6 +2687,27 @@ namespace SaovietTax
             var selectedRow = gridView1.GetRow(e.RowHandle) as clsKTHT;
             if (selectedRow.Khautruthue == 1)
                 return;
+            if(e.Column.FieldName== "GhiChu")
+            {
+                if (e.CellValue == null)
+                    return;
+                int rowHandle = e.RowHandle;
+                var gridView = sender as GridView; 
+                var getValue = e.CellValue.ToString();
+                if (getValue != null)
+                {
+                    if (e.CellValue.ToString() == "Hoá đơn chưa được nhập")
+                    {
+                        e.Appearance.ForeColor = Color.Red; // Tô màu chữ đỏ
+                    }
+                    //Có hàng chưa nhập mã 
+                    if (e.CellValue.ToString() == "Có hàng chưa nhập mã")
+                    {
+                        e.Appearance.ForeColor = Color.Blue; // Tô màu chữ đỏ
+                    }
+                }
+               
+            }
             if (e.Column.FieldName == "STTType")
             {
                 if (e.CellValue == null)
@@ -2484,7 +2737,7 @@ namespace SaovietTax
                 double gettt = (double)gridView1.GetRowCellValue(rowHandle, "TongTienTT");
                 //TongTienPhi 
                 double getdt2 = double.Parse(e.CellValue.ToString());
-                if ( getdt1!= getdt2)
+                if ( getdt1!= getdt2 && getdt2!=0)
                 {
                     if (getdt1 != 0)
                     {
