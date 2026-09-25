@@ -29,6 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static SaovietTax.frmMain;
+using static SaovietTax.KTHT;
 using static SaovietTax.Vanguard;
 using DataTable = System.Data.DataTable;
 using Size = System.Drawing.Size;
@@ -265,9 +266,173 @@ namespace SaovietTax
                 XtraMessageBox.Show(ex.Message);
             }
             //Chạy code tải excel
-           // TaiExcel();
+            // TaiExcel();
+
+            loadCheckdata();
             LoadMeaasge();
+
+
         }
+        DataTable gettbChungtu;
+        private void loadCheckdata()
+        { // 1. Query (nên chỉ lấy cột cần thiết)
+            gettbChungtu = ExecuteQuery("SELECT MaCT, MaLoai, SoHieu, MaTKTCNo,MaTKTCCo, SoPS,SoPS2No,SoPS2Co,NgayImport,MaVattu FROM ChungTu", null);
+            DataTable tbHoadon = ExecuteQuery("SELECT Maso, MaSo, KyHieu, NgayPH, MaKhachHang FROM HoaDon", null);
+            DataTable tbKhachHang = ExecuteQuery("SELECT MaSo, MST, Ten FROM KhachHang", null);
+
+            // 2. Dictionary khách hàng
+            Dictionary<string, KhachHangInfo> dictKhachHang = new Dictionary<string, KhachHangInfo>();
+            foreach (DataRow r in tbKhachHang.Rows)
+            {
+                string maSo = r["MaSo"].ToString();
+                if (!dictKhachHang.ContainsKey(maSo))
+                {
+                    dictKhachHang.Add(maSo, new KhachHangInfo
+                    {
+                        MST = r["MST"].ToString(),
+                        Ten = r["Ten"].ToString()
+                    });
+                }
+            }
+
+            // 3. Group ChungTu theo MaCT
+            Dictionary<int, List<DataRow>> chungTuGroups = new Dictionary<int, List<DataRow>>();
+            foreach (DataRow r in gettbChungtu.Rows)
+            {
+                int maCT = Convert.ToInt32(r["MaCT"]);
+                if (!chungTuGroups.ContainsKey(maCT))
+                    chungTuGroups[maCT] = new List<DataRow>();
+
+                chungTuGroups[maCT].Add(r);
+            }
+
+            // 4. Query join
+            DataTable tonghop = ExecuteQuery(@"
+    SELECT c.MaCT, c.MaLoai,c.NgayCT,c.NgayGS,c.ThangCT, c.SoHieu,c.NgayImport, h.MaKhachHang,h.KyHieu
+    FROM ChungTu c
+    INNER JOIN HoaDon h ON c.Maso = h.Maso", null);
+
+            // 5. Xử lý
+
+            HashSet<int> processed = new HashSet<int>();
+
+            foreach (DataRow row in tonghop.Rows)
+            {
+                int mact = Convert.ToInt32(row["MaCT"]);
+                if (processed.Contains(mact))
+                    continue;
+
+                processed.Add(mact);
+
+                string maLoai = row["MaLoai"].ToString();
+
+                ChungTuHD item = new ChungTuHD();
+                item.MaCT = mact;
+                item.SoHieu = row["SoHieu"].ToString();
+                item.NgayImport = DateTime.Parse(row["NgayImport"].ToString());
+                if (item.SoHieu == "1825")
+                {
+                    int test = 10;
+                }
+                item.KHHD = row["KyHieu"].ToString();
+                item.NgayCT = DateTime.Parse(row["NgayCT"].ToString());
+                // Type
+                if (maLoai == "0" || maLoai == "1")
+                    item.Type = 1;
+                else if (maLoai == "8")
+                    item.Type = 2;
+                else
+                    item.Type = 0;
+
+                // Khách hàng
+                string maKH = row["MaKhachHang"].ToString();
+                if (dictKhachHang.ContainsKey(maKH))
+                {
+                    item.MST = dictKhachHang[maKH].MST;
+                    item.TenKH = dictKhachHang[maKH].Ten;
+                }
+
+                // Tính tiền chỉ khi MaLoai = 8
+                if (maLoai == "8" && chungTuGroups.ContainsKey(mact))
+                {
+                    double tienTrcThue = 0;
+                    double tienThue = 0;
+
+                    List<DataRow> rows = chungTuGroups[mact];
+                    for (int i = 0; i < rows.Count; i++)
+                    {
+                        DataRow r = rows[i];
+                        double soPS = Convert.ToDouble(r["SoPS"]);
+                        string maTK = r["MaTKTCCo"].ToString();
+                        string matkno = r["MaTKTCNo"].ToString();
+                        double SoPS2Co = Convert.ToDouble(r["SoPS2Co"]);
+                        if (maTK == "14038")
+                            tienThue += soPS;
+                        else
+                        {
+                            if (soPS > 0)
+                            {
+                                if (matkno != "169" && SoPS2Co > 0)
+                                {
+                                    tienTrcThue += soPS;
+                                }
+                            }
+
+
+                        }
+                    }
+
+                    item.TienTrcThue = tienTrcThue;
+                    item.TienThue = tienThue;
+                    item.TongTien = tienTrcThue + tienThue;
+                }
+                if ((maLoai == "0" || maLoai == "1") && chungTuGroups.ContainsKey(mact))
+                {
+                    double tienTrcThue = 0;
+                    double tienThue = 0;
+
+                    List<DataRow> rows = chungTuGroups[mact];
+                    for (int i = 0; i < rows.Count; i++)
+                    {
+                        DataRow r = rows[i];
+                        double soPS = Convert.ToDouble(r["SoPS"]);
+                        string maTK = r["MaTKTCNo"].ToString();
+                        string matkco = r["MaTKTCCo"].ToString();
+                        double SoPS2No = Convert.ToDouble(r["SoPS2No"]);
+                        if (maTK == "5108")
+                            tienThue += soPS;
+                        else
+                        {
+                            if (soPS > 0)
+                            {
+                                if (matkco != "169" && (SoPS2No > 0))
+                                {
+                                    tienTrcThue += soPS;
+                                }
+                                else
+                                {
+                                    if (maTK == "161" || maTK == "160")
+                                    {
+                                        tienTrcThue += soPS;
+                                    }
+                                }
+                                if (matkco == "169")
+                                {
+                                    tienTrcThue -= soPS;
+                                }
+                            }
+
+                        }
+                    }
+
+                    item.TienTrcThue = tienTrcThue;
+                    item.TienThue = tienThue;
+                    item.TongTien = tienTrcThue + tienThue;
+                }
+                lstChungTuHD.Add(item);
+            }
+        }
+        List<ChungTuHD> lstChungTuHD = new List<ChungTuHD>();
         DevExpress.XtraEditors.LabelControl lblThongBao;
         // ===== Class Warning =====
         public class Warning
@@ -306,27 +471,27 @@ namespace SaovietTax
             public string TenVT { get; set; }
             public string MaPL { get; set; }
         }
-        List<VattuAm> vattuAms { get; set; }    
+        List<VattuAm> vattuAms { get; set; }
         private void LoadMeaasge()
         {
             vattuAms = new List<VattuAm>();
             string queryct = @"
-                                       SELECT 
-                        hd.SoHD,
-                        hd.KyHieu,
-                        hd.NgayPH,
-                        hd.MaKhachHang,
-                        kh.MST, 
-                        ct.NgayCT,
-                        ct.MaLoai
-                    FROM 
-                        ((Hoadon hd 
-                        INNER JOIN 
-                        Chungtu ct ON hd.MaSo = ct.MaSo)
-                        INNER JOIN 
-                        KhachHang kh ON hd.MaKhachHang = kh.MaSo)
-                    WHERE 
-                        hd.KyHieu <> '...'";
+                SELECT 
+                    hd.SoHD,
+                    hd.KyHieu,
+                    hd.NgayPH,
+                    hd.MaKhachHang,
+                    kh.MST, 
+                    ct.NgayCT,
+                    ct.MaLoai
+                FROM 
+                    ((Hoadon hd 
+                    INNER JOIN 
+                    Chungtu ct ON hd.MaSo = ct.MaSo)
+                    INNER JOIN 
+                    KhachHang kh ON hd.MaKhachHang = kh.MaSo)
+                WHERE 
+                    hd.KyHieu <> '...'";
 
             dtChungtu = ExecuteQuery(queryct);
 
@@ -365,7 +530,7 @@ namespace SaovietTax
             string qrvt = "select * from Vattu";
             var dtVattu = ExecuteQuery(qrvt);
             string hangam = "";
-             qrip = "SELECT * FROM PhanLoaiVattu";
+            qrip = "SELECT * FROM PhanLoaiVattu";
             var phanloaivt = ExecuteQuery(qrip);
             var months = new List<MonthWarning>();
             for (int i = DateTime.Now.Month; i >= 1; i--)
@@ -448,8 +613,12 @@ namespace SaovietTax
                 string dshdrachunhap = "";
                 int tongvao = 0;
                 int tongra = 0;
-                  string hdnhapduDauvao = "";
-  string hdnhapduDaura = "";
+                string hdnhapduDauvao = "";
+                string hdnhapduDaura = "";
+
+                string dshdsaithongtin = "";
+                int hdsaithongtin = 0;
+
                 var qr = tbImport.AsEnumerable()
                 .Where(m => m.Field<DateTime>("NLap").Date.Month == i)
                 .Where(m => m["Status"].ToString() == "2");
@@ -470,7 +639,7 @@ namespace SaovietTax
                 string directoryPath2 = Path.Combine(savedPath, pathYear, "HDVao", i.ToString());
 
                 var excelFiles = Directory.EnumerateFiles(directoryPath2, "*.xlsx", SearchOption.AllDirectories).ToList();
-                if(excelFiles.Count==0)
+                if (excelFiles.Count == 0)
                     continue;
                 int j = 1;
                 foreach (var excelFile in excelFiles)
@@ -488,6 +657,34 @@ namespace SaovietTax
                                 string getSohd = Helpers.RemoveLeadingZeros(row.Cell("D").Value.ToString()); // Lấy giá trị của cột C trong hàng hiện tại 
                                 string GetNLap = row.Cell("E").Value.ToString();
                                 string mstnb = row.Cell("F").Value.ToString();
+                                if (getSohd == "12856")
+                                {
+                                    int asdsd = 10;
+                                }
+
+                                double TienTrcThue = 0;
+                                double TienThue = 0;
+                                double TongTienTT = 0;
+                                if (excelFile.Contains("MayTinhTien"))
+                                {
+                                    if (!string.IsNullOrEmpty(row.Cell("L").Value.ToString()))
+                                        TienTrcThue = Math.Round(double.Parse(row.Cell("L").Value.ToString()));
+                                    if (!string.IsNullOrEmpty(row.Cell("M").Value.ToString()))
+                                        TienThue = Math.Round(double.Parse(row.Cell("M").Value.ToString()));
+                                    if (!string.IsNullOrEmpty(row.Cell("O").Value.ToString()))
+                                        TongTienTT = Math.Round(double.Parse(row.Cell("O").Value.ToString()));
+
+                                }
+                                else
+                                {
+                                    if (!string.IsNullOrEmpty(row.Cell("K").Value.ToString()))
+                                        TienTrcThue = Math.Round(double.Parse(row.Cell("K").Value.ToString()));
+                                    if (!string.IsNullOrEmpty(row.Cell("L").Value.ToString()))
+                                        TienThue = Math.Round(double.Parse(row.Cell("L").Value.ToString()));
+                                    if (!string.IsNullOrEmpty(row.Cell("O").Value.ToString()))
+                                        TongTienTT = Math.Round(double.Parse(row.Cell("O").Value.ToString()));
+                                }
+
                                 DateTime getdate = DateTime.Parse(GetNLap);
                                 HoaDonNhap HoaDonNhap = new HoaDonNhap();
                                 HoaDonNhap.SoHD = getSohd;
@@ -498,6 +695,50 @@ namespace SaovietTax
                                 {
                                     hdchuanhapvao += 1;
                                     dshdvaochunhap += getSohd + ",";
+                                }
+                                ChungTuHD findhoadon = new ChungTuHD();
+                                findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == getdate.Date && Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(getSohd).TrimEnd('.') && m.KHHD == getSHHD);
+                                if (findhoadon != null)
+                                {
+                                    bool saithongtin = false;
+                                    string lydosai = "";
+                                    if (TienTrcThue != findhoadon.TienTrcThue && TienTrcThue != 0)
+                                    {
+                                        lydosai += "Tiền trước thuế bị lệch";
+                                        saithongtin = true;
+                                    }
+                                    if (TienThue != findhoadon.TienThue && TienThue != 0)
+                                    {
+                                        if (lydosai == "")
+                                            lydosai += "Tiền  thuế bị lệch";
+                                        saithongtin = true;
+                                    }
+
+                                    if (saithongtin)
+                                    {
+                                        dshdsaithongtin += $"{getSohd}({lydosai}) ,";
+                                        hdsaithongtin += 1;
+                                    }
+                                }
+                                else
+                                {
+                                    //Trường hợp null có thể do ngày sai, bỏ điều kiện ngày
+                                    findhoadon = lstChungTuHD.FirstOrDefault(m => Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(getSohd).TrimEnd('.') && m.KHHD == getSHHD);
+                                    if (findhoadon != null)
+                                    {
+                                        bool saithongtin = false;
+                                        string lydosai = "";
+                                        if (findhoadon.NgayCT.Date != getdate.Date)
+                                        {
+                                            lydosai += "Ngày chứng từ bị sai";
+                                            saithongtin = true;
+                                        }
+                                        if (saithongtin)
+                                        {
+                                            dshdsaithongtin += $"{getSohd}({lydosai}) ,";
+                                            hdsaithongtin += 1;
+                                        }
+                                    }
                                 }
                                 tongvao += 1;
                             }
@@ -589,18 +830,22 @@ namespace SaovietTax
                 {
                     if (hdchuanhapra > 0)
                     {
-                        warning1.Text = $"🔴 {hdchuanhapra} Hóa đơn đầu ra chưa nhập"; 
+                        warning1.Text = $"🔴 {hdchuanhapra} Hóa đơn đầu ra chưa nhập";
                     }
                 }
 
                 warning1.Color = Color.Red;
                 month1.Warnings.Add(warning1);
 
-                //var warning2 = new Warning();
-                //warning2.Text = "🔵 6 hàng chưa nhập kho";
-                //warning2.Color = Color.Blue;
-                //month1.Warnings.Add(warning2);
+                //Sai thông tin 
+                if (hdsaithongtin > 0)
+                {
+                    var warning3 = new Warning();
+                    warning3.Text = $"🔵 {hdsaithongtin} hoá đơn sai thông tin  : {dshdsaithongtin}";
+                    warning3.Color = Color.IndianRed;
+                    month1.Warnings.Add(warning3);
 
+                }
 
                 //Import lỗi 
                 if (getimportloi.Rows.Count > 0)
@@ -622,10 +867,10 @@ namespace SaovietTax
                 {
                     var group = vattuAms.GroupBy(m => m.MaPL);
                     var warning4 = new Warning();
-                    foreach( var m in group)
+                    foreach (var m in group)
                     {
                         warning4.Text = $"🔵 Nhóm {m.Key} Có {m.Count()} ⚠️ hàng đang âm";
-                    } 
+                    }
                     warning4.Color = Color.DarkCyan;
                     month1.Warnings.Add(warning4);
                 }
@@ -633,7 +878,6 @@ namespace SaovietTax
                 //Tài khoản chưa cân
                 if (sumDkNo != sumDkCo)
                 {
-                    //warningData.HethongTK += $"Số dư đầu kỳ chưa cân {sumDkNo} -  {sumDkCo}";
                     var warning4 = new Warning();
                     warning4.Text = $"🔵 Số dư đầu kỳ chưa cân {sumDkNo} -  {sumDkCo}";
                     warning4.Color = Color.DarkSeaGreen;
@@ -641,7 +885,6 @@ namespace SaovietTax
                 }
                 if (sumPsNo != sumPsCo)
                 {
-                    //warningData.HethongTK += $"Số dư trong kỳ chưa cân {sumPsNo} -  {sumPsCo}";
                     var warning4 = new Warning();
                     warning4.Text = $"🔵 Số dư trong kỳ chưa cân {sumPsNo} -  {sumPsCo}";
                     warning4.Color = Color.GreenYellow;
@@ -697,11 +940,12 @@ namespace SaovietTax
             int yPos = 5;
 
             int headerHeight = 45;
-            int warningHeight = 22;
+            int warningHeight = 22;  // chiều cao tối thiểu, sẽ tăng nếu text wrap
+            int warningSpacing = 4;  // khoảng cách giữa các warning
 
             int leftMargin = 5;
             int rightMargin = 15;
-            int bottomMargin = 5;
+            int bottomMargin = 8;
 
 
             // ==========================================================
@@ -711,7 +955,7 @@ namespace SaovietTax
             foreach (var monthData in months)
             {
                 // ------------------------------------------------------
-                // Panel của tháng
+                // Panel của tháng (chưa set Size, sẽ set sau khi đo warning)
                 // ------------------------------------------------------
 
                 var panelControl2 = new DevExpress.XtraEditors.PanelControl();
@@ -727,6 +971,7 @@ namespace SaovietTax
                     yPos
                 );
 
+                panelControl2.TabIndex = 0;
 
                 // Chiều rộng thực tế của vùng scroll
                 int panelWidth = panelScroll.ClientSize.Width
@@ -735,20 +980,6 @@ namespace SaovietTax
 
                 if (panelWidth < 100)
                     panelWidth = 100;
-
-
-                // Chiều cao theo số warning
-                int panelHeight =
-                    headerHeight +
-                    (monthData.Warnings.Count * warningHeight) +
-                    bottomMargin;
-
-                panelControl2.Size = new Size(
-                    panelWidth,
-                    panelHeight
-                );
-
-                panelControl2.TabIndex = 0;
 
 
                 // ======================================================
@@ -820,17 +1051,6 @@ namespace SaovietTax
                 var labelControl2 =
                     new DevExpress.XtraEditors.LabelControl();
 
-                // 1. Kích hoạt chế độ bọc chữ (Wrap)
-                labelControl2.Appearance.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;
-                // Quan trọng: Phải bật option này để TextOptions có hiệu lực [citation:2][citation:10]
-                labelControl2.Appearance.Options.UseTextOptions = true;
-
-                // 2. Thiết lập chế độ tự động co giãn theo chiều dọc (Vertical)
-                // Điều này đảm bảo label sẽ tăng chiều cao để hiển thị toàn bộ text khi bị bọc [citation:5][citation:7]
-                labelControl2.AutoSizeMode = LabelAutoSizeMode.Vertical;
-
-                // 3. Xác định chiều rộng tối đa cho label 
-
                 labelControl2.Appearance.Font =
                     new System.Drawing.Font(
                         "Tahoma",
@@ -872,78 +1092,63 @@ namespace SaovietTax
 
                 // ======================================================
                 // DANH SÁCH CẢNH BÁO
+                // Tạo + đo chiều cao từng cái trước, rồi mới tính Size panel
                 // ======================================================
 
                 int warningY = headerHeight;
+                int warningWidth = panelWidth - 40;  // 20 trái + 20 phải
 
+                if (warningWidth < 50)
+                    warningWidth = 50;
 
                 foreach (var warning in monthData.Warnings)
                 {
-                    var lblWarning =
-                        new DevExpress.XtraEditors.LabelControl();
+                    var lblWarning = new DevExpress.XtraEditors.LabelControl();
 
                     lblWarning.Text = warning.Text;
+                    lblWarning.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+                    lblWarning.ForeColor = warning.Color;
 
-                    lblWarning.Font =
-                        new Font(
-                            "Segoe UI",
-                            7.5F,
-                            FontStyle.Bold);
+                    lblWarning.Appearance.BackColor = Color.Transparent;
+                    lblWarning.Appearance.Options.UseBackColor = true;
 
-                    lblWarning.ForeColor =
-                        warning.Color;
+                    // === BẮT BUỘC để wrap text ===
+                    lblWarning.AutoSizeMode = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+                    lblWarning.Appearance.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;
+                    lblWarning.Appearance.Options.UseTextOptions = true;   // ⚠️ RẤT QUAN TRỌNG
 
-                    lblWarning.Appearance.BackColor =
-                        Color.Transparent;
+                    lblWarning.Appearance.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Near;
+                    lblWarning.Appearance.TextOptions.VAlignment = DevExpress.Utils.VertAlignment.Top;
 
-                    lblWarning.Appearance.Options.UseBackColor =
-                        true;
+                    // === Tính chiều cao động theo nội dung ===
+                    int actualHeight = GetLabelHeight(lblWarning, warningWidth, warningHeight);
 
-                    lblWarning.AutoSizeMode =
-                        DevExpress.XtraEditors.LabelAutoSizeMode.None;
+                    lblWarning.Size = new Size(warningWidth, actualHeight);
+                    lblWarning.Location = new Point(20, warningY);
 
+                    panelControl2.Controls.Add(lblWarning);
 
-                    // Chừa khoảng cách trái phải
-                    int warningWidth =
-                        panelWidth - 30;
-
-                    if (warningWidth < 50)
-                        warningWidth = 50;
-
-
-                    lblWarning.Size =
-                        new Size(
-                            warningWidth,
-                            warningHeight);
-
-
-                    lblWarning.Location =
-                        new Point(
-                            20,
-                            warningY);
-
-
-                    lblWarning.Appearance.TextOptions.HAlignment =
-                        DevExpress.Utils.HorzAlignment.Near;
-
-                    lblWarning.Appearance.TextOptions.VAlignment =
-                        DevExpress.Utils.VertAlignment.Center;
-
-
-                    panelControl2.Controls.Add(
-                        lblWarning);
-
-
-                    warningY += warningHeight;
+                    warningY += actualHeight + warningSpacing;
                 }
+
+
+                // ======================================================
+                // BÂY GIỜ MỚI SET SIZE CHO PANEL (đủ cao để chứa hết warning)
+                // ======================================================
+
+                int panelHeight = warningY + bottomMargin;
+
+                panelControl2.Size = new Size(
+                    panelWidth,
+                    panelHeight
+                );
 
 
                 // ======================================================
                 // THÊM PANEL THÁNG VÀO PANEL SCROLL
                 // ======================================================
 
-                panelScroll.Controls.Add(
-                    panelControl2);
+                panelScroll.Controls.Add(panelControl2);
 
 
                 // Vị trí tháng tiếp theo
@@ -962,6 +1167,33 @@ namespace SaovietTax
             panelScroll.HorizontalScroll.Enabled = false;
             panelScroll.HorizontalScroll.Visible = false;
         }
+
+
+        // ==========================================================
+        // HÀM ĐO CHIỀU CAO LABEL THEO NỘI DUNG (có word-wrap)
+        // ==========================================================
+        private int GetLabelHeight(
+            DevExpress.XtraEditors.LabelControl lbl,
+            int width,
+            int minHeight)
+        {
+            if (string.IsNullOrEmpty(lbl.Text))
+                return minHeight;
+
+            // Dùng TextRenderer để đo chính xác theo cách WinForms render
+            Size proposed = new Size(width, int.MaxValue);
+
+            Size measured = TextRenderer.MeasureText(
+                lbl.Text,
+                lbl.Font,
+                proposed,
+                TextFormatFlags.WordBreak | TextFormatFlags.NoPadding
+            );
+
+            int h = measured.Height + 6;   // padding trên dưới
+            return Math.Max(h, minHeight);
+        }
+        
         string tokken = "";
         int maxlogin = 1;
         private async void GetToken()

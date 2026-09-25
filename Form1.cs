@@ -167,6 +167,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 using static Tensorflow.CollectionDef.Types;
+using static Tensorflow.RewriterConfig.Types;
 using Color = System.Drawing.Color;
 using DataTable = System.Data.DataTable;
 using Font = System.Drawing.Font;
@@ -18476,15 +18477,22 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         {
 
         }
-        public void TaiBKAV(string mst,string shdon,string KHHDon)
+
+        public void TaiBKAV(bool toggle, string mst,string shdon,string KHHDon,string mabimat)
         {
-            string url = "https://van.ehoadon.vn/Lookup?InvoiceGUID=b8c78b7f-2d3a-47ca-8a02-79dcd88e0edb";
-            string downloadPath = @"D:\HoaDonDownload";
+            string url = $"https://van.ehoadon.vn/Lookup?InvoiceGUID={mabimat}";
+            string downloadPath = "";
+            if(chkDauvao.Checked)
+            downloadPath= savedPath + $"\\HD{dtTungay.DateTime.Year}"+ "\\HDVao\\" + dtTungay.DateTime.Month;
+            if (chkDaura.Checked)
+                downloadPath = savedPath + $"\\HD{dtTungay.DateTime.Year}" + "\\" + "\\HDRa\\" + dtTungay.DateTime.Month;
 
             Directory.CreateDirectory(downloadPath);
 
             ChromeOptions options = new ChromeOptions();
-
+            options.AddArgument("--headless=new");
+            options.AddArgument("--disable-gpu");
+            options.AddArgument("--window-size=1920,1080");
             options.AddUserProfilePreference(
                 "download.default_directory",
                 downloadPath);
@@ -18603,18 +18611,35 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 // ==========================================
 
                 string pdfFile = WaitForPdf(downloadPath, 60);
-
+                Thread.Sleep(500);
                 if (pdfFile != null)
                 {
-                    Console.WriteLine("Đã tải:");
-                    Console.WriteLine(pdfFile);
-                }
-                else
-                {
-                    Console.WriteLine("Không tìm thấy PDF.");
+                    string fileMoi = Path.Combine(
+                        downloadPath,
+                        $"{mst}_{shdon}_{KHHDon}.pdf"
+                    );
+
+                    // Nếu tên mới đã tồn tại thì xóa
+                    if (File.Exists(fileMoi))
+                        File.Delete(fileMoi);
+
+                    // Đổi tên file PDF vừa tải
+                    File.Move(pdfFile, fileMoi);
+                    if (toggle)
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = fileMoi,
+                            UseShellExecute = true
+                        });
+                        Console.WriteLine($"📂 Đã mở file: {fileMoi}");
+                    }
+                    Console.WriteLine($"Đã đổi tên PDF: {fileMoi}");
+                    driver.Quit();
                 }
             }
         }
+       
         private string WaitForPdf(string folder, int timeoutSeconds)
         {
             DateTime start = DateTime.Now;
@@ -18649,7 +18674,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     return newestFile;
                 }
 
-                Thread.Sleep(500);
+                Thread.Sleep(500); 
             }
 
             return null;
@@ -18684,7 +18709,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     }
                     if (NCC == "BKAV")
                     {
-                        TaiBKAV(mstNB,shdon, KHHDon);
+                       TaiBKAV(true,mstNB,shdon, KHHDon,mabimat);
                     }
                 }
 

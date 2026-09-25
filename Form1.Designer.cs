@@ -1039,7 +1039,7 @@
             this.gridControl2.MainView = this.gridView3;
             this.gridControl2.Margin = new System.Windows.Forms.Padding(2);
             this.gridControl2.Name = "gridControl2";
-            this.gridControl2.Size = new System.Drawing.Size(1266, 529);
+            this.gridControl2.Size = new System.Drawing.Size(1270, 534);
             this.gridControl2.TabIndex = 1;
             this.gridControl2.ViewCollection.AddRange(new DevExpress.XtraGrid.Views.Base.BaseView[] {
             this.gridView3,
@@ -1459,7 +1459,7 @@
             this.gridControl1.Name = "gridControl1";
             this.gridControl1.RepositoryItems.AddRange(new DevExpress.XtraEditors.Repository.RepositoryItem[] {
             this.repositoryItemButtonEdit1});
-            this.gridControl1.Size = new System.Drawing.Size(1266, 529);
+            this.gridControl1.Size = new System.Drawing.Size(1270, 534);
             this.gridControl1.TabIndex = 0;
             this.gridControl1.ViewCollection.AddRange(new DevExpress.XtraGrid.Views.Base.BaseView[] {
             this.gridView1,
@@ -1548,8 +1548,6 @@
             this.colNCC.FieldName = "NCC";
             this.colNCC.Name = "colNCC";
             this.colNCC.OptionsColumn.AllowEdit = false;
-            this.colNCC.Visible = true;
-            this.colNCC.VisibleIndex = 16;
             this.colNCC.Width = 82;
             // 
             // colNLap
@@ -1790,7 +1788,7 @@
             this.xtraTabPage1.Controls.Add(this.comboBoxEdit1);
             this.xtraTabPage1.Margin = new System.Windows.Forms.Padding(2);
             this.xtraTabPage1.Name = "xtraTabPage1";
-            this.xtraTabPage1.Size = new System.Drawing.Size(1281, 764);
+            this.xtraTabPage1.Size = new System.Drawing.Size(1285, 769);
             this.xtraTabPage1.Text = "Sao việt tải hóa đơn";
             this.xtraTabPage1.Paint += new System.Windows.Forms.PaintEventHandler(this.xtraTabPage1_Paint);
             // 
@@ -1812,7 +1810,7 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 43.88753F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 308F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 134F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 71F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 72F));
             this.tableLayoutPanel1.Controls.Add(this.panelControl12, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl11, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl10, 0, 0);
@@ -1839,7 +1837,7 @@
             this.panelControl12.Controls.Add(this.radVbDauvao1);
             this.panelControl12.Controls.Add(this.btnClearNganhang);
             this.panelControl12.Controls.Add(this.btnLocdulieuNganhang);
-            this.panelControl12.Location = new System.Drawing.Point(762, 2);
+            this.panelControl12.Location = new System.Drawing.Point(761, 2);
             this.panelControl12.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl12.Name = "panelControl12";
             this.panelControl12.Size = new System.Drawing.Size(304, 138);
@@ -1973,7 +1971,7 @@
             this.panelControl11.Controls.Add(this.btnOpenFolder);
             this.panelControl11.Controls.Add(this.btnRefresh);
             this.panelControl11.Controls.Add(this.btnimport);
-            this.panelControl11.Location = new System.Drawing.Point(429, 2);
+            this.panelControl11.Location = new System.Drawing.Point(428, 2);
             this.panelControl11.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl11.Name = "panelControl11";
             this.panelControl11.Size = new System.Drawing.Size(329, 138);
@@ -2406,7 +2404,7 @@
             // 
             this.pictureEdit2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureEdit2.EditValue = ((object)(resources.GetObject("pictureEdit2.EditValue")));
-            this.pictureEdit2.Location = new System.Drawing.Point(1070, 2);
+            this.pictureEdit2.Location = new System.Drawing.Point(1069, 2);
             this.pictureEdit2.Margin = new System.Windows.Forms.Padding(2);
             this.pictureEdit2.Name = "pictureEdit2";
             this.pictureEdit2.Properties.ShowCameraMenuItem = DevExpress.XtraEditors.Controls.CameraMenuItemVisibility.Auto;
@@ -2444,7 +2442,7 @@
             this.xtraTabPage3.Controls.Add(this.btnReadPDF);
             this.xtraTabPage3.Margin = new System.Windows.Forms.Padding(2);
             this.xtraTabPage3.Name = "xtraTabPage3";
-            this.xtraTabPage3.Size = new System.Drawing.Size(1266, 529);
+            this.xtraTabPage3.Size = new System.Drawing.Size(1270, 534);
             this.xtraTabPage3.Text = "HĐ đầu vào";
             // 
             // progressChitievao
@@ -2535,7 +2533,7 @@
             this.xtraTabPage4.Controls.Add(this.gridControl2);
             this.xtraTabPage4.Margin = new System.Windows.Forms.Padding(2);
             this.xtraTabPage4.Name = "xtraTabPage4";
-            this.xtraTabPage4.Size = new System.Drawing.Size(1266, 529);
+            this.xtraTabPage4.Size = new System.Drawing.Size(1270, 534);
             this.xtraTabPage4.Text = "HĐ Đầu ra";
             // 
             // progressPanel2
@@ -2606,7 +2604,7 @@
             this.xtraTabPage7.Controls.Add(this.gridControl7);
             this.xtraTabPage7.Margin = new System.Windows.Forms.Padding(2);
             this.xtraTabPage7.Name = "xtraTabPage7";
-            this.xtraTabPage7.Size = new System.Drawing.Size(1266, 529);
+            this.xtraTabPage7.Size = new System.Drawing.Size(1270, 534);
             this.xtraTabPage7.Text = "Ngân hàng";
             // 
             // labelControl23
@@ -2902,7 +2900,7 @@
             this.xtraTabPage2.Controls.Add(this.gridControl3);
             this.xtraTabPage2.Margin = new System.Windows.Forms.Padding(2);
             this.xtraTabPage2.Name = "xtraTabPage2";
-            this.xtraTabPage2.Size = new System.Drawing.Size(1266, 529);
+            this.xtraTabPage2.Size = new System.Drawing.Size(1270, 534);
             this.xtraTabPage2.Text = "Ngân hàng";
             // 
             // cbbNganhangOrder
@@ -3021,7 +3019,7 @@
             this.gridControl3.MainView = this.gridView5;
             this.gridControl3.Margin = new System.Windows.Forms.Padding(2);
             this.gridControl3.Name = "gridControl3";
-            this.gridControl3.Size = new System.Drawing.Size(1266, 529);
+            this.gridControl3.Size = new System.Drawing.Size(1270, 534);
             this.gridControl3.TabIndex = 0;
             this.gridControl3.ViewCollection.AddRange(new DevExpress.XtraGrid.Views.Base.BaseView[] {
             this.gridView5});
@@ -3202,7 +3200,7 @@
             this.xtraTabPage5.Controls.Add(this.panelControl1);
             this.xtraTabPage5.Margin = new System.Windows.Forms.Padding(2);
             this.xtraTabPage5.Name = "xtraTabPage5";
-            this.xtraTabPage5.Size = new System.Drawing.Size(1266, 529);
+            this.xtraTabPage5.Size = new System.Drawing.Size(1270, 534);
             this.xtraTabPage5.Text = "Nhập kho thành phẩm";
             // 
             // panelControl2
@@ -4346,7 +4344,7 @@
             this.xtraTabPage6.Controls.Add(this.panelControl3);
             this.xtraTabPage6.Margin = new System.Windows.Forms.Padding(2);
             this.xtraTabPage6.Name = "xtraTabPage6";
-            this.xtraTabPage6.Size = new System.Drawing.Size(1281, 764);
+            this.xtraTabPage6.Size = new System.Drawing.Size(1285, 769);
             this.xtraTabPage6.Text = "Tìm hoá đơn";
             // 
             // gridControl5

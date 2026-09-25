@@ -1918,6 +1918,7 @@ namespace SaovietTax
         int slhangchuanhapma = 0;
         int slhangchuaiport = 0;
         int lshoadonloi = 0;
+        int slhangdaimport = 0;
         private void Dohoadon()
         {
             slcoquanthue = 0;
@@ -1931,7 +1932,7 @@ namespace SaovietTax
             slhangchuanhapma = 0;
             slhangchuaiport = 0;
             lshoadonloi = 0;
-
+            slhangdaimport = 0;
             progressPanel1.Visible = true;
             progressPanel1.Caption = "Đang xử lý dữ liệu";
             Application.DoEvents();
@@ -1965,16 +1966,23 @@ namespace SaovietTax
 
                 foreach (var g in groups)
                 {
+                    //14053
+                    //bool hasEmpty = g.Any(r =>
+                    //    r["MaVattu"].ToString() == "0" &&
+                    //    r["MaTKTCNo"].ToString() != "5108" &&
+                    //    r["MaTKTCCo"].ToString() != "14038" &&
+                    //     r["MaTKTCCo"].ToString() != "14053" &&
+                    //    r["MaTKTCNo"].ToString() != "160" &&
+                    //     r["MaTKTCNo"].ToString() != "82" &&
+                    //      r["MaTKTCCo"].ToString() != "82" &&
+                    //        r["MaTKTCNo"].ToString() != "169" &&
+                    //      r["MaTKTCCo"].ToString() != "169" &&
+                    //      (r["MaTKTCNo"].ToString()!="0" || r["MaTKTCCo"].ToString()!="0") &&
+                    //    r["MaTKTCNo"].ToString() != "161");
+
                     bool hasEmpty = g.Any(r =>
-                        r["MaVattu"].ToString() == "0" &&
-                        r["MaTKTCNo"].ToString() != "5108" &&
-                        r["MaTKTCCo"].ToString() != "14038" &&
-                        r["MaTKTCNo"].ToString() != "160" &&
-                         r["MaTKTCNo"].ToString() != "82" &&
-                          r["MaTKTCCo"].ToString() != "82" &&
-                            r["MaTKTCNo"].ToString() != "169" &&
-                          r["MaTKTCCo"].ToString() != "169" &&
-                        r["MaTKTCNo"].ToString() != "161");
+                       r["MaVattu"].ToString() == "0" &&  
+                       (r["SoPS2No"].ToString() != "0" || r["SoPS2Co"].ToString() != "0") );
 
                     dictMaCT_HasEmpty[g.Key] = hasEmpty;
                 }
@@ -2002,6 +2010,7 @@ namespace SaovietTax
                             try
                             {
                                 slcoquanthue += 1;
+                                clsKTHT.Statustype = 0;
                                 clsKTHT.KHMS = GetCellValue(row.Cell("B"));
                                 clsKTHT.KHHD = GetCellValue(row.Cell("C"));
                                 clsKTHT.SoHD = GetCellValue(row.Cell("D")); 
@@ -2120,7 +2129,8 @@ namespace SaovietTax
                                     slhangchuaiport += 1;
                                     clsKTHT.Statustype = 1;
                                 }
-                               
+                                if (clsKTHT.Statustype == 0)
+                                    slhangdaimport += 1;
                                 clsKTHTs.Add(clsKTHT);
 
                             }
@@ -2150,10 +2160,15 @@ namespace SaovietTax
             lblwarning1.Text = slhangchuaiport.ToString();
             lblwarning2.Text = lshoadonloi.ToString();
             lblwarning3.Text=slhangchuanhapma.ToString();
+            lblwarning0.Text= $"{slhangdaimport.ToString("N0")}";
         }
         private void LoadDatasource()
         {
             var orgiginlist = clsKTHTs;
+            if (checkEdit1.Checked)
+            {
+                orgiginlist = orgiginlist.Where(m => m.Statustype == 0).ToList();
+            }
             if (chkhoadonchuanhap.Checked)
             {
                 orgiginlist = orgiginlist.Where(m => m.Statustype == 1).ToList();
@@ -2415,6 +2430,7 @@ namespace SaovietTax
         {
             if (chkhoadonchuanhap.Checked)
             {
+                checkEdit1.Checked = false;
                 chkhoadonsaitt.Checked = false;
                 chkhoadonthieuhang.Checked = false;
             }
@@ -2426,6 +2442,7 @@ namespace SaovietTax
         {
             if (chkhoadonsaitt.Checked)
             {
+                checkEdit1.Checked = false;
                 chkhoadonchuanhap.Checked = false;
                 chkhoadonthieuhang.Checked = false;
             }
@@ -2436,6 +2453,7 @@ namespace SaovietTax
         {
             if (chkhoadonthieuhang.Checked)
             {
+                checkEdit1.Checked = false;
                 chkhoadonchuanhap.Checked = false;
                 chkhoadonsaitt.Checked = false;
             }
@@ -2446,22 +2464,41 @@ namespace SaovietTax
         {
             string path = savedPath + @"\invoice.txt";
             int index = gridView1.FocusedRowHandle;
-            string sohd = gridView1.GetRowCellValue(index, "SoHD").ToString();
-            string ngaylap = DateTime.Parse(gridView1.GetRowCellValue(index, "NgayLap").ToString()).ToShortDateString();
+
+            // Kiểm tra có dòng nào được chọn không
+            if (index < 0)
+            {
+                MessageBox.Show("Vui lòng chọn một hóa đơn!");
+                return;
+            }
+
+            string sohd = gridView1.GetRowCellValue(index, "SoHD")?.ToString() ?? "";
+            string ngaylap = DateTime.Parse(gridView1.GetRowCellValue(index, "NgayLap").ToString())
+                                     .ToShortDateString();
 
             string content = $"{sohd}_{ngaylap}";
-            // Ghi đè (nếu file đã tồn tại sẽ bị ghi đè)
-            File.WriteAllText(path, content, Encoding.UTF8);
 
-            // Ghi thêm vào cuối file (Append)
-            File.AppendAllText(path, content + Environment.NewLine, Encoding.UTF8);
+            // Chỉ ghi MỘT lần, ghi đè hoàn toàn
+            File.WriteAllText(path, content + Environment.NewLine, new UTF8Encoding(false));
 
-            string qrupdate = $"UPDATE tbResponse SET Status = ?";
+            // Cập nhật trạng thái
+            string qrupdate = "UPDATE tbResponse SET Status = ?";
             var paramss = new OleDbParameter[]
             {
-                    new OleDbParameter("?", "1"), 
+        new OleDbParameter("?", "1"),
             };
             int rrf = ExecuteQueryResult(qrupdate, paramss);
+        }
+
+        private void checkEdit1_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkEdit1.Checked)
+            {
+                chkhoadonchuanhap.Checked = false;
+                chkhoadonsaitt.Checked = false;
+                chkhoadonthieuhang.Checked = false;
+            }
+            LoadDatasource();
         }
 
         DataTable gettbChungtu;
