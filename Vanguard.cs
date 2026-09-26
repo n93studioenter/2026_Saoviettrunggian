@@ -2,6 +2,7 @@
 using DevExpress.CodeParser;
 using DevExpress.Utils;
 using DevExpress.Utils.Extensions;
+using DevExpress.Utils.Svg;
 using DevExpress.XtraEditors;
 using DevExpress.XtraWaitForm;
 using DocumentFormat.OpenXml.Drawing.Charts;
@@ -16,6 +17,7 @@ using System.Data;
 using System.Data.OleDb;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -33,6 +35,7 @@ using static SaovietTax.KTHT;
 using static SaovietTax.Vanguard;
 using DataTable = System.Data.DataTable;
 using Size = System.Drawing.Size;
+using WinLabel = System.Windows.Forms.Label;
 
 namespace SaovietTax
 {
@@ -78,6 +81,11 @@ namespace SaovietTax
         {
             public string SoHD { get; set; }
             public DateTime NLap { get; set; }
+            public string KHHD { get; set; }          // Mã khách hàng / Số hiệu HĐ
+            public string MST { get; set; }           // Mã số thuế
+            public double TienTrcThue { get; set; }   // Tiền trước thuế
+            public double TienThue { get; set; }      // Tiền thuế
+            public double TongTienTT { get; set; }    // Tổng tiền thanh toán
         }
         public DataTable GetHeThongTK(int thang, int nam)
         {
@@ -269,7 +277,7 @@ namespace SaovietTax
             // TaiExcel();
 
             loadCheckdata();
-            LoadMeaasge();
+            LoadMessageOld();
 
 
         }
@@ -329,8 +337,20 @@ namespace SaovietTax
                 ChungTuHD item = new ChungTuHD();
                 item.MaCT = mact;
                 item.SoHieu = row["SoHieu"].ToString();
-                item.NgayImport = DateTime.Parse(row["NgayImport"].ToString());
-                if (item.SoHieu == "1825")
+                if (DateTime.TryParseExact(
+          row["NgayImport"]?.ToString(),
+          "dd/MM/yyyy",
+          CultureInfo.InvariantCulture,
+          DateTimeStyles.None,
+          out DateTime ngayImport))
+                {
+                    item.NgayImport = ngayImport;
+                }
+                else
+                {
+                    item.NgayImport = DateTime.MinValue;
+                }
+                if (item.SoHieu == "6111")
                 {
                     int test = 10;
                 }
@@ -376,8 +396,7 @@ namespace SaovietTax
                                 {
                                     tienTrcThue += soPS;
                                 }
-                            }
-
+                            } 
 
                         }
                     }
@@ -423,6 +442,8 @@ namespace SaovietTax
                             }
 
                         }
+
+
                     }
 
                     item.TienTrcThue = tienTrcThue;
@@ -472,7 +493,686 @@ namespace SaovietTax
             public string MaPL { get; set; }
         }
         List<VattuAm> vattuAms { get; set; }
-        private void LoadMeaasge()
+        private int MeasureRowHeight(string text, int width, int minHeight)
+        {
+            if (string.IsNullOrEmpty(text))
+                return minHeight;
+
+            Size proposed = new Size(width, int.MaxValue);
+
+            // ⭐ Dùng font khớp với font của label warning
+            using (var font = new Font("Segoe UI", 9F))
+            {
+                Size measured = TextRenderer.MeasureText(
+                    text,
+                    font,
+                    proposed,
+                    TextFormatFlags.WordBreak | TextFormatFlags.NoPadding
+                );
+
+                int h = measured.Height + 10;   // padding trên dưới
+                return Math.Max(h, minHeight);
+            }
+        }
+        private void LoadMessageOld()
+        {
+            // ============================================================
+            // 1. LOAD CHỨNG TỪ + BUILD LOOKUP
+            // ============================================================
+            string queryct = @"
+                SELECT 
+                    hd.SoHD, hd.KyHieu, hd.NgayPH, hd.MaKhachHang,
+                    kh.MST, ct.NgayCT, ct.MaLoai
+                FROM 
+                    ((Hoadon hd 
+                    INNER JOIN Chungtu ct ON hd.MaSo = ct.MaSo)
+                    INNER JOIN KhachHang kh ON hd.MaKhachHang = kh.MaSo)
+                WHERE hd.KyHieu <> '...'";
+
+            dtChungtu = ExecuteQuery(queryct);
+
+            lookupHoaDonCT.Clear();
+
+            foreach (DataRow item in dtChungtu.Rows)
+            {
+                string soHD = Helpers.RemoveLeadingZeros(item["SoHD"]?.ToString() ?? "")
+                                      .Replace(".", "").Trim();
+                string kyHieu = item["KyHieu"]?.ToString() ?? "";
+                DateTime ngayPH = ((DateTime)item["NgayCT"]).Date;
+                string mst = item["MST"]?.ToString() ?? "";
+                int maLoai = int.Parse(item["MaLoai"]?.ToString() ?? "0");
+                int type = (maLoai == 8) ? 2 : 1;
+
+                lookupHoaDonCT.Add((mst, soHD, kyHieu, ngayPH, type));
+            }
+
+            // Dictionary tra cứu nhanh chứng từ
+            var chungTuDict = lstChungTuHD
+                .GroupBy(m => $"{Helpers.RemoveLeadingZeros(m.SoHieu).TrimEnd('.')}|{m.KHHD}")
+                .ToDictionary(g => g.Key, g => g.First());
+
+            // ============================================================
+            // 2. LOAD DATA TĨNH
+            // ============================================================
+            var tbImport = ExecuteQuery("SELECT * FROM tbImport");
+            var dtTonKho = ExecuteQuery("SELECT * FROM TonKho");
+            var dtVattu = ExecuteQuery("SELECT * FROM Vattu");
+            var phanloaivt = ExecuteQuery("SELECT * FROM PhanLoaiVattu");
+
+            var vattuDict = dtVattu.AsEnumerable()
+                .GroupBy(r => r["MaSo"].ToString())
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var phanLoaiDict = phanloaivt.AsEnumerable()
+                .GroupBy(r => r["MaSo"].ToString())
+                .ToDictionary(g => g.Key, g => g.First()["SoHieu"].ToString());
+
+            // ============================================================
+            // 3. XỬ LÝ TỪNG THÁNG (mới nhất → cũ nhất)
+            // ============================================================
+            var months = new List<MonthWarning>();
+            int currentMonth = DateTime.Now.Month;
+            int currentYear = DateTime.Now.Year;
+            string pathYear = $"HD{currentYear}";
+
+            for (int i = currentMonth; i >= 1; i--)
+            {
+                
+                //Kiểm tra xem có file excel vào ra ko
+                string dirVaos = Path.Combine(savedPath, pathYear, "HDVao", i.ToString());
+                if (Directory.Exists(dirVaos))
+                {
+                    var filesVao = Directory.EnumerateFiles(dirVaos, "*.xlsx", SearchOption.AllDirectories);
+                    int count = filesVao.Count();
+                    if (count == 0)
+                        continue;
+                }
+
+
+                vattuAms = new List<VattuAm>(); // reset mỗi tháng
+
+                var monthData = new MonthWarning
+                {
+                    Month = $"{i:00}/{currentYear}",
+                    Warnings = new List<Warning>()
+                };
+
+                // ---------- 3.1 TỒN KHO ÂM ----------
+                string hangam = "";
+                string columnName = $"Luong_{i}";
+
+                foreach (DataRow row in dtTonKho.Rows)
+                {
+                    object value = row[columnName];
+                    if (value == null || value == DBNull.Value) continue;
+
+                    double soLuong = Convert.ToDouble(value);
+                    if (soLuong >= 0) continue;
+
+                    string maVT = row["MaVatTu"].ToString();
+                    if (!vattuDict.TryGetValue(maVT, out var getvattu)) continue;
+
+                    hangam += getvattu["SoHieu"] + ",";
+
+                    vattuAms.Add(new VattuAm
+                    {
+                        MaVT = getvattu["SoHieu"].ToString(),
+                        TenVT = getvattu["TenVattu"].ToString(),
+                        MaPL = phanLoaiDict.TryGetValue(getvattu["MaPhanLoai"].ToString(), out var pl)
+                                ? pl : ""
+                    });
+                }
+
+                // ---------- 3.2 TÀI KHOẢN ----------
+                var result = GetHeThongTK(i, currentYear);
+
+                decimal sumDkNo = 0, sumDkCo = 0, sumPsNo = 0,
+                        sumPsCo = 0, sumCkNo = 0, sumCkCo = 0;
+
+                foreach (DataRow m in result.Rows)
+                {
+                    if (m["Cap"].ToString() != "0") continue;
+
+                    if (m["DkNo"] != DBNull.Value && m["DkNo"] != null) sumDkNo += Convert.ToDecimal(m["DkNo"]);
+                    if (m["DkCo"] != DBNull.Value && m["DkCo"] != null) sumDkCo += Convert.ToDecimal(m["DkCo"]);
+                    if (m["PsNo"] != DBNull.Value && m["PsNo"] != null) sumPsNo += Convert.ToDecimal(m["PsNo"]);
+                    if (m["PsCo"] != DBNull.Value && m["PsCo"] != null) sumPsCo += Convert.ToDecimal(m["PsCo"]);
+                    if (m["CkNo"] != DBNull.Value && m["CkNo"] != null) sumCkNo += Convert.ToDecimal(m["CkNo"]);
+                    if (m["CkCo"] != DBNull.Value && m["CkCo"] != null) sumCkCo += Convert.ToDecimal(m["CkCo"]);
+                }
+
+                // ---------- 3.3 ĐỌC EXCEL ----------
+                var lstVao = new List<HoaDonNhap>();
+                var lstRa = new List<HoaDonNhap>();
+
+                // --- HĐ vào ---
+                string dirVao = Path.Combine(savedPath, pathYear, "HDVao", i.ToString());
+                if (Directory.Exists(dirVao))
+                {
+                    var filesVao = Directory.EnumerateFiles(dirVao, "*.xlsx", SearchOption.AllDirectories);
+                    foreach (var excelFile in filesVao)
+                    {
+                        try
+                        {
+                            using (var workbook = new XLWorkbook(excelFile))
+                            {
+                                var ws = workbook.Worksheet(1);
+                                foreach (var row in ws.RowsUsed().Skip(3))
+                                {
+                                    try
+                                    {
+                                        string khhd = row.Cell("B").Value.ToString();
+                                        string shhd = row.Cell("C").Value.ToString();
+                                        string sohd = Helpers.RemoveLeadingZeros(row.Cell("D").Value.ToString());
+                                        string nLapStr = row.Cell("E").Value.ToString();
+                                        string mstnb = row.Cell("F").Value.ToString();
+
+                                        if (!DateTime.TryParse(nLapStr, out DateTime nLap)) continue;
+
+                                        double tienTrcThue = 0, tienThue = 0, tongTienTT = 0;
+
+                                        if (excelFile.Contains("MayTinhTien"))
+                                        {
+                                            tienTrcThue = ParseMoney(row.Cell("L").Value.ToString());
+                                            tienThue = ParseMoney(row.Cell("M").Value.ToString());
+                                            tongTienTT = ParseMoney(row.Cell("O").Value.ToString());
+                                        }
+                                        else
+                                        {
+                                            tienTrcThue = ParseMoney(row.Cell("K").Value.ToString());
+                                            tienThue = ParseMoney(row.Cell("L").Value.ToString());
+                                            tongTienTT = ParseMoney(row.Cell("O").Value.ToString());
+                                        }
+
+                                        lstVao.Add(new HoaDonNhap
+                                        {
+                                            SoHD = sohd,
+                                            NLap = nLap,
+                                            KHHD = shhd,
+                                            MST = mstnb,
+                                            TienTrcThue = tienTrcThue,
+                                            TienThue = tienThue,
+                                            TongTienTT = tongTienTT
+                                        });
+                                    }
+                                    catch { }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                // --- HĐ ra ---
+                string dirRa = Path.Combine(savedPath, pathYear, "HDRa", i.ToString());
+                if (Directory.Exists(dirRa))
+                {
+                    var filesRa = Directory.EnumerateFiles(dirRa, "*.xlsx", SearchOption.AllDirectories);
+                    foreach (var excelFile in filesRa)
+                    {
+                        try
+                        {
+                            using (var workbook = new XLWorkbook(excelFile))
+                            {
+                                var ws = workbook.Worksheet(1);
+                                foreach (var row in ws.RowsUsed().Skip(3))
+                                {
+                                    try
+                                    {
+                                        string getkhhd = row.Cell("C").Value.ToString();
+                                        string sohd = Helpers.RemoveLeadingZeros(row.Cell("D").Value.ToString());
+                                        string nLapStr = row.Cell("E").Value.ToString();
+                                        string mstnm = row.Cell("H").Value.ToString();
+
+                                        if (!DateTime.TryParse(nLapStr, out DateTime nLap)) continue;
+
+                                        double tienTrcThue = ParseMoney(row.Cell("L").Value.ToString());
+                                        double tienThue = ParseMoney(row.Cell("M").Value.ToString());
+                                        double tongTienTT = ParseMoney(row.Cell("O").Value.ToString());
+
+                                        lstRa.Add(new HoaDonNhap
+                                        {
+                                            SoHD = sohd,
+                                            NLap = nLap,
+                                            KHHD = getkhhd,
+                                            MST = mstnm,
+                                            TienTrcThue = tienTrcThue,
+                                            TienThue = tienThue,
+                                            TongTienTT = tongTienTT
+                                        });
+                                    }
+                                    catch { }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                // ---------- 3.4 ĐỐI CHIẾU ----------
+
+
+                //Mã hàng bị mất
+                foreach (var hd in lstVao)
+                {
+
+                }
+
+                    int hdChuaNhapVao = 0, hdChuaNhapRa = 0, hdSaiThongTin = 0,hdNullhang=0;
+                string dsHdVao = "", dsHdRa = "", dsSai = "",dsNullhang="";
+
+                foreach (var hd in lstVao)
+                { 
+                    if (hd.SoHD == "12856")
+                    {
+                        int yest = 10;
+                    }
+                    if (!KiemtrahoadonCT(hd.SoHD, hd.KHHD, hd.NLap, hd.MST, 1))
+                    {
+                        hdChuaNhapVao++;
+                        dsHdVao += hd.SoHD + ",";
+                    }
+
+                    string key = $"{Helpers.RemoveLeadingZeros(hd.SoHD).TrimEnd('.')}|{hd.KHHD}";
+                    if (chungTuDict.TryGetValue(key, out var ct))
+                    {
+                        //Kiểm tra hàng ko ma
+                        var getlist = gettbChungtu.AsEnumerable().Where(m => m["MaCT"].ToString() == ct.MaCT.ToString());
+                        var checknullhang = getlist.AsEnumerable().Any(m => (m["SoPS2No"].ToString() != "0" || m["SoPS2Co"].ToString() != "0") && m["SoPS"].ToString() != "0" && m["MaVattu"].ToString()=="0");
+                        if (checknullhang)
+                        {
+                            hdNullhang ++;
+                            dsNullhang += $"[{hd.SoHD}](v) , "; 
+                        }
+                        string lyDo = CompareHoaDon(hd, ct);
+                        if (lyDo != null)
+                        {
+                            hdSaiThongTin++;
+                            dsSai += $"[{hd.SoHD}](v)({lyDo}), ";
+                        }
+                    }
+                }
+
+                foreach (var hd in lstRa)
+                {
+                    if (!KiemtrahoadonCT(hd.SoHD, hd.KHHD, hd.NLap, hd.MST, 2))
+                    {
+                        hdChuaNhapRa++;
+                        dsHdRa += hd.SoHD + ",";
+                    }
+
+                    string key = $"{Helpers.RemoveLeadingZeros(hd.SoHD).TrimEnd('.')}|{hd.KHHD}";
+                    if (chungTuDict.TryGetValue(key, out var ct))
+                    {
+                        //Kiểm tra hàng ko ma
+                        var getlist = gettbChungtu.AsEnumerable().Where(m => m["MaCT"].ToString() == ct.MaCT.ToString());
+                        var checknullhang = getlist.AsEnumerable().Any(m => (m["SoPS2No"].ToString() != "0" || m["SoPS2Co"].ToString() != "0") && m["SoPS"].ToString() != "0" && m["MaVattu"].ToString() == "0");
+                        if (checknullhang)
+                        {
+                            hdNullhang++;
+                            dsNullhang += $"{hd.SoHD}(r), ";
+                        }
+                        string lyDo = CompareHoaDon(hd, ct);
+                        if (lyDo != null)
+                        {
+                            hdSaiThongTin++;
+                            dsSai += $"{hd.SoHD}(r)({lyDo}), ";
+                        }
+                    }
+                }
+
+                var dsNhapDuVao = lookupHoaDonCT
+                    .Where(m => m.NLap.Month == i && m.Type == 1)
+                    .Where(m => !lstVao.Any(x => x.SoHD == m.SoHD))
+                    .Select(m => m.SoHD)
+                    .ToList();
+
+                var dsNhapDuRa = lookupHoaDonCT
+                    .Where(m => m.NLap.Month == i && m.Type == 2)
+                    .Where(m => !lstRa.Any(x => x.SoHD == m.SoHD))
+                    .Select(m => m.SoHD)
+                    .ToList();
+
+                // ---------- 3.5 IMPORT LỖI ----------
+                var getimportloi = tbImport.AsEnumerable()
+                    .Where(m => m.Field<DateTime>("NLap").Date.Month == i)
+                    .Where(m => m["Status"].ToString() == "2")
+                    .ToList();
+
+                // ---------- 3.6 WARNING ----------
+                if (hdChuaNhapVao > 0 || hdChuaNhapRa > 0)
+                {
+                    var parts = new List<string>();
+                    if (hdChuaNhapVao > 0) parts.Add($"{hdChuaNhapVao} HĐ đầu vào");
+                    if (hdChuaNhapRa > 0) parts.Add($"{hdChuaNhapRa} HĐ đầu ra");
+
+                    monthData.Warnings.Add(new Warning
+                    {
+                        Text = $"🔴 {string.Join(" , ", parts)} chưa nhập",
+                        Color = Color.FromArgb(220, 53, 69)
+                    });
+                }
+
+                if (hdSaiThongTin > 0)
+                {
+                    monthData.Warnings.Add(new Warning
+                    {
+                        Text = $"🟠 {hdSaiThongTin} hóa đơn sai thông tin: {dsSai.TrimEnd(',')}",
+                        Color = Color.DarkBlue
+                    });
+                }
+                if (hdNullhang > 0)
+                {
+                    monthData.Warnings.Add(new Warning
+                    {
+                        Text = $"🟠 {hdNullhang} hoá đơn bị thiếu mã hàng : {dsNullhang.TrimEnd(',')}",
+                        Color = Color.DarkMagenta
+                    });
+                }
+                if (getimportloi.Count > 0)
+                {
+                    var listimportloi = string.Join(",", getimportloi.Select(r => r["SHDon"].ToString()));
+                    monthData.Warnings.Add(new Warning
+                    {
+                        Text = $"🔵 {getimportloi.Count} import lỗi: {listimportloi}",
+                        Color = Color.FromArgb(13, 110, 253)
+                    });
+                }
+
+                
+
+                if (sumDkNo != sumDkCo)
+                {
+                    monthData.Warnings.Add(new Warning
+                    {
+                        Text = $"🔵 Số dư đầu kỳ chưa cân: {sumDkNo} - {sumDkCo}",
+                        Color = Color.FromArgb(23, 162, 184)
+                    });
+                }
+
+                if (sumPsNo != sumPsCo)
+                {
+                    monthData.Warnings.Add(new Warning
+                    {
+                        Text = $"🔵 Số dư trong kỳ chưa cân: {sumPsNo} - {sumPsCo}",
+                        Color = Color.FromArgb(40, 167, 69)
+                    });
+                }
+
+                if (dsNhapDuVao.Count > 0)
+                {
+                    monthData.Warnings.Add(new Warning
+                    {
+                        Text = $"🟣 HĐ đầu vào nhập dư: {string.Join("  ", dsNhapDuVao.Select(x => $"[{x}]"))}",
+                        Color = Color.DarkOrange
+                    });
+                }
+
+                if (dsNhapDuRa.Count > 0)
+                {
+                    monthData.Warnings.Add(new Warning
+                    {
+                        Text = $"🟣 HĐ đầu ra nhập dư: {string.Join(",", dsNhapDuRa.Select(x => $"[{x}]"))}",
+                        Color = Color.FromArgb(111, 66, 193)
+                    });
+                }
+                //if (!string.IsNullOrEmpty(hangam))
+                //{
+                //    var group = vattuAms.GroupBy(m => m.MaPL);
+                //    foreach (var g in group)
+                //    {
+                //        monthData.Warnings.Add(new Warning
+                //        {
+                //            Text = $"🟡 Nhóm {g.Key} có {g.Count()} ⚠️ hàng đang âm",
+                //            Color = Color.DarkGreen
+                //        });
+                //    }
+                //}
+                if (!string.IsNullOrEmpty(hangam))
+                {
+                    // Bỏ dấu phẩy cuối
+                    var dsMaHang = hangam.TrimEnd(',');
+
+                    monthData.Warnings.Add(new Warning
+                    {
+                        Text = $"🟡 Có {vattuAms.Count} ⚠️ mặt hàng đang âm: {dsMaHang}",
+                        Color = Color.Green
+                    });
+                }
+                months.Add(monthData);
+            }
+
+            // ============================================================
+            // 4. RENDER GIAO DIỆN
+            // ============================================================
+            panelControl1.Controls.Clear();
+            panelControl1.BackColor = Color.FromArgb(245, 247, 250);
+
+            var panelScroll = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = Color.FromArgb(245, 247, 250)
+            };
+            panelControl1.Controls.Add(panelScroll);
+
+            int yPos = 10;
+            const int leftMargin = 10;
+            const int rightMargin = 26;
+
+            panelScroll.CreateControl();
+
+            int panelWidth = panelScroll.ClientSize.Width - leftMargin - rightMargin;
+            if (panelWidth < 200) panelWidth = 200;
+
+            // months[0] = tháng hiện tại → hiển thị trên cùng
+            foreach (var monthData in months)
+            {
+                // ====================================================
+                // CARD
+                // ====================================================
+                var card = new Panel
+                {
+                    Width = panelWidth,
+                    BackColor = Color.White,
+                    Location = new Point(leftMargin, yPos)
+                };
+
+                card.Paint += (s, e) =>
+                {
+                    var g = e.Graphics;
+                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                    using (var shadow = new SolidBrush(Color.FromArgb(18, 0, 0, 0)))
+                        g.FillRectangle(shadow, new Rectangle(2, 2, card.Width - 4, card.Height - 4));
+
+                    using (var pen = new Pen(Color.FromArgb(225, 228, 232), 1))
+                        g.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                };
+
+                bool hasWarning = monthData.Warnings.Count > 0;
+
+                // ====================================================
+                // HEADER
+                // ====================================================
+                int headerHeight = 52;
+
+                var header = new Panel
+                {
+                    Location = new Point(0, 0),
+                    Width = panelWidth,
+                    Height = headerHeight,
+                    BackColor = hasWarning
+                        ? Color.FromArgb(255, 250, 250)
+                        : Color.FromArgb(248, 255, 248)
+                };
+
+                // Icon lịch
+                var icon = new DevExpress.XtraEditors.SvgImageBox
+                {
+                    Location = new Point(14, 12),
+                    Size = new Size(28, 28),
+                    SvgImage = GetCalendarSvg(hasWarning)
+                };
+                header.Controls.Add(icon);
+
+                // Label tháng
+                var lblMonth = new WinLabel
+                {
+                    Text = monthData.Month,
+                    Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(33, 37, 41),
+                    Location = new Point(52, 14),
+                    AutoSize = true,
+                    BackColor = Color.Transparent
+                };
+                header.Controls.Add(lblMonth);
+
+                // Badge
+                if (hasWarning)
+                {
+                    var badge = new WinLabel
+                    {
+                        Text = $"  {monthData.Warnings.Count} cảnh báo  ",
+                        Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                        ForeColor = Color.White,
+                        BackColor = Color.FromArgb(220, 53, 69),
+                        Location = new Point(52 + lblMonth.PreferredWidth + 14, 17),
+                        AutoSize = true,
+                        Padding = new Padding(4, 2, 4, 2)
+                    };
+                    header.Controls.Add(badge);
+                }
+                else
+                {
+                    var ok = new WinLabel
+                    {
+                        Text = "✓ Không có cảnh báo",
+                        Font = new Font("Segoe UI", 8.5F, FontStyle.Italic),
+                        ForeColor = Color.FromArgb(40, 167, 69),
+                        Location = new Point(52 + lblMonth.PreferredWidth + 14, 18),
+                        AutoSize = true,
+                        BackColor = Color.Transparent
+                    };
+                    header.Controls.Add(ok);
+                }
+
+                // ====================================================
+                // BODY — đo chiều cao từng row thủ công
+                // ====================================================
+                var body = new FlowLayoutPanel
+                {
+                    Location = new Point(0, headerHeight),
+                    Width = panelWidth,
+                    AutoSize = false,                    // ⭐ tắt AutoSize
+                    FlowDirection = FlowDirection.TopDown,
+                    WrapContents = false,
+                    Padding = new Padding(14, 8, 14, 12),
+                    BackColor = Color.White
+                };
+
+                int warningWidth = panelWidth - 28 - 12;      // trừ padding + thanh màu
+                int bodyY = 0;
+
+                foreach (var w in monthData.Warnings)
+                {
+                    int rowHeight = MeasureRowHeight(w.Text, warningWidth, minHeight: 26);
+
+                    var row = new Panel
+                    {
+                        Location = new Point(0, bodyY),
+                        Width = panelWidth - 28,
+                        Height = rowHeight,
+                        BackColor = Color.Transparent
+                    };
+
+                    var bar = new Panel
+                    {
+                        Location = new Point(0, 0),
+                        Size = new Size(4, rowHeight),
+                        BackColor = w.Color
+                    };
+                    row.Controls.Add(bar);
+
+                    var lbl = new WinLabel
+                    {
+                        Text = w.Text,
+                        Font = new Font("Segoe UI", 9F),
+                        ForeColor = w.Color,
+                        Location = new Point(8, 4),
+                        Size = new Size(warningWidth, rowHeight - 8),
+                        AutoSize = false,                    // ⭐ tắt AutoSize
+                        BackColor = Color.Transparent
+                    };
+                    row.Controls.Add(lbl);
+
+                    body.Controls.Add(row);
+                    bodyY += rowHeight + 4;
+                }
+
+                body.Height = bodyY + body.Padding.Top + body.Padding.Bottom;
+
+                // ====================================================
+                // ADD VÀO CARD
+                // ====================================================
+                card.Controls.Add(header);
+                card.Controls.Add(body);
+
+                card.Height = headerHeight + body.Height;
+                card.Width = panelWidth;
+
+                panelScroll.Controls.Add(card);
+
+                yPos += card.Height + 12;
+            }
+
+            panelScroll.AutoScrollMinSize = new Size(0, yPos + 10);
+            panelScroll.HorizontalScroll.Enabled = false;
+            panelScroll.HorizontalScroll.Visible = false;
+        }
+
+        // ============================================================
+        // HELPER METHODS
+        // ============================================================
+
+        private static double ParseMoney(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return 0;
+            return double.TryParse(s, out double v) ? Math.Round(v) : 0;
+        }
+
+        private static string CompareHoaDon(HoaDonNhap hd, ChungTuHD ct)
+        {
+            var loi = new List<string>();
+
+            if (hd.TienTrcThue != 0 && hd.TienTrcThue != ct.TienTrcThue)
+                loi.Add("Tiền trước thuế bị lệch");
+
+            if (hd.TienThue != 0 && hd.TienThue != ct.TienThue)
+                loi.Add("Tiền thuế bị lệch");
+
+            if (ct.NgayCT.Date != hd.NLap.Date && loi.Count == 0)
+                loi.Add("Ngày chứng từ bị sai");
+
+            return loi.Count > 0 ? string.Join("; ", loi) : null;
+        }
+
+        private static SvgImage GetCalendarSvg(bool hasWarning)
+        {
+            string color = hasWarning ? "#DC3545" : "#28A745";
+            string svg = $@"
+<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'>
+  <rect x='3' y='4' width='18' height='18' rx='3' fill='none' stroke='{color}' stroke-width='2'/>
+  <line x1='3' y1='10' x2='21' y2='10' stroke='{color}' stroke-width='2'/>
+  <line x1='8' y1='2' x2='8' y2='6' stroke='{color}' stroke-width='2'/>
+  <line x1='16' y1='2' x2='16' y2='6' stroke='{color}' stroke-width='2'/>
+</svg>";
+
+            using (var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(svg)))
+                return DevExpress.Utils.Svg.SvgImage.FromStream(ms);
+        }
+
+        private void LoadMeaasgeold2()
         {
             vattuAms = new List<VattuAm>();
             string queryct = @"
@@ -716,7 +1416,7 @@ namespace SaovietTax
 
                                     if (saithongtin)
                                     {
-                                        dshdsaithongtin += $"{getSohd}({lydosai}) ,";
+                                        dshdsaithongtin += $"{getSohd}(v)({lydosai}) ,";
                                         hdsaithongtin += 1;
                                     }
                                 }
@@ -735,7 +1435,7 @@ namespace SaovietTax
                                         }
                                         if (saithongtin)
                                         {
-                                            dshdsaithongtin += $"{getSohd}({lydosai}) ,";
+                                            dshdsaithongtin += $"{getSohd}(v)({lydosai}) ,";
                                             hdsaithongtin += 1;
                                         }
                                     }
@@ -775,6 +1475,15 @@ namespace SaovietTax
                             string GetNLap = row.Cell("E").Value.ToString();
                             string getSohd = Helpers.RemoveLeadingZeros(row.Cell("D").Value.ToString()); // Lấy giá trị của cột C trong hàng hiện tại 
                             string getkhhd = row.Cell("C").Value.ToString();
+                            double TienTrcThue = 0;
+                            double TienThue = 0;
+                            double TongTienTT = 0;
+                            if (!string.IsNullOrEmpty(row.Cell("L").Value.ToString()))
+                                TienTrcThue = Math.Round(double.Parse(row.Cell("L").Value.ToString()));
+                            if (!string.IsNullOrEmpty(row.Cell("M").Value.ToString()))
+                                TienThue = Math.Round(double.Parse(row.Cell("M").Value.ToString()));
+                            if (!string.IsNullOrEmpty(row.Cell("O").Value.ToString()))
+                                TongTienTT = Math.Round(double.Parse(row.Cell("O").Value.ToString()));
                             if (getSohd == "104")
                             {
                                 int dngg = 10;
@@ -792,6 +1501,50 @@ namespace SaovietTax
                                 {
                                     hdchuanhapra += 1;
                                     dshdrachunhap += getSohd + ",";
+                                }
+                                ChungTuHD findhoadon = new ChungTuHD();
+                                findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == getdate.Date && Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(getSohd).TrimEnd('.') && m.KHHD == getkhhd);
+                                if (findhoadon != null)
+                                {
+                                    bool saithongtin = false;
+                                    string lydosai = "";
+                                    if (TienTrcThue != findhoadon.TienTrcThue && TienTrcThue != 0)
+                                    {
+                                        lydosai += "Tiền trước thuế bị lệch";
+                                        saithongtin = true;
+                                    }
+                                    if (TienThue != findhoadon.TienThue && TienThue != 0)
+                                    {
+                                        if (lydosai == "")
+                                            lydosai += "Tiền thuế bị lệch";
+                                        saithongtin = true;
+                                    }
+
+                                    if (saithongtin)
+                                    {
+                                        dshdsaithongtin += $"{getSohd}(r)({lydosai}) ,";
+                                        hdsaithongtin += 1;
+                                    }
+                                }
+                                else
+                                {
+                                    //Trường hợp null có thể do ngày sai, bỏ điều kiện ngày
+                                    findhoadon = lstChungTuHD.FirstOrDefault(m => Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(getSohd).TrimEnd('.') && m.KHHD == getkhhd);
+                                    if (findhoadon != null)
+                                    {
+                                        bool saithongtin = false;
+                                        string lydosai = "";
+                                        if (findhoadon.NgayCT.Date != getdate.Date)
+                                        {
+                                            lydosai += "Ngày chứng từ bị sai";
+                                            saithongtin = true;
+                                        }
+                                        if (saithongtin)
+                                        {
+                                            dshdsaithongtin += $"{getSohd}(r)({lydosai}) ,";
+                                            hdsaithongtin += 1;
+                                        }
+                                    }
                                 }
                             }
                             tongra += 1;
@@ -842,7 +1595,7 @@ namespace SaovietTax
                 {
                     var warning3 = new Warning();
                     warning3.Text = $"🔵 {hdsaithongtin} hoá đơn sai thông tin  : {dshdsaithongtin}";
-                    warning3.Color = Color.IndianRed;
+                    warning3.Color = Color.DarkMagenta;
                     month1.Warnings.Add(warning3);
 
                 }
@@ -1167,8 +1920,544 @@ namespace SaovietTax
             panelScroll.HorizontalScroll.Enabled = false;
             panelScroll.HorizontalScroll.Visible = false;
         }
+        private void LoadMessage()
+        {
+            try
+            {
+                vattuAms = new List<VattuAm>();
+                lookupHoaDonCT.Clear();
 
+                // ===================== LOAD DỮ LIỆU GỐC =====================
+                LoadChungTuLookup();
+                tbImport = ExecuteQuery("SELECT * FROM tbImport");
+                var dtTonKho = ExecuteQuery("SELECT * FROM TonKho");
+                var dtVattu = ExecuteQuery("SELECT * FROM Vattu");
+                var phanloaivt = ExecuteQuery("SELECT * FROM PhanLoaiVattu");
 
+                var months = new List<MonthWarning>();
+                int currentYear = DateTime.Now.Year;
+                int currentMonth = DateTime.Now.Month;
+
+                for (int month = currentMonth; month >= 1; month--)
+                {
+                    var monthWarning = ProcessMonth(month, currentYear, dtTonKho, dtVattu, phanloaivt);
+                    months.Add(monthWarning);
+                }
+
+                // ===================== BUILD UI =====================
+                BuildWarningUI(months);
+            }
+            catch (Exception ex)
+            {
+                // Log hoặc hiển thị lỗi
+                XtraMessageBox.Show($"Lỗi khi load cảnh báo: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        #region ===================== LOAD DỮ LIỆU =====================
+
+        private void LoadChungTuLookup()
+        {
+            string query = @"
+        SELECT hd.SoHD, hd.KyHieu, hd.NgayPH, hd.MaKhachHang, kh.MST, ct.NgayCT, ct.MaLoai
+        FROM ((Hoadon hd 
+            INNER JOIN Chungtu ct ON hd.MaSo = ct.MaSo)
+            INNER JOIN KhachHang kh ON hd.MaKhachHang = kh.MaSo)
+        WHERE hd.KyHieu <> '...'";
+
+            var dt = ExecuteQuery(query);
+
+            foreach (DataRow row in dt.Rows)
+            {
+                string soHD = Helpers.RemoveLeadingZeros(row["SoHD"]?.ToString() ?? "")
+                                    .Replace(".", "")
+                                    .Trim();
+                soHD = RemoveLeadingZeros(soHD);
+
+                string kyHieu = row["KyHieu"]?.ToString() ?? "";
+                DateTime ngayPH = ((DateTime)row["NgayCT"]).Date;
+                string mst = row["MST"]?.ToString() ?? "";
+                int maLoai = int.Parse(row["MaLoai"]?.ToString() ?? "1");
+                maLoai = (maLoai == 8) ? 2 : 1;
+
+                lookupHoaDonCT.Add((mst, soHD, kyHieu, ngayPH, maLoai));
+            }
+        }
+
+        #endregion
+
+        #region ===================== XỬ LÝ TỪNG THÁNG =====================
+
+        private MonthWarning ProcessMonth(int month, int year, DataTable dtTonKho, DataTable dtVattu, DataTable phanloaivt)
+        {
+            var monthWarning = new MonthWarning
+            {
+                Month = $"{month:00}/{year}",
+                Warnings = new List<Warning>()
+            };
+
+            // 1. Kiểm tra tồn kho âm
+            CheckNegativeInventory(month, dtTonKho, dtVattu, phanloaivt, monthWarning);
+
+            // 2. Kiểm tra cân đối tài khoản
+            CheckAccountBalance(month, year, monthWarning);
+
+            // 3. Xử lý hóa đơn đầu vào + đầu ra
+            ProcessInvoices(month, year, monthWarning);
+
+            // 4. Import lỗi
+            CheckImportErrors(month, monthWarning);
+
+            monthWarning.Total = monthWarning.Warnings.Count;
+            return monthWarning;
+        }
+
+        private void CheckNegativeInventory(int month, DataTable dtTonKho, DataTable dtVattu, DataTable phanloaivt, MonthWarning monthWarning)
+        {
+            string columnName = $"Luong_{month}";
+            var negativeItems = new List<VattuAm>();
+
+            foreach (DataRow row in dtTonKho.Rows)
+            {
+                if (row[columnName] == DBNull.Value || row[columnName] == null) continue;
+
+                double soLuong = Convert.ToDouble(row[columnName]);
+                if (soLuong >= 0) continue;
+
+                var vt = dtVattu.AsEnumerable()
+                    .FirstOrDefault(m => m["MaSo"].ToString() == row["MaVatTu"].ToString());
+
+                if (vt == null) continue;
+
+                string maPL = phanloaivt.AsEnumerable()
+                    .FirstOrDefault(m => m["MaSo"].ToString() == vt["MaPhanLoai"].ToString())?["SoHieu"]?.ToString() ?? "";
+
+                negativeItems.Add(new VattuAm
+                {
+                    MaVT = vt["SoHieu"].ToString(),
+                    TenVT = vt["TenVattu"].ToString(),
+                    MaPL = maPL
+                });
+            }
+
+            if (negativeItems.Count == 0) return;
+
+            vattuAms.AddRange(negativeItems);
+
+            var groups = negativeItems.GroupBy(x => x.MaPL);
+            foreach (var g in groups)
+            {
+                monthWarning.Warnings.Add(new Warning
+                {
+                    Text = $"⚠️ Nhóm {g.Key}: {g.Count()} mặt hàng đang âm",
+                    Color = Color.FromArgb(0, 150, 136) // Teal
+                });
+            }
+        }
+
+        private void CheckAccountBalance(int month, int year, MonthWarning monthWarning)
+        {
+            var result = GetHeThongTK(month, year);
+            if (result == null || result.Rows.Count == 0) return;
+
+            decimal Sum(string col) => result.AsEnumerable()
+                .Where(r => r["Cap"]?.ToString() == "0" && r[col] != DBNull.Value)
+                .Sum(r => Convert.ToDecimal(r[col]));
+
+            decimal sumDkNo = Sum("DkNo");
+            decimal sumDkCo = Sum("DkCo");
+            decimal sumPsNo = Sum("PsNo");
+            decimal sumPsCo = Sum("PsCo");
+
+            if (sumDkNo != sumDkCo)
+            {
+                monthWarning.Warnings.Add(new Warning
+                {
+                    Text = $"⚖️ Số dư đầu kỳ chưa cân: {sumDkNo:N0} - {sumDkCo:N0}",
+                    Color = Color.FromArgb(76, 175, 80)
+                });
+            }
+
+            if (sumPsNo != sumPsCo)
+            {
+                monthWarning.Warnings.Add(new Warning
+                {
+                    Text = $"⚖️ Phát sinh trong kỳ chưa cân: {sumPsNo:N0} - {sumPsCo:N0}",
+                    Color = Color.FromArgb(139, 195, 74)
+                });
+            }
+        }
+
+        private void ProcessInvoices(int month, int year, MonthWarning monthWarning)
+        {
+            if (month == 7)
+            {
+                int test = 10;
+            }
+            var lstVao = new List<HoaDonNhap>();
+            var lstRa = new List<HoaDonNhap>();
+            var sbSaiThongTin = new StringBuilder();
+            var sbVaoChuaNhap = new StringBuilder();
+            var sbRaChuaNhap = new StringBuilder();
+            var sbVaoNhapDu = new StringBuilder();
+            var sbRaNhapDu = new StringBuilder();
+
+            int hdChuaNhapVao = 0, hdChuaNhapRa = 0, hdSaiThongTin = 0;
+
+            string pathYear = $"HD{year}";
+            string pathVao = Path.Combine(savedPath, pathYear, "HDVao", month.ToString());
+            string pathRa = Path.Combine(savedPath, pathYear, "HDRa", month.ToString());
+
+            // ---- Đầu vào ----
+            if (Directory.Exists(pathVao))
+            {
+                foreach (var file in Directory.EnumerateFiles(pathVao, "*.xlsx", SearchOption.AllDirectories))
+                {
+                    ProcessExcelFile(file, isVao: true, lstVao, ref hdChuaNhapVao, sbVaoChuaNhap,
+                                     ref hdSaiThongTin, sbSaiThongTin);
+                }
+            }
+
+            // ---- Đầu ra ----
+            if (Directory.Exists(pathRa))
+            {
+                foreach (var file in Directory.EnumerateFiles(pathRa, "*.xlsx", SearchOption.AllDirectories))
+                {
+                    ProcessExcelFile(file, isVao: false, lstRa, ref hdChuaNhapRa, sbRaChuaNhap,
+                                     ref hdSaiThongTin, sbSaiThongTin);
+                }
+            }
+
+            // Hóa đơn nhập dư
+            var ctVao = lookupHoaDonCT.Where(m => m.NLap.Month == month && m.Type == 1).ToList();
+            foreach (var it in ctVao)
+                if (!lstVao.Any(m => m.SoHD == it.SoHD))
+                    sbVaoNhapDu.Append(it.SoHD).Append(",");
+
+            var ctRa = lookupHoaDonCT.Where(m => m.NLap.Month == month && m.Type == 2).ToList();
+            foreach (var it in ctRa)
+                if (!lstRa.Any(m => m.SoHD == it.SoHD))
+                    sbRaNhapDu.Append(it.SoHD).Append(",");
+
+            // Thêm warning
+            if (hdChuaNhapVao > 0 || hdChuaNhapRa > 0)
+            {
+                string text = "🔴 ";
+                if (hdChuaNhapVao > 0) text += $"{hdChuaNhapVao} HĐ đầu vào chưa nhập";
+                if (hdChuaNhapRa > 0) text += (hdChuaNhapVao > 0 ? "  •  " : "") + $"{hdChuaNhapRa} HĐ đầu ra chưa nhập";
+
+                monthWarning.Warnings.Add(new Warning { Text = text, Color = Color.FromArgb(244, 67, 54) });
+            }
+
+            if (hdSaiThongTin > 0)
+            {
+                monthWarning.Warnings.Add(new Warning
+                {
+                    Text = $"🔵 {hdSaiThongTin} hóa đơn sai thông tin: {sbSaiThongTin}",
+                    Color = Color.FromArgb(156, 39, 176)
+                });
+            }
+
+            if (sbVaoNhapDu.Length > 0)
+            {
+                monthWarning.Warnings.Add(new Warning
+                {
+                    Text = $"🟣 HĐ đầu vào nhập dư: {sbVaoNhapDu}",
+                    Color = Color.FromArgb(103, 58, 183)
+                });
+            }
+
+            if (sbRaNhapDu.Length > 0)
+            {
+                monthWarning.Warnings.Add(new Warning
+                {
+                    Text = $"🟣 HĐ đầu ra nhập dư: {sbRaNhapDu}",
+                    Color = Color.FromArgb(103, 58, 183)
+                });
+            }
+        }
+
+        private void ProcessExcelFile(string filePath, bool isVao,
+            List<HoaDonNhap> list, ref int countChuaNhap, StringBuilder sbChuaNhap,
+            ref int countSai, StringBuilder sbSai)
+        {
+            try
+            {
+                 var workbook = new XLWorkbook(filePath);
+                var worksheet = workbook.Worksheet(1);
+
+                foreach (var row in worksheet.RowsUsed().Skip(3))
+                {
+                    try
+                    {
+                        string soHD = Helpers.RemoveLeadingZeros(row.Cell("D").Value.ToString()).Trim();
+                        string kyHieu = row.Cell(isVao ? "C" : "C").Value.ToString();
+                        string ngayStr = row.Cell("E").Value.ToString();
+                        string mst = isVao ? row.Cell("F").Value.ToString() : row.Cell("H").Value.ToString();
+
+                        if (!DateTime.TryParse(ngayStr, out DateTime ngayLap)) continue;
+
+                        list.Add(new HoaDonNhap { SoHD = soHD, NLap = ngayLap });
+
+                        int type = isVao ? 1 : 2;
+                        if (!KiemtrahoadonCT(soHD, kyHieu, ngayLap, mst, type))
+                        {
+                            countChuaNhap++;
+                            sbChuaNhap.Append(soHD).Append(",");
+                        }
+
+                        // Kiểm tra sai thông tin tiền / ngày
+                        CheckInvoiceInfo(row, filePath, soHD, kyHieu, ngayLap, isVao, ref countSai, sbSai);
+                    }
+                    catch { /* bỏ qua dòng lỗi */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log file lỗi nếu cần
+                System.Diagnostics.Debug.WriteLine($"Lỗi đọc file {filePath}: {ex.Message}");
+            }
+        }
+
+        private void CheckInvoiceInfo(IXLRow row, string filePath, string soHD, string kyHieu, DateTime ngayLap,
+            bool isVao, ref int countSai, StringBuilder sbSai)
+        {
+            double tienTrcThue = 0, tienThue = 0;
+
+            if (filePath.Contains("MayTinhTien"))
+            {
+                double.TryParse(row.Cell("L").Value.ToString(), out tienTrcThue);
+                double.TryParse(row.Cell("M").Value.ToString(), out tienThue);
+            }
+            else
+            {
+                double.TryParse(row.Cell(isVao ? "K" : "L").Value.ToString(), out tienTrcThue);
+                double.TryParse(row.Cell(isVao ? "L" : "M").Value.ToString(), out tienThue);
+            }
+
+            tienTrcThue = Math.Round(tienTrcThue);
+            tienThue = Math.Round(tienThue);
+
+            var find = lstChungTuHD.FirstOrDefault(m =>
+                m.NgayCT.Date == ngayLap.Date &&
+                Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(soHD).TrimEnd('.') &&
+                m.KHHD == kyHieu);
+
+            if (find == null)
+            {
+                // Thử bỏ điều kiện ngày
+                find = lstChungTuHD.FirstOrDefault(m =>
+                    Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(soHD).TrimEnd('.') &&
+                    m.KHHD == kyHieu);
+
+                if (find != null && find.NgayCT.Date != ngayLap.Date)
+                {
+                    countSai++;
+                    sbSai.Append($"{soHD}({(isVao ? "v" : "r")})(Ngày CT sai), ");
+                }
+                return;
+            }
+
+            bool sai = false;
+            var lyDo = new List<string>();
+
+            if (tienTrcThue != 0 && tienTrcThue != find.TienTrcThue)
+            {
+                lyDo.Add("Tiền trước thuế lệch");
+                sai = true;
+            }
+            if (tienThue != 0 && tienThue != find.TienThue)
+            {
+                lyDo.Add("Tiền thuế lệch");
+                sai = true;
+            }
+
+            if (sai)
+            {
+                countSai++;
+                sbSai.Append($"{soHD}({(isVao ? "v" : "r")})({string.Join(" + ", lyDo)}), ");
+            }
+        }
+
+        private void CheckImportErrors(int month, MonthWarning monthWarning)
+        {
+            var errors = tbImport.AsEnumerable()
+                .Where(m => m.Field<DateTime>("NLap").Month == month && m["Status"]?.ToString() == "2")
+                .ToList();
+
+            if (errors.Count == 0) return;
+
+            var sb = new StringBuilder();
+            foreach (var row in errors)
+                sb.Append(row["SHDon"]).Append(",");
+
+            monthWarning.Warnings.Add(new Warning
+            {
+                Text = $"🔵 {errors.Count} import lỗi: {sb}",
+                Color = Color.FromArgb(33, 150, 243)
+            });
+        }
+
+        #endregion
+
+        #region ===================== BUILD GIAO DIỆN ĐẸP =====================
+
+        private void BuildWarningUI(List<MonthWarning> months)
+        {
+            panelControl1.Controls.Clear();
+            panelControl1.SuspendLayout();
+
+            var panelScroll = new Panel
+            {
+                Name = "panelScrollMonth",
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = Color.FromArgb(245, 247, 250),
+                Padding = new Padding(12)
+            };
+            panelControl1.Controls.Add(panelScroll);
+
+            int yPos = 12;
+            int leftMargin = 12;
+            int rightMargin = 20;
+
+            foreach (var monthData in months)
+            {
+                int panelWidth = Math.Max(panelScroll.ClientSize.Width - leftMargin - rightMargin, 320);
+
+                // ===== Card tháng =====
+                var card = new DevExpress.XtraEditors.PanelControl
+                {
+                    Appearance = { BackColor = Color.White },
+                    BorderStyle = DevExpress.XtraEditors.Controls.BorderStyles.Simple,
+                    Location = new Point(leftMargin, yPos),
+                    Padding = new Padding(0),
+                    LookAndFeel = { UseDefaultLookAndFeel = false, Style = DevExpress.LookAndFeel.LookAndFeelStyle.Flat }
+                };
+                card.Appearance.BorderColor = Color.FromArgb(220, 225, 230);
+
+                // Header nền nhẹ
+                var headerPanel = new Panel
+                {
+                    BackColor = Color.FromArgb(248, 250, 252),
+                    Dock = DockStyle.Top,
+                    Height = 48
+                };
+                card.Controls.Add(headerPanel);
+
+                // Icon lịch
+                var svgCalendar = CreateCalendarSvg();
+                svgCalendar.Location = new Point(14, 8);
+                headerPanel.Controls.Add(svgCalendar);
+
+                // Label tháng
+                var lblMonth = new DevExpress.XtraEditors.LabelControl
+                {
+                    Text = monthData.Month,
+                    Location = new Point(70, 14),
+                    Appearance = {
+                Font = new Font("Segoe UI Semibold", 11F),
+                ForeColor = Color.FromArgb(33, 37, 41)
+            }
+                };
+                headerPanel.Controls.Add(lblMonth);
+
+                // Tổng cảnh báo
+                var lblTotal = new DevExpress.XtraEditors.LabelControl
+                {
+                    Text = monthData.Total == 0 ? "Không có cảnh báo" : $"{monthData.Total} cảnh báo",
+                    Location = new Point(170, 16),
+                    Appearance = {
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = monthData.Total == 0 ? Color.FromArgb(76, 175, 80) : Color.FromArgb(220, 53, 69)
+            }
+                };
+                headerPanel.Controls.Add(lblTotal);
+
+                // ===== Danh sách warning =====
+                int warningY = 56;
+                int warningWidth = panelWidth - 36;
+
+                if (monthData.Warnings.Count == 0)
+                {
+                    var lblEmpty = new DevExpress.XtraEditors.LabelControl
+                    {
+                        Text = "✓ Tháng này ổn định",
+                        Location = new Point(18, warningY),
+                        Appearance = {
+                    Font = new Font("Segoe UI", 9F),
+                    ForeColor = Color.FromArgb(108, 117, 125)
+                }
+                    };
+                    card.Controls.Add(lblEmpty);
+                    warningY += 28;
+                }
+                else
+                {
+                    foreach (var w in monthData.Warnings)
+                    {
+                        var lbl = new DevExpress.XtraEditors.LabelControl
+                        {
+                            Text = w.Text,
+                            Location = new Point(18, warningY),
+                            AutoSizeMode = DevExpress.XtraEditors.LabelAutoSizeMode.None,
+                            Appearance = {
+                        Font = new Font("Segoe UI", 8.5F),
+                        ForeColor = w.Color,
+                        TextOptions = {
+                            WordWrap = DevExpress.Utils.WordWrap.Wrap,
+                            HAlignment = DevExpress.Utils.HorzAlignment.Near,
+                            VAlignment = DevExpress.Utils.VertAlignment.Top
+                        }
+                    }
+                        };
+                        lbl.Appearance.Options.UseTextOptions = true;
+                        lbl.Appearance.Options.UseFont = true;
+                        lbl.Appearance.Options.UseForeColor = true;
+
+                        int h = GetLabelHeight(lbl, warningWidth, 22);
+                        lbl.Size = new Size(warningWidth, h);
+                        card.Controls.Add(lbl);
+
+                        warningY += h + 8;
+                    }
+                }
+
+                card.Size = new Size(panelWidth, warningY + 12);
+                panelScroll.Controls.Add(card);
+
+                yPos += card.Height + 12;
+            }
+
+            panelScroll.AutoScrollMinSize = new Size(0, yPos + 20);
+            panelScroll.HorizontalScroll.Enabled = false;
+            panelScroll.HorizontalScroll.Visible = false;
+
+            panelControl1.ResumeLayout();
+        }
+
+        private DevExpress.XtraEditors.SvgImageBox CreateCalendarSvg()
+        {
+            string svg = @"
+<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24'>
+  <rect x='3' y='4' width='18' height='18' rx='2' fill='none' stroke='#4CAF50' stroke-width='1.8'/>
+  <line x1='3' y1='10' x2='21' y2='10' stroke='#4CAF50' stroke-width='1.8'/>
+  <line x1='8' y1='2' x2='8' y2='6' stroke='#4CAF50' stroke-width='1.8'/>
+  <line x1='16' y1='2' x2='16' y2='6' stroke='#4CAF50' stroke-width='1.8'/>
+</svg>";
+
+            var box = new DevExpress.XtraEditors.SvgImageBox
+            {
+                Size = new Size(32, 32),
+                BackColor = Color.Transparent
+            };
+
+             var stream = new MemoryStream(Encoding.UTF8.GetBytes(svg));
+            box.SvgImage = DevExpress.Utils.Svg.SvgImage.FromStream(stream);
+            return box;
+        }
+
+        #endregion
         // ==========================================================
         // HÀM ĐO CHIỀU CAO LABEL THEO NỘI DUNG (có word-wrap)
         // ==========================================================

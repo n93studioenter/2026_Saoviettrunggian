@@ -2575,122 +2575,142 @@ namespace SaovietTax
             // 5. Xử lý
        
             HashSet<int> processed = new HashSet<int>();
-
             foreach (DataRow row in tonghop.Rows)
             {
-                int mact = Convert.ToInt32(row["MaCT"]);
-                if (processed.Contains(mact))
-                    continue;
-
-                processed.Add(mact);
-
-                string maLoai = row["MaLoai"].ToString();
-
-                ChungTuHD item = new ChungTuHD();
-                item.MaCT = mact;
-                item.SoHieu = row["SoHieu"].ToString();
-                item.NgayImport= DateTime.Parse(row["NgayImport"].ToString());
-                if (item.SoHieu == "79831")
+                try
                 {
-                    int test = 10;
-                }
-                item.KHHD= row["KyHieu"].ToString();
-                item.NgayCT = DateTime.Parse(row["NgayCT"].ToString());
-                // Type
-                if (maLoai == "0" || maLoai == "1")
-                    item.Type = 1;
-                else if (maLoai == "8")
-                    item.Type = 2;
-                else
-                    item.Type = 0;
+                    int mact = Convert.ToInt32(row["MaCT"]);
+                    if (processed.Contains(mact))
+                        continue;
 
-                // Khách hàng
-                string maKH = row["MaKhachHang"].ToString();
-                if (dictKhachHang.ContainsKey(maKH))
-                {
-                    item.MST = dictKhachHang[maKH].MST;
-                    item.TenKH = dictKhachHang[maKH].Ten;
-                }
+                    processed.Add(mact);
 
-                // Tính tiền chỉ khi MaLoai = 8
-                if (maLoai == "8" && chungTuGroups.ContainsKey(mact))
-                {
-                    double tienTrcThue = 0;
-                    double tienThue = 0;
+                    string maLoai = row["MaLoai"].ToString();
 
-                    List<DataRow> rows = chungTuGroups[mact];
-                    for (int i = 0; i < rows.Count; i++)
+                    ChungTuHD item = new ChungTuHD();
+                    item.MaCT = mact;
+                    item.SoHieu = row["SoHieu"].ToString();
+                    if (item.MaCT == 5723)
                     {
-                        DataRow r = rows[i];
-                        double soPS = Convert.ToDouble(r["SoPS"]);
-                        string maTK = r["MaTKTCCo"].ToString();
-                        string matkno = r["MaTKTCNo"].ToString();
-                        double SoPS2Co = Convert.ToDouble(r["SoPS2Co"]);
-                        if (maTK == "14038")
-                            tienThue += soPS;
-                        else
-                        {
-                            if (soPS > 0)
-                            {
-                                if (matkno != "169" && SoPS2Co>0)
-                                {
-                                    tienTrcThue += soPS;
-                                }
-                            }
-                               
-                           
-                        }
+                        int aaa = 10;
+                    }
+                    if (DateTime.TryParse(row["NgayImport"]?.ToString(), out DateTime ngayImport))
+                    {
+                        item.NgayImport = ngayImport;
+                    }
+                    else
+                    {
+                        item.NgayImport = DateTime.MinValue; // hoặc giá trị mặc định khác
+                    }
+                    if (item.SoHieu == "79831")
+                    {
+                        int test = 10;
+                    }
+                    item.KHHD = row["KyHieu"].ToString();
+                    item.NgayCT = DateTime.Parse(row["NgayCT"].ToString());
+                    // Type
+                    if (maLoai == "0" || maLoai == "1")
+                        item.Type = 1;
+                    else if (maLoai == "8")
+                        item.Type = 2;
+                    else
+                        item.Type = 0;
+
+                    // Khách hàng
+                    string maKH = row["MaKhachHang"].ToString();
+                    if (dictKhachHang.ContainsKey(maKH))
+                    {
+                        item.MST = dictKhachHang[maKH].MST;
+                        item.TenKH = dictKhachHang[maKH].Ten;
                     }
 
-                    item.TienTrcThue = tienTrcThue;
-                    item.TienThue = tienThue;
-                    item.TongTien = tienTrcThue + tienThue;
-                }
-                if ((maLoai == "0" || maLoai == "1") && chungTuGroups.ContainsKey(mact))
-                {
-                    double tienTrcThue = 0;
-                    double tienThue = 0;
-
-                    List<DataRow> rows = chungTuGroups[mact];
-                    for (int i = 0; i < rows.Count; i++)
+                    // Tính tiền chỉ khi MaLoai = 8
+                    if (maLoai == "8" && chungTuGroups.ContainsKey(mact))
                     {
-                        DataRow r = rows[i];
-                        double soPS = Convert.ToDouble(r["SoPS"]);
-                        string maTK = r["MaTKTCNo"].ToString();
-                        string matkco= r["MaTKTCCo"].ToString();
-                        double SoPS2No = Convert.ToDouble(r["SoPS2No"]);
-                        if (maTK == "5108")
-                            tienThue += soPS;
-                        else
+                        double tienTrcThue = 0;
+                        double tienThue = 0;
+
+                        List<DataRow> rows = chungTuGroups[mact];
+                        for (int i = 0; i < rows.Count; i++)
                         {
-                            if(soPS > 0)
+                            DataRow r = rows[i];
+                            double soPS = Convert.ToDouble(r["SoPS"]);
+                            string maTK = r["MaTKTCCo"].ToString();
+                            string matkno = r["MaTKTCNo"].ToString();
+                            double SoPS2Co = Convert.ToDouble(r["SoPS2Co"]);
+                            if (maTK == "14038")
+                                tienThue += soPS;
+                            else
                             {
-                                if (matkco != "169" && (SoPS2No > 0))
+                                if (soPS > 0)
                                 {
-                                    tienTrcThue += soPS;
-                                }
-                                else
-                                {
-                                    if (maTK == "161" || maTK == "160")
+                                    if (matkno != "169" && SoPS2Co > 0)
                                     {
                                         tienTrcThue += soPS;
                                     }
                                 }
-                                if (matkco == "169")
-                                {
-                                    tienTrcThue -= soPS;
-                                }
-                            }
-                           
-                        }
-                    }
 
-                    item.TienTrcThue = tienTrcThue;
-                    item.TienThue = tienThue;
-                    item.TongTien = tienTrcThue + tienThue;
+
+                            }
+                        }
+
+                        item.TienTrcThue = tienTrcThue;
+                        item.TienThue = tienThue;
+                        item.TongTien = tienTrcThue + tienThue;
+                    }
+                    if ((maLoai == "0" || maLoai == "1") && chungTuGroups.ContainsKey(mact))
+                    {
+                        double tienTrcThue = 0;
+                        double tienThue = 0;
+
+                        List<DataRow> rows = chungTuGroups[mact];
+                        for (int i = 0; i < rows.Count; i++)
+                        {
+                            DataRow r = rows[i];
+                            double soPS = Convert.ToDouble(r["SoPS"]);
+                            string maTK = r["MaTKTCNo"].ToString();
+                            string matkco = r["MaTKTCCo"].ToString();
+                            double SoPS2No = Convert.ToDouble(r["SoPS2No"]);
+                            if (maTK == "5108")
+                                tienThue += soPS;
+                            else
+                            {
+                                if (soPS > 0)
+                                {
+                                    if (matkco != "169" && (SoPS2No > 0))
+                                    {
+                                        tienTrcThue += soPS;
+                                    }
+                                    else
+                                    {
+                                        if (maTK == "161" || maTK == "160")
+                                        {
+                                            tienTrcThue += soPS;
+                                        }
+                                    }
+                                    if (matkco == "169")
+                                    {
+                                        tienTrcThue -= soPS;
+                                    }
+                                }
+
+                            }
+                        }
+
+                        item.TienTrcThue = tienTrcThue;
+                        item.TienThue = tienThue;
+                        item.TongTien = tienTrcThue + tienThue;
+                    }
+                    lstChungTuHD.Add(item);
                 }
-                lstChungTuHD.Add(item);
+                catch (Exception ex)
+                {
+                    XtraMessageBox.Show(ex.Message + Convert.ToInt32(row["MaCT"].ToString()));
+                }
+               
             }
+          
+           
         }
 
         public class KhachHangInfo
@@ -2712,6 +2732,7 @@ namespace SaovietTax
             public double TienTrcThue { get; set; }
             public double TienThue { get; set; }    
             public DateTime NgayImport { get; set; }
+            public int Hangnull { get; set; }
         } 
         DataTable tonghop { get; set; }
         private void radDauvao_CheckedChanged(object sender, EventArgs e)

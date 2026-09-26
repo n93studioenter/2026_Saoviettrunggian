@@ -6021,7 +6021,7 @@ new OleDbParameter("?", dtDenngay.DateTime.Date) // End date
                     conn.Close();
             }
         }
-        private void InitDatanew()
+        private async Task InitDatanew()
         {
             string query = "SELECT * FROM tbRegister";
 
@@ -6058,37 +6058,106 @@ new OleDbParameter("?", dtDenngay.DateTime.Date) // End date
                     txtpass.Text = row["Password"] == DBNull.Value
                         ? ""
                         : row["Password"].ToString();
+                    //                    try
+                    //                    {
+                    //                        string dbPath = Path.Combine(
+                    //                            @"\\192.168.1.90\Ke toan 2025 New\1 Copi vao dung 1\Hoadon",
+                    //                            "VietstarAccount.mdb");
+
+                    //                        connectionString3 = $@"Provider=Microsoft.ACE.OLEDB.12.0;
+                    //Data Source={dbPath};
+                    //Connect Timeout=3;";
+
+                    //                        string queryGetdetail = @"SELECT * FROM tbcompany WHERE Username = ?";
+
+                    //                        var parameters2 = new OleDbParameter[]
+                    //                        {
+                    //        new OleDbParameter("?", row["Username"].ToString())
+                    //                        };
+
+                    //                        DataTable tbImportdetails = ExecuteQuery3(
+                    //                            queryGetdetail,
+                    //                            parameters2);
+
+                    //                        if (tbImportdetails.Rows.Count > 0)
+                    //                        {
+                    //                            string passwordMoi =
+                    //                                tbImportdetails.Rows[0]["Password"].ToString();
+
+                    //                            if (row["Password"].ToString() != passwordMoi)
+                    //                            {
+                    //                                XtraMessageBox.Show(
+                    //                                    $"Hệ thống phát hiện password đã được thay đổi, mật khẩu mới: {passwordMoi}");
+
+                    //                                txtpass.Text = passwordMoi;
+                    //                            }
+                    //                            else
+                    //                            {
+                    //                                txtpass.Text = row["Password"].ToString();
+                    //                            }
+                    //                        }
+                    //                        else
+                    //                        {
+                    //                            txtpass.Text = row["Password"].ToString();
+                    //                        }
+                    //                    }
+                    //                    catch (Exception ex)
+                    //                    {
+                    //                        // Không kết nối được IP hoặc có lỗi truy vấn
+                    //                        txtpass.Text = row["Password"].ToString();
+                    //                    }
+                    //txtpass.Text = row["Password"].ToString();
+
                     try
                     {
                         string dbPath = Path.Combine(
                             @"\\192.168.1.90\Ke toan 2025 New\1 Copi vao dung 1\Hoadon",
                             "VietstarAccount.mdb");
 
+                        // Kiểm tra nhanh xem share có tồn tại không (timeout 2 giây)
+                        bool canAccess = false;
+                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
+                        {
+                            try
+                            {
+                                canAccess = await Task.Run(() =>
+                                {
+                                    return Directory.Exists(Path.GetDirectoryName(dbPath));
+                                }, cts.Token);
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                // Timeout → coi như không truy cập được
+                                canAccess = false;
+                            }
+                        }
+
+                        if (!canAccess)
+                        {
+                            txtpass.Text = row["Password"].ToString();
+                            return; // hoặc continue nếu đang trong vòng lặp
+                        }
+
+                        // Chỉ kết nối khi chắc chắn share tồn tại
                         connectionString3 = $@"Provider=Microsoft.ACE.OLEDB.12.0;
 Data Source={dbPath};
 Connect Timeout=3;";
 
                         string queryGetdetail = @"SELECT * FROM tbcompany WHERE Username = ?";
-
                         var parameters2 = new OleDbParameter[]
                         {
         new OleDbParameter("?", row["Username"].ToString())
                         };
 
-                        DataTable tbImportdetails = ExecuteQuery3(
-                            queryGetdetail,
-                            parameters2);
+                        DataTable tbImportdetails = ExecuteQuery3(queryGetdetail, parameters2);
 
                         if (tbImportdetails.Rows.Count > 0)
                         {
-                            string passwordMoi =
-                                tbImportdetails.Rows[0]["Password"].ToString();
-
+                            string passwordMoi = tbImportdetails.Rows[0]["Password"].ToString();
                             if (row["Password"].ToString() != passwordMoi)
                             {
                                 XtraMessageBox.Show(
                                     $"Hệ thống phát hiện password đã được thay đổi, mật khẩu mới: {passwordMoi}");
-
                                 txtpass.Text = passwordMoi;
                             }
                             else
@@ -6101,12 +6170,12 @@ Connect Timeout=3;";
                             txtpass.Text = row["Password"].ToString();
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        // Không kết nối được IP hoặc có lỗi truy vấn
+                        // Không kết nối được hoặc lỗi khác
                         txtpass.Text = row["Password"].ToString();
                     }
-                    //txtpass.Text = row["Password"].ToString();
+
                     if (row["IsNCC"].ToString() == "1")
                     {
                         chkInvoice.Checked = true;

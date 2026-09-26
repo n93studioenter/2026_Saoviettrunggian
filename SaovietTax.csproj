@@ -1000,6 +1000,7 @@
     <None Include="Resources\del.svg" />
     <None Include="Resources\bkavicon.png" />
     <None Include="Resources\fasticon.png" />
+    <None Include="Resources\close_32x32.png" />
     <Content Include="Resources\favicon.ico" />
     <None Include="Resources\next.svg" />
     <None Include="Resources\next_16x16.png" />
