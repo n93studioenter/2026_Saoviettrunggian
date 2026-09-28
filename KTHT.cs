@@ -52,7 +52,8 @@ namespace SaovietTax
         public class clsKTHT
         {
             public int STT { get; set; }
-            public int Type { get; set; } //1 ,2 ,3, 4, 5
+            public int Type { get; set; } 
+            public int QueryType { get; set; } //1 ,2 ,3, 4, 5
             public string STTType { get; set; }
             public string KHMS { get; set; }
             public string SoHD { get; set; }
@@ -1367,7 +1368,7 @@ namespace SaovietTax
         bool needLogin = true;
         public string tokken { get; set; } = "";
         public int trylogin = 3;
-        private async void Getttoken()
+        private async Task Getttoken()
         {
             progressPanel1.Visible = true;
             progressPanel1.Caption = "Đang lấy thông tin token";
@@ -1389,7 +1390,7 @@ namespace SaovietTax
             //     }
             // }
 
-            if (needLogin)
+            if (needLogin || 1<2)
             {
                 try
                 {
@@ -1741,14 +1742,19 @@ namespace SaovietTax
             }
 
             // Chưa có file → tải mới
-            Getttoken(); // đảm bảo có token
+           await  Getttoken(); // đảm bảo có token
 
             int type = 0;
-            if (selectedRow.Type == 1) type = 4;
-            else if (selectedRow.Type == 2) type = 6;
-            else if (selectedRow.Type == 3) type = 5;
-            else if (selectedRow.Type == 4) type = 4;
-            else if (selectedRow.Type == 5) type = 5;
+            if (radDauvao.Checked)
+            {
+                if(selectedRow.QueryType==1 || selectedRow.QueryType==2)
+                type = 4;
+                else
+                    if(selectedRow.QueryType == 3)
+                    type = 5;
+            }  
+            else
+                type = 5;
 
             string url = GetInvoiceUrl(type, mst, selectedRow.KHHD, selectedRow.SoHD, selectedRow.KHMS);
             string filename = $"{selectedRow.NgayLap:yyyyMMdd}_{mst}_{selectedRow.SoHD}_{selectedRow.KHHD}.zip";
@@ -1761,7 +1767,7 @@ namespace SaovietTax
                 client.Timeout = TimeSpan.FromSeconds(60);
 
                 client.DefaultRequestHeaders.Clear();
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", this.myTokken);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", myTokken);
                 client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
@@ -1981,9 +1987,12 @@ namespace SaovietTax
                     //    r["MaTKTCNo"].ToString() != "161");
 
                     bool hasEmpty = g.Any(r =>
-                       r["MaVattu"].ToString() == "0" &&  
-                       (r["SoPS2No"].ToString() != "0" || r["SoPS2Co"].ToString() != "0") );
-
+                     r["MaVattu"].ToString() == "0"
+                     && r["SoPS"].ToString() != "0"
+                     && r["SoPS"].ToString() != "0"
+                     && r["MaTKTCNo"].ToString() != "5108"
+                     && r["MaTKTCCo"].ToString() != "14038"
+                     && (r["SoPS2No"].ToString() != "0" || r["SoPS2Co"].ToString() != "0"));
                     dictMaCT_HasEmpty[g.Key] = hasEmpty;
                 }
             }
@@ -2010,7 +2019,26 @@ namespace SaovietTax
                             try
                             {
                                 slcoquanthue += 1;
-                                clsKTHT.Statustype = 0;
+                                if (radDauvao.Checked)
+                                {
+                                    if (excelFile.Contains("DaCapMa"))
+                                    {
+                                        clsKTHT.QueryType = 1;
+                                    }
+                                    if (excelFile.Contains("KhongMa"))
+                                    {
+                                        clsKTHT.QueryType = 2;
+                                    }
+                                    if (excelFile.Contains("MayTinhTien"))
+                                    {
+                                        clsKTHT.QueryType = 3;
+                                    }
+                                }
+                                else
+                                {
+                                    clsKTHT.QueryType = 4;
+                                }
+                                    clsKTHT.Statustype = 0;
                                 clsKTHT.KHMS = GetCellValue(row.Cell("B"));
                                 clsKTHT.KHHD = GetCellValue(row.Cell("C"));
                                 clsKTHT.SoHD = GetCellValue(row.Cell("D")); 
@@ -2027,6 +2055,10 @@ namespace SaovietTax
                                 clsKTHT.TenKH = GetCellValue(row.Cell("G"));
                                 clsKTHT.NgayLap = DateTime.Parse(GetCellValue(row.Cell("E")));
 
+                                if (clsKTHT.SoHD == "133")
+                                {
+                                    int ssdf = 10;
+                                }
                                 clsKTHT.MST = radDauvao.Checked
                                     ? GetCellValue(row.Cell("F"))
                                     : GetCellValue(row.Cell("H"));
@@ -2084,11 +2116,11 @@ namespace SaovietTax
                                 ChungTuHD findhoadon = new ChungTuHD();
                                 if (radDauvao.Checked)
                                 {
-                                    findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == clsKTHT.NgayLap && Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(clsKTHT.SoHD).TrimEnd('.') && m.KHHD == clsKTHT.KHHD);
+                                    findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == clsKTHT.NgayLap && Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(clsKTHT.SoHD).TrimEnd('.') && m.KHHD == clsKTHT.KHHD && m.Type==1);
                                     //Kiểm tra cho trường hợp sai ngày, đúng mst
                                     if(findhoadon == null)
                                     {
-                                        findhoadon= lstChungTuHD.FirstOrDefault(m => Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(clsKTHT.SoHD).TrimEnd('.') && m.KHHD == clsKTHT.KHHD && m.MST== clsKTHT.MST);
+                                        findhoadon= lstChungTuHD.FirstOrDefault(m => Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(clsKTHT.SoHD).TrimEnd('.') && m.KHHD == clsKTHT.KHHD && m.MST== clsKTHT.MST && m.Type == 1);
                                         if(findhoadon != null)
                                         {
                                             clsKTHT.GhiChu += $"Hoá đơn sai ngày chứng từ {findhoadon.NgayCT.ToShortDateString()}";
@@ -2098,7 +2130,19 @@ namespace SaovietTax
                                     }
                                 }
                                 else
-                                    findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == clsKTHT.NgayLap && Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(clsKTHT.SoHD).TrimEnd('.')  && m.KHHD == clsKTHT.KHHD);
+                                {
+                                    findhoadon = lstChungTuHD.FirstOrDefault(m => m.NgayCT.Date == clsKTHT.NgayLap && Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(clsKTHT.SoHD).TrimEnd('.') && m.KHHD == clsKTHT.KHHD && m.Type == 2);
+                                    if(findhoadon == null)
+                                    {
+                                        findhoadon = lstChungTuHD.FirstOrDefault(m => Helpers.RemoveLeadingZeros(m.SoHieu) == Helpers.RemoveLeadingZeros(clsKTHT.SoHD).TrimEnd('.') && m.KHHD == clsKTHT.KHHD && m.Type == 2);
+                                        if (findhoadon != null)
+                                        {
+                                            clsKTHT.GhiChu += $"Hoá đơn sai ngày chứng từ {findhoadon.NgayCT.ToShortDateString()}";
+                                            clsKTHT.Statustype = 2;
+                                            lshoadonloi += 1;
+                                        }
+                                    }
+                                }
 
                                 if (findhoadon != null)
                                 {
@@ -2189,7 +2233,7 @@ namespace SaovietTax
             if (string.IsNullOrEmpty(clsKTHT.MST))
                 clsKTHT.MST = "00";
             
-            if (clsKTHT.MST!= clsKTHT.MSTHD)
+            if (clsKTHT.MST!= clsKTHT.MSTHD && clsKTHT.MSTHD!="...")
             {
                 clsKTHT.GhiChu += "MST không khớp , ";
                 haserro = true;
@@ -2602,10 +2646,7 @@ namespace SaovietTax
                     {
                         item.NgayImport = DateTime.MinValue; // hoặc giá trị mặc định khác
                     }
-                    if (item.SoHieu == "79831")
-                    {
-                        int test = 10;
-                    }
+                   
                     item.KHHD = row["KyHieu"].ToString();
                     item.NgayCT = DateTime.Parse(row["NgayCT"].ToString());
                     // Type
@@ -2615,7 +2656,10 @@ namespace SaovietTax
                         item.Type = 2;
                     else
                         item.Type = 0;
-
+                    if (item.SoHieu == "133" && item.Type == 1)
+                    {
+                        int test = 10;
+                    }
                     // Khách hàng
                     string maKH = row["MaKhachHang"].ToString();
                     if (dictKhachHang.ContainsKey(maKH))
@@ -2642,9 +2686,9 @@ namespace SaovietTax
                                 tienThue += soPS;
                             else
                             {
-                                if (soPS > 0)
+                                if (soPS != 0)
                                 {
-                                    if (matkno != "169" && SoPS2Co > 0)
+                                    if (matkno != "169" && SoPS2Co != 0)
                                     {
                                         tienTrcThue += soPS;
                                     }
@@ -2675,9 +2719,9 @@ namespace SaovietTax
                                 tienThue += soPS;
                             else
                             {
-                                if (soPS > 0)
+                                if (soPS != 0)
                                 {
-                                    if (matkco != "169" && (SoPS2No > 0))
+                                    if (matkco != "169" && (SoPS2No != 0))
                                     {
                                         tienTrcThue += soPS;
                                     }

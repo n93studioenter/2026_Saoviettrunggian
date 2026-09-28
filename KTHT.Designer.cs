@@ -111,6 +111,7 @@
             this.svgImageBox4 = new DevExpress.XtraEditors.SvgImageBox();
             this.lblwarning0 = new DevExpress.XtraEditors.LabelControl();
             this.checkEdit1 = new DevExpress.XtraEditors.CheckEdit();
+            this.colQueryType = new DevExpress.XtraGrid.Columns.GridColumn();
             ((System.ComponentModel.ISupportInitialize)(this.clsKTHTBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.thongKeBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl2)).BeginInit();
@@ -289,7 +290,8 @@
             this.colTongTienTTHD,
             this.colGhiChu,
             this.colPath,
-            this.colTongTienPhi});
+            this.colTongTienPhi,
+            this.colQueryType});
             this.gridView1.DetailHeight = 284;
             this.gridView1.GridControl = this.gridControl1;
             this.gridView1.Name = "gridView1";
@@ -1073,6 +1075,14 @@
             this.checkEdit1.TabIndex = 0;
             this.checkEdit1.CheckedChanged += new System.EventHandler(this.checkEdit1_CheckedChanged);
             // 
+            // colQueryType
+            // 
+            this.colQueryType.Caption = "QueryType";
+            this.colQueryType.FieldName = "QueryType";
+            this.colQueryType.Name = "colQueryType";
+            this.colQueryType.Visible = true;
+            this.colQueryType.VisibleIndex = 14;
+            // 
             // KTHT
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1211,5 +1221,6 @@
         private DevExpress.XtraEditors.SvgImageBox svgImageBox4;
         private DevExpress.XtraEditors.LabelControl lblwarning0;
         private DevExpress.XtraEditors.CheckEdit checkEdit1;
+        private DevExpress.XtraGrid.Columns.GridColumn colQueryType;
     }
 }
