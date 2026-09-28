@@ -218,12 +218,14 @@ namespace SaovietTax
             switch (type)
             {
                 case 1: // Hóa đơn điện tử bán ra
-                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc,khmshdon:asc,shdon:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
+                    //url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc,khmshdon:asc,shdon:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
                     filename = $"{mstcongty}_Hoadondientu.xlsx";
                     break;
                 case 2: // Máy tính tiền bán ra
                 case 3:
-                    url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc,khmshdon:asc,shdon:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
+                    //url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc,khmshdon:asc,shdon:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
+                    url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
                     filename = $"{mstcongty}_HDDienTuMayTinhTien.xlsx";
                     action = "Xuất excel (hóa đơn máy tính tiền bán ra)";
                     break;
@@ -1925,8 +1927,10 @@ namespace SaovietTax
         int slhangchuaiport = 0;
         int lshoadonloi = 0;
         int slhangdaimport = 0;
+        public  List<ChungTuHD> listRemain = new List<ChungTuHD>();
         private void Dohoadon()
         {
+            listRemain = new List<ChungTuHD>();
             slcoquanthue = 0;
             slvb6 = 0;
             cqt_tongtien = 0;
@@ -2048,7 +2052,7 @@ namespace SaovietTax
                                     clsKTHT.Type = 2;
                                 clsKTHT.STT = stt;
                                 stt += 1;
-                                if (clsKTHT.SoHD == "218288")
+                                if (clsKTHT.SoHD == "550")
                                 {
                                     int a = 10;
                                 }
@@ -2158,7 +2162,7 @@ namespace SaovietTax
                                     Thietlapghichu(clsKTHT);
                                     var getlistkt = gettbChungtu.AsEnumerable().Where(m => m["MaCT"].ToString() == findhoadon.MaCT.ToString());
                                     //Kiểm tra xem có mặt hàng nào bỏ trống không
-                                    if (dictMaCT_HasEmpty.TryGetValue(findhoadon.MaCT.ToString(), out bool hasEmpty) && hasEmpty)
+                                    if (dictMaCT_HasEmpty.TryGetValue(findhoadon.MaCT.ToString(), out bool hasEmpty) && hasEmpty || findhoadon.Hangnull==1)
                                     {
                                         clsKTHT.GhiChu += "Có hàng chưa nhập mã";
                                         slhangchuanhapma += 1;
@@ -2186,11 +2190,27 @@ namespace SaovietTax
                         }
                     }
                 }
-
+                int _type = 0;
+                if (radDauvao.Checked)
+                    _type = 1;
+                else
+                    _type = 2;  
+                     listRemain = lstChungTuHD.Where(m => m.NgayCT.Month == tuthang && m.Type == _type).Where(m => !clsKTHTs.Where(j => j.NgayLap.Month == tuthang && j.Type == _type).Any(n => n.SoHD == m.SoHieu && m.KHHD == n.KHHD)).ToList();
                 //Rán datasource
-                LoadDatasource();
-               
+                foreach(var it in listRemain)
+                {
+                    clsKTHT clsKTHT = new clsKTHT();
+                    clsKTHT.SoHD = it.SoHieu;
+                    clsKTHT.KHHD = it.KHHD;
+                    clsKTHT.MST = it.MST;
+                    clsKTHT.NgayLap = it.NgayCT;
+                    clsKTHT.Statustype = 4;
+                    clsKTHT.GhiChu = "Hoá đơn nhập dư";
+                    clsKTHTs.Add(clsKTHT);
+                }
+                LoadDatasource(); 
             }
+        
             progressPanel1.Caption = "";
             progressPanel1.Visible = false;
 
@@ -2205,6 +2225,7 @@ namespace SaovietTax
             lblwarning2.Text = lshoadonloi.ToString();
             lblwarning3.Text=slhangchuanhapma.ToString();
             lblwarning0.Text= $"{slhangdaimport.ToString("N0")}";
+            lblwarining4.Text = listRemain.Count.ToString();
         }
         private void LoadDatasource()
         {
@@ -2225,10 +2246,20 @@ namespace SaovietTax
             {
                 orgiginlist = orgiginlist.Where(m => m.Statustype == 3).ToList();
             }
+            if (chkhoadondu.Checked)
+            {
+                orgiginlist= orgiginlist.Where(m => m.Statustype == 4).ToList();
+            }
             gridControl1.DataSource = orgiginlist;
         }
         private void Thietlapghichu(clsKTHT clsKTHT)
         {
+            if (clsKTHT.TienTrcThueHD == 0 && clsKTHT.TienThueHD == 0 && clsKTHT.TongTienTTHD == 0)
+                return;
+            if (clsKTHT.SoHD == "1007")
+            {
+                int a = 100;
+            }
             bool haserro = false;
             if (string.IsNullOrEmpty(clsKTHT.MST))
                 clsKTHT.MST = "00";
@@ -2545,6 +2576,11 @@ namespace SaovietTax
             LoadDatasource();
         }
 
+        private void chkhoadondu_CheckedChanged(object sender, EventArgs e)
+        {
+            LoadDatasource();
+        }
+
         DataTable gettbChungtu;
         private void KTHT_Load(object sender, EventArgs e)
         {
@@ -2634,10 +2670,7 @@ namespace SaovietTax
                     ChungTuHD item = new ChungTuHD();
                     item.MaCT = mact;
                     item.SoHieu = row["SoHieu"].ToString();
-                    if (item.MaCT == 5723)
-                    {
-                        int aaa = 10;
-                    }
+                    
                     if (DateTime.TryParse(row["NgayImport"]?.ToString(), out DateTime ngayImport))
                     {
                         item.NgayImport = ngayImport;
@@ -2646,7 +2679,10 @@ namespace SaovietTax
                     {
                         item.NgayImport = DateTime.MinValue; // hoặc giá trị mặc định khác
                     }
-                   
+                    if (item.SoHieu == "1007" && item.NgayCT.Month==7)
+                    {
+                        int aaa = 10;
+                    }
                     item.KHHD = row["KyHieu"].ToString();
                     item.NgayCT = DateTime.Parse(row["NgayCT"].ToString());
                     // Type
@@ -2688,12 +2724,18 @@ namespace SaovietTax
                             {
                                 if (soPS != 0)
                                 {
-                                    if (matkno != "169" && SoPS2Co != 0)
+                                    if (matkno != "169")
                                     {
-                                        tienTrcThue += soPS;
-                                    }
-                                }
+                                        if (SoPS2Co != 0)
+                                            tienTrcThue += soPS;
+                                        else
+                                        {
+                                            tienTrcThue += soPS;
 
+                                            item.Hangnull = 1;
+                                        }
+                                    }
+                                } 
 
                             }
                         }

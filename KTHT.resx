@@ -274,6 +274,26 @@
         IDwvZz4NCjwvc3ZnPgs=
 </value>
   </data>
+  <data name="svgImageBox5.SvgImage" type="DevExpress.Utils.Svg.SvgImage, DevExpress.Data.v22.1" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        AAEAAAD/////AQAAAAAAAAAMAgAAAFlEZXZFeHByZXNzLkRhdGEudjIyLjEsIFZlcnNpb249MjIuMS4z
+        LjAsIEN1bHR1cmU9bmV1dHJhbCwgUHVibGljS2V5VG9rZW49Yjg4ZDE3NTRkNzAwZTQ5YQUBAAAAHURl
+        dkV4cHJlc3MuVXRpbHMuU3ZnLlN2Z0ltYWdlAQAAAAREYXRhBwICAAAACQMAAAAPAwAAAPICAAAC77u/
+        PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz4NCjxzdmcgeD0iMHB4IiB5PSIwcHgi
+        IHZpZXdCb3g9IjAgMCAzMiAzMiIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcv
+        MjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4bWw6c3Bh
+        Y2U9InByZXNlcnZlIiBpZD0iRXJyb3JfQmFyc19Ob25lIiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6
+        bmV3IDAgMCAzMiAzMiI+DQogIDxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+CgkuQmxhY2t7ZmlsbDojNzI3
+        MjcyO30KCS5SZWR7ZmlsbDojRDExQzFDO30KCS5zdDB7b3BhY2l0eTowLjU7fQo8L3N0eWxlPg0KICA8
+        ZyBjbGFzcz0ic3QwIj4NCiAgICA8cGF0aCBkPSJNMjgsMTB2MmgtNS4yTDIyLDExLjJWMTBIMjh6IE04
+        LDE2SDJ2Mmg2VjE2eiIgY2xhc3M9IlJlZCIgLz4NCiAgICA8cGF0aCBkPSJNNiwyNGgydjJIMnYtMmgy
+        di00aDJWMjR6IE00LDE0aDJ2LTRoMlY4SDJ2MmgyVjE0eiBNMjYsMTRoLTJ2NGgtMnYxLjJsMC44LDAu
+        OEgyOHYtMmgtMlYxNHogTTIyLDJ2MmgydjRoMiAgIFY0aDJWMkgyMnogTTE2LDI0aC0ydjRoLTJ2Mmg2
+        di0yaC0yVjI0eiIgY2xhc3M9IkJsYWNrIiAvPg0KICA8L2c+DQogIDxwb2x5Z29uIHBvaW50cz0iMjEs
+        MTMgMTksMTEgMTUsMTUgMTEsMTEgOSwxMyAxMywxNyA5LDIxIDExLDIzIDE1LDE5IDE5LDIzIDIxLDIx
+        IDE3LDE3ICIgY2xhc3M9IlJlZCIgLz4NCjwvc3ZnPgs=
+</value>
+  </data>
   <metadata name="$this.TrayHeight" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>146</value>
   </metadata>

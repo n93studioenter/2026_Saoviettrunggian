@@ -338,7 +338,7 @@ namespace SaovietTax
                     KHHD = row["KyHieu"].ToString(),
                     NgayCT = DateTime.Parse(row["NgayCT"].ToString())
                 };
-                if (item.SoHieu == "104" && item.NgayCT.Month==1)
+                if (item.SoHieu == "550" && item.NgayCT.Month==8)
                 {
                     int test = 10;
                 }
@@ -373,9 +373,22 @@ namespace SaovietTax
                             string maTK = r["MaTKTCCo"].ToString();
                             string matkno = r["MaTKTCNo"].ToString();
                             double soPS2Co = Convert.ToDouble(r["SoPS2Co"]);
-
+                            string Mavt= r["MaVattu"].ToString();
                             if (maTK == "14038") tienThue += soPS;
-                            else if (soPS != 0 && matkno != "169" && soPS2Co != 0) tienTrcThue += soPS;
+                            else 
+                            if (soPS != 0 && matkno != "169" && soPS2Co != 0)
+                            {
+                                tienTrcThue += soPS;
+                            }
+                            else
+                            {
+                                if (soPS != 0 && soPS2Co == 0)
+                                {
+                                    tienTrcThue += soPS;
+                                    if(maTK != "169" && Mavt=="0")
+                                        item.Hangnull = 1;
+                                }
+                            }
                         }
                         else // maLoai == 0 hoặc 1
                         {
@@ -388,7 +401,7 @@ namespace SaovietTax
                             {
                                 if (matkco != "169" && soPS2No != 0)
                                     tienTrcThue += soPS;
-                                else if (maTK == "161" || maTK == "160")
+                                else if (maTK == "161" || maTK == "160" || maTK=="76")
                                     tienTrcThue += soPS;
 
                                 if (matkco == "169")
@@ -589,7 +602,7 @@ namespace SaovietTax
                             string soHD = Helpers.RemoveLeadingZeros(row.Cell("D").Value.ToString()).Trim();
                             
                             if (!DateTime.TryParse(row.Cell("E").Value.ToString(), out var nLap)) continue;
-                            if (soHD == "159" && nLap.Date.Month == 1 && isVao)
+                            if (soHD == "543" && nLap.Date.Month == 8 && !isVao)
                             {
                                 int test = 10;
                             }
@@ -824,10 +837,17 @@ namespace SaovietTax
                 if (_gettbChungTuByMaCT.TryGetValue(ct.MaCT, out var rows))
                 {
                     bool checkNullHang = rows.Any(m =>
-                        (m["SoPS2No"].ToString() != "0" || m["SoPS2Co"].ToString() != "0")
-                        && m["SoPS"].ToString() != "0"
+                        m["SoPS"].ToString() != "0"
                         && m["MaTKTCNo"].ToString()!= "5108"
                         && m["MaTKTCCo"].ToString() != "14038"
+                        && m["MaTKTCCo"].ToString() != "82"
+                        && m["MaTKTCCo"].ToString() != "169"
+                        && m["MaTKTCNo"].ToString() != "160"
+                        && m["MaTKTCNo"].ToString() != "161"
+                        && (m["MaTKTCNo"].ToString() != "0" || m["MaTKTCCo"].ToString() != "0")
+                        && m["MaTKTCNo"].ToString() != "75"
+                        && m["MaTKTCNo"].ToString() != "76"
+                        && m["MaTKTCNo"].ToString() != "77"
                         && m["MaVattu"].ToString() == "0");
 
                     if (checkNullHang)
@@ -841,7 +861,10 @@ namespace SaovietTax
                 if (lyDo != null)
                 {
                     r.HdSaiThongTin++;
-                    sbSai.Append(type == 1 ? $"[{hd.SoHD}](v)({lyDo}), " : $"{hd.SoHD}(r)({lyDo}), ");
+                    if (type == 1)
+                        sbSai.Append($"◆ {hd.SoHD}(v)({lyDo})\n");
+                    else
+                        sbSai.Append($"◆ {hd.SoHD}(r)({lyDo})\n");
                 }
             }
 
@@ -854,7 +877,10 @@ namespace SaovietTax
             // Hóa đơn nhập dư — dùng HashSet
             var setVao = lstVao.Select(x => x.SoHD).ToHashSet();
             var setRa = lstRa.Select(x => x.SoHD).ToHashSet();
-
+            if (month == 1)
+            {
+                int dasda = 100;
+            }
             r.DsNhapDuVao = lookupHoaDonCT
                 .Where(m => m.NLap.Month == month && m.Type == 1 && !setVao.Contains(m.SoHD))
                 .Select(m => m.SoHD).ToList();
@@ -1082,11 +1108,15 @@ namespace SaovietTax
 
         private static string CompareHoaDon(HoaDonNhap hd, ChungTuHD ct)
         {
-            if (hd.SoHD == "159" && hd.NLap.Month==1)
+            if(ct.SoHieu=="550" && ct.NgayCT.Month == 8)
             {
-                int a = 10;
+                int aa = 100;
             }
             var loi = new List<string>();
+            if(ct.TienThue==0 && ct.TienThue==0 && ct.TongTien == 0)
+            {
+                return null;
+            }
             if (hd.TienTrcThue != 0 && hd.TienTrcThue != ct.TienTrcThue && hd.NLap == ct.NgayCT && hd.Type==ct.Type)
                 loi.Add("Tiền trước thuế bị lệch");
             if (hd.TienThue != 0 && hd.TienThue != ct.TienThue && hd.NLap == ct.NgayCT && hd.Type == ct.Type)
@@ -1101,7 +1131,10 @@ namespace SaovietTax
                 if (ct.NgayCT.Date != hd.NLap.Date && loi.Count == 0 && hd.Type == ct.Type)
                     loi.Add($"Ngày chứng từ bị sai {ct.NgayCT.Date},  ngày đúng là {hd.NLap.Date}");
             }
-           
+            //if (ct.Hangnull == 1)
+            //{
+            //    loi.Add($"Thiếu mã hàng");
+            //}
             return loi.Count > 0 ? string.Join("; ", loi) : null;
         }
 

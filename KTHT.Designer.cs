@@ -64,6 +64,7 @@
             this.colGhiChu = new DevExpress.XtraGrid.Columns.GridColumn();
             this.colPath = new DevExpress.XtraGrid.Columns.GridColumn();
             this.colTongTienPhi = new DevExpress.XtraGrid.Columns.GridColumn();
+            this.colQueryType = new DevExpress.XtraGrid.Columns.GridColumn();
             this.clsKTHTBindingSource1 = new System.Windows.Forms.BindingSource(this.components);
             this.panelControl3 = new DevExpress.XtraEditors.PanelControl();
             this.svgImageBox1 = new DevExpress.XtraEditors.SvgImageBox();
@@ -111,7 +112,10 @@
             this.svgImageBox4 = new DevExpress.XtraEditors.SvgImageBox();
             this.lblwarning0 = new DevExpress.XtraEditors.LabelControl();
             this.checkEdit1 = new DevExpress.XtraEditors.CheckEdit();
-            this.colQueryType = new DevExpress.XtraGrid.Columns.GridColumn();
+            this.panelControl7 = new DevExpress.XtraEditors.PanelControl();
+            this.svgImageBox5 = new DevExpress.XtraEditors.SvgImageBox();
+            this.lblwarining4 = new DevExpress.XtraEditors.LabelControl();
+            this.chkhoadondu = new DevExpress.XtraEditors.CheckEdit();
             ((System.ComponentModel.ISupportInitialize)(this.clsKTHTBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.thongKeBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl2)).BeginInit();
@@ -140,6 +144,10 @@
             this.panelControl6.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.svgImageBox4)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.checkEdit1.Properties)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.panelControl7)).BeginInit();
+            this.panelControl7.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox5)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.chkhoadondu.Properties)).BeginInit();
             this.SuspendLayout();
             // 
             // clsKTHTBindingSource
@@ -544,6 +552,14 @@
             this.colTongTienPhi.Name = "colTongTienPhi";
             this.colTongTienPhi.Width = 81;
             // 
+            // colQueryType
+            // 
+            this.colQueryType.Caption = "QueryType";
+            this.colQueryType.FieldName = "QueryType";
+            this.colQueryType.Name = "colQueryType";
+            this.colQueryType.Visible = true;
+            this.colQueryType.VisibleIndex = 14;
+            // 
             // clsKTHTBindingSource1
             // 
             this.clsKTHTBindingSource1.DataSource = typeof(SaovietTax.KTHT.clsKTHT);
@@ -555,7 +571,7 @@
             this.panelControl3.Controls.Add(this.chkhoadonchuanhap);
             this.panelControl3.Location = new System.Drawing.Point(243, 87);
             this.panelControl3.Name = "panelControl3";
-            this.panelControl3.Size = new System.Drawing.Size(322, 38);
+            this.panelControl3.Size = new System.Drawing.Size(283, 38);
             this.panelControl3.TabIndex = 3;
             // 
             // svgImageBox1
@@ -572,7 +588,7 @@
             // 
             this.lblwarning1.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
             this.lblwarning1.Appearance.Options.UseFont = true;
-            this.lblwarning1.Location = new System.Drawing.Point(233, 8);
+            this.lblwarning1.Location = new System.Drawing.Point(224, 8);
             this.lblwarning1.Name = "lblwarning1";
             this.lblwarning1.Size = new System.Drawing.Size(11, 21);
             this.lblwarning1.TabIndex = 1;
@@ -596,9 +612,9 @@
             this.panelControl4.Controls.Add(this.svgImageBox2);
             this.panelControl4.Controls.Add(this.lblwarning2);
             this.panelControl4.Controls.Add(this.chkhoadonsaitt);
-            this.panelControl4.Location = new System.Drawing.Point(571, 87);
+            this.panelControl4.Location = new System.Drawing.Point(532, 87);
             this.panelControl4.Name = "panelControl4";
-            this.panelControl4.Size = new System.Drawing.Size(254, 38);
+            this.panelControl4.Size = new System.Drawing.Size(235, 38);
             this.panelControl4.TabIndex = 4;
             // 
             // svgImageBox2
@@ -615,7 +631,7 @@
             // 
             this.lblwarning2.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
             this.lblwarning2.Appearance.Options.UseFont = true;
-            this.lblwarning2.Location = new System.Drawing.Point(219, 10);
+            this.lblwarning2.Location = new System.Drawing.Point(209, 10);
             this.lblwarning2.Name = "lblwarning2";
             this.lblwarning2.Size = new System.Drawing.Size(11, 21);
             this.lblwarning2.TabIndex = 1;
@@ -639,7 +655,7 @@
             this.panelControl5.Controls.Add(this.svgImageBox3);
             this.panelControl5.Controls.Add(this.lblwarning3);
             this.panelControl5.Controls.Add(this.chkhoadonthieuhang);
-            this.panelControl5.Location = new System.Drawing.Point(831, 87);
+            this.panelControl5.Location = new System.Drawing.Point(773, 87);
             this.panelControl5.Name = "panelControl5";
             this.panelControl5.Size = new System.Drawing.Size(269, 38);
             this.panelControl5.TabIndex = 5;
@@ -1075,19 +1091,55 @@
             this.checkEdit1.TabIndex = 0;
             this.checkEdit1.CheckedChanged += new System.EventHandler(this.checkEdit1_CheckedChanged);
             // 
-            // colQueryType
+            // panelControl7
             // 
-            this.colQueryType.Caption = "QueryType";
-            this.colQueryType.FieldName = "QueryType";
-            this.colQueryType.Name = "colQueryType";
-            this.colQueryType.Visible = true;
-            this.colQueryType.VisibleIndex = 14;
+            this.panelControl7.Controls.Add(this.svgImageBox5);
+            this.panelControl7.Controls.Add(this.lblwarining4);
+            this.panelControl7.Controls.Add(this.chkhoadondu);
+            this.panelControl7.Location = new System.Drawing.Point(1048, 87);
+            this.panelControl7.Name = "panelControl7";
+            this.panelControl7.Size = new System.Drawing.Size(221, 38);
+            this.panelControl7.TabIndex = 5;
+            // 
+            // svgImageBox5
+            // 
+            this.svgImageBox5.Location = new System.Drawing.Point(16, 5);
+            this.svgImageBox5.Name = "svgImageBox5";
+            this.svgImageBox5.Size = new System.Drawing.Size(33, 28);
+            this.svgImageBox5.SizeMode = DevExpress.XtraEditors.SvgImageSizeMode.Stretch;
+            this.svgImageBox5.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox5.SvgImage")));
+            this.svgImageBox5.TabIndex = 2;
+            this.svgImageBox5.Text = "svgImageBox5";
+            // 
+            // lblwarining4
+            // 
+            this.lblwarining4.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
+            this.lblwarining4.Appearance.Options.UseFont = true;
+            this.lblwarining4.Location = new System.Drawing.Point(179, 9);
+            this.lblwarining4.Name = "lblwarining4";
+            this.lblwarining4.Size = new System.Drawing.Size(11, 21);
+            this.lblwarining4.TabIndex = 1;
+            this.lblwarining4.Text = "0";
+            // 
+            // chkhoadondu
+            // 
+            this.chkhoadondu.Location = new System.Drawing.Point(56, 9);
+            this.chkhoadondu.Name = "chkhoadondu";
+            this.chkhoadondu.Properties.Appearance.Font = new System.Drawing.Font("Tahoma", 8.25F, System.Drawing.FontStyle.Bold);
+            this.chkhoadondu.Properties.Appearance.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.chkhoadondu.Properties.Appearance.Options.UseFont = true;
+            this.chkhoadondu.Properties.Appearance.Options.UseForeColor = true;
+            this.chkhoadondu.Properties.Caption = "Hoá đơn dư";
+            this.chkhoadondu.Size = new System.Drawing.Size(98, 19);
+            this.chkhoadondu.TabIndex = 0;
+            this.chkhoadondu.CheckedChanged += new System.EventHandler(this.chkhoadondu_CheckedChanged);
             // 
             // KTHT
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1272, 687);
+            this.Controls.Add(this.panelControl7);
             this.Controls.Add(this.panelControl6);
             this.Controls.Add(this.panelControl5);
             this.Controls.Add(this.panelControl4);
@@ -1135,6 +1187,11 @@
             this.panelControl6.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.svgImageBox4)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.checkEdit1.Properties)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.panelControl7)).EndInit();
+            this.panelControl7.ResumeLayout(false);
+            this.panelControl7.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox5)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.chkhoadondu.Properties)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -1222,5 +1279,9 @@
         private DevExpress.XtraEditors.LabelControl lblwarning0;
         private DevExpress.XtraEditors.CheckEdit checkEdit1;
         private DevExpress.XtraGrid.Columns.GridColumn colQueryType;
+        private DevExpress.XtraEditors.PanelControl panelControl7;
+        private DevExpress.XtraEditors.SvgImageBox svgImageBox5;
+        private DevExpress.XtraEditors.LabelControl lblwarining4;
+        private DevExpress.XtraEditors.CheckEdit chkhoadondu;
     }
 }

@@ -28436,19 +28436,19 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             switch (_type)
             {
                 case 1: // Có mã CQT (ttxly == 5)
-                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc,khmshdon:asc,shdon:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==5&type=purchase";
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==5&type=purchase";
                     filename = $"{mstcongty}_HDDienTuDaCapMa.xlsx";
                     action = "Xuất excel (hóa đơn mua vào)";
                     break;
 
                 case 2: // Không mã CQT (ttxly == 6)
-                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc,khmshdon:asc,shdon:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==6&type=purchase";
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==6&type=purchase";
                     filename = $"{mstcongty}_HDDienTuKhongMa.xlsx";
                     action = "Xuất excel (hóa đơn mua vào)";
                     break;
 
                 case 3: // Máy tính tiền (ttxly == 8)
-                    url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc,khmshdon:asc,shdon:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==8&type=purchase";
+                    url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==8&type=purchase";
                     filename = $"{mstcongty}_HDDienTuMayTinhTien.xlsx";
                     action = "Xuất excel (hóa đơn máy tính tiền mua vào)";
                     break;
@@ -28793,13 +28793,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             switch (_type)
             {
                 case 1: // Hóa đơn điện tử bán ra
-                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc,khmshdon:asc,shdon:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
                     filename = $"{mstcongty}_Hoadondientu.xlsx";
                     action = "Xuất excel (hóa đơn bán ra)";
                     break;
 
                 case 2: // Máy tính tiền bán ra
-                    url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc,khmshdon:asc,shdon:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
+                    url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
                     filename = $"{mstcongty}_HDDienTuMayTinhTien.xlsx";
                     action = "Xuất excel (hóa đơn máy tính tiền bán ra)";
                     break;
