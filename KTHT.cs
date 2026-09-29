@@ -1756,7 +1756,12 @@ namespace SaovietTax
                     type = 5;
             }  
             else
+            {
+                if (selectedRow.QueryType == 4)
                 type = 5;
+                if (selectedRow.QueryType == 5)
+                    type = 4;
+            }
 
             string url = GetInvoiceUrl(type, mst, selectedRow.KHHD, selectedRow.SoHD, selectedRow.KHMS);
             string filename = $"{selectedRow.NgayLap:yyyyMMdd}_{mst}_{selectedRow.SoHD}_{selectedRow.KHHD}.zip";
@@ -1996,6 +2001,8 @@ namespace SaovietTax
                      && r["SoPS"].ToString() != "0"
                      && r["MaTKTCNo"].ToString() != "5108"
                      && r["MaTKTCCo"].ToString() != "14038"
+                     && r["MaTKTCCo"].ToString() != "125"
+                     && r["MaTKTCCo"].ToString() != "126"
                      && (r["SoPS2No"].ToString() != "0" || r["SoPS2Co"].ToString() != "0"));
                     dictMaCT_HasEmpty[g.Key] = hasEmpty;
                 }
@@ -2040,7 +2047,14 @@ namespace SaovietTax
                                 }
                                 else
                                 {
-                                    clsKTHT.QueryType = 4;
+                                    if (excelFile.Contains("MayTinhTien"))
+                                    {
+                                        clsKTHT.QueryType = 4;
+                                    }
+                                    if (excelFile.Contains("Hoadondientu"))
+                                    {
+                                        clsKTHT.QueryType = 5;
+                                    }
                                 }
                                     clsKTHT.Statustype = 0;
                                 clsKTHT.KHMS = GetCellValue(row.Cell("B"));
@@ -2059,7 +2073,7 @@ namespace SaovietTax
                                 clsKTHT.TenKH = GetCellValue(row.Cell("G"));
                                 clsKTHT.NgayLap = DateTime.Parse(GetCellValue(row.Cell("E")));
 
-                                if (clsKTHT.SoHD == "133")
+                                if (clsKTHT.SoHD == "192")
                                 {
                                     int ssdf = 10;
                                 }
@@ -2101,13 +2115,28 @@ namespace SaovietTax
                                 }
                                 else
                                 {
-                                    if (!string.IsNullOrEmpty(row.Cell("L").Value.ToString()))
-                                        clsKTHT.TienTrcThue = Math.Round(double.Parse(row.Cell("L").Value.ToString()));
-                                    if (!string.IsNullOrEmpty(row.Cell("M").Value.ToString()))
-                                        clsKTHT.TienThue = Math.Round(double.Parse(row.Cell("M").Value.ToString()));
-                                    if (!string.IsNullOrEmpty(row.Cell("O").Value.ToString()))
-                                        clsKTHT.TongTienTT = Math.Round(double.Parse(row.Cell("O").Value.ToString()));
-                                    clsKTHT.STTType = GetCellValue(row.Cell("P")).ToString();
+                                    if (excelFile.Contains("MayTinhTien"))
+                                    {
+                                        if (!string.IsNullOrEmpty(row.Cell("L").Value.ToString()))
+                                            clsKTHT.TienTrcThue = Math.Round(double.Parse(row.Cell("L").Value.ToString()));
+                                        if (!string.IsNullOrEmpty(row.Cell("M").Value.ToString()))
+                                            clsKTHT.TienThue = Math.Round(double.Parse(row.Cell("M").Value.ToString()));
+                                        if (!string.IsNullOrEmpty(row.Cell("O").Value.ToString()))
+                                            clsKTHT.TongTienTT = Math.Round(double.Parse(row.Cell("O").Value.ToString()));
+                                        clsKTHT.STTType = GetCellValue(row.Cell("P")).ToString();
+                                    }
+                                    else
+                                    {
+                                        if (!string.IsNullOrEmpty(row.Cell("K").Value.ToString()))
+                                            clsKTHT.TienTrcThue = Math.Round(double.Parse(row.Cell("K").Value.ToString()));
+                                        if (!string.IsNullOrEmpty(row.Cell("L").Value.ToString()))
+                                            clsKTHT.TienThue = Math.Round(double.Parse(row.Cell("L").Value.ToString()));
+                                        if (!string.IsNullOrEmpty(row.Cell("O").Value.ToString()))
+                                            clsKTHT.TongTienTT = Math.Round(double.Parse(row.Cell("O").Value.ToString()));
+                                        clsKTHT.STTType = GetCellValue(row.Cell("R")).ToString();
+                                    }
+
+                                        
                                     //Trường hợp ko có thuế
                                     if (clsKTHT.TienTrcThue == 0 && clsKTHT.TienThue == 0)
                                     {
@@ -2254,6 +2283,8 @@ namespace SaovietTax
         }
         private void Thietlapghichu(clsKTHT clsKTHT)
         {
+            if (clsKTHT.Statustype == 2)
+                return;
             if (clsKTHT.TienTrcThueHD == 0 && clsKTHT.TienThueHD == 0 && clsKTHT.TongTienTTHD == 0)
                 return;
             if (clsKTHT.SoHD == "1007")
@@ -2679,7 +2710,7 @@ namespace SaovietTax
                     {
                         item.NgayImport = DateTime.MinValue; // hoặc giá trị mặc định khác
                     }
-                    if (item.SoHieu == "1007" && item.NgayCT.Month==7)
+                    if (item.SoHieu == "192" )
                     {
                         int aaa = 10;
                     }
@@ -2730,8 +2761,8 @@ namespace SaovietTax
                                             tienTrcThue += soPS;
                                         else
                                         {
-                                            tienTrcThue += soPS;
-
+                                            tienTrcThue += soPS; 
+                                            if(maTK!="125" && maTK != "126")
                                             item.Hangnull = 1;
                                         }
                                     }
@@ -2769,7 +2800,7 @@ namespace SaovietTax
                                     }
                                     else
                                     {
-                                        if (maTK == "161" || maTK == "160")
+                                        if (maTK == "161" || maTK == "160" || maTK == "37")
                                         {
                                             tienTrcThue += soPS;
                                         }

@@ -338,7 +338,7 @@ namespace SaovietTax
                     KHHD = row["KyHieu"].ToString(),
                     NgayCT = DateTime.Parse(row["NgayCT"].ToString())
                 };
-                if (item.SoHieu == "550" && item.NgayCT.Month==8)
+                if (item.SoHieu == "19817" && item.NgayCT.Month==9)
                 {
                     int test = 10;
                 }
@@ -401,7 +401,8 @@ namespace SaovietTax
                             {
                                 if (matkco != "169" && soPS2No != 0)
                                     tienTrcThue += soPS;
-                                else if (maTK == "161" || maTK == "160" || maTK=="76")
+                                else 
+                                if (maTK == "161" || maTK == "160" || maTK=="76" || maTK=="37")
                                     tienTrcThue += soPS;
 
                                 if (matkco == "169")
@@ -848,6 +849,7 @@ namespace SaovietTax
                         && m["MaTKTCNo"].ToString() != "75"
                         && m["MaTKTCNo"].ToString() != "76"
                         && m["MaTKTCNo"].ToString() != "77"
+                          && m["MaTKTCNo"].ToString() != "37"
                         && m["MaVattu"].ToString() == "0");
 
                     if (checkNullHang)
@@ -1124,12 +1126,12 @@ namespace SaovietTax
             if (hd.Type == 1)
             {
                 if (ct.NgayCT.Date != hd.NLap.Date && loi.Count == 0 && hd.Type == ct.Type && hd.MST==ct.MST)
-                    loi.Add($"Ngày chứng từ bị sai {ct.NgayCT.Date}, ngày đúng là {hd.NLap.Date}");
+                    loi.Add($"Ngày chứng từ bị sai {ct.NgayCT.Date.ToShortDateString()}, ngày đúng là {hd.NLap.Date.ToShortDateString()}");
             }
             else
             {
                 if (ct.NgayCT.Date != hd.NLap.Date && loi.Count == 0 && hd.Type == ct.Type)
-                    loi.Add($"Ngày chứng từ bị sai {ct.NgayCT.Date},  ngày đúng là {hd.NLap.Date}");
+                    loi.Add($"Ngày chứng từ bị sai {ct.NgayCT.Date.ToShortDateString()},  ngày đúng là {hd.NLap.Date.ToShortDateString()}");
             }
             //if (ct.Hangnull == 1)
             //{
