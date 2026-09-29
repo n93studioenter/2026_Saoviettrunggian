@@ -12102,9 +12102,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                             final = final2;
                                     }
                                     //Tim theo tên thứ 2  
-                                }
-
-
+                                }  
                             }
                             if (final >= 90)
                             {
@@ -13530,7 +13528,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             string tenGoc = node.SelectSingleNode("THHDVu")?.InnerText;
                             ten = tenGoc;
 
-                            if (Loaiborow(tenGoc)) continue;
+                            if (Loaiborow(tenGoc) && SafeParse(node.SelectSingleNode("ThTien")?.InnerText) ==0) continue;
 
                             int tchat = int.Parse(node.SelectSingleNode("TChat")?.InnerText ?? "0");
                             if (tenGoc.Contains("Chiết khấu") && tchat != 3)
@@ -13970,7 +13968,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             foreach (var dt in item.tbImportDetails)
                             {
                                 int hangam = 0;
-                                var getvattu= lstvt.FirstOrDefault(m => m.SoHieu.ToLower() == dt.SoHieu.ToLower());
+                                var getvattu= lstvt.FirstOrDefault(m => dt.SoHieu!=null && m.SoHieu.ToLower() == dt.SoHieu.ToLower());
                                 if (getvattu != null)
                                 {
                                     if (getvattu.SoLuong <= 0)
@@ -25412,12 +25410,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
             }
         }
-        private async void simpleButton3_Click(object sender, EventArgs e)
-        {
-            await  Taihoadon();
-            //LoginAndGetTokenSelenium(txtuser.Text, txtpass.Text);
-            //Taihoadon(1);
-        }
+       
 
         DataTable tbDinhDanhtaikhoan = new DataTable();
         private List<TbImport> lstdsVao = new List<TbImport>();
@@ -27664,7 +27657,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                 foreach (var key in candidateKeys)
                 {
-                    if (key == "DUONG-011")
+                    if (key == "DGOI-008")
                     {
                         int a1 = 10;
                     } 
@@ -27745,7 +27738,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     {
                         if (quyCachTrongKho == quyCach || quyCachTrongKho.Contains(quyCach))
                         {
-                            finalPercent += 20;
+                            finalPercent += 5;
                         }
                     }
 
@@ -27827,10 +27820,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     //Lấy ra vattu
                    
                     var sorted = results
-                        .OrderByDescending(x => x.soluong)
+                        .OrderByDescending(x => x.Percent)
                         .ThenByDescending(x => x.MatchCount)
-                        .ThenByDescending(x => x.AttrMatch.Count) // Ưu tiên có nhiều thuộc tính khớp
-                        .ThenByDescending(x => x.Percent) // Ưu tiên có nhiều thuộc tính khớp
+                        .ThenByDescending(x => x.AttrMatch.Count) // Ưu tiên có nhiều thuộc tính khớp 
                         .ToList();
 
                     var best = sorted.First();
@@ -27866,6 +27858,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     // ================================================= 
 
                     tbImportDetail.SoHieu = GenerateResultString(Helpers.NormalizeVietnameseString(normalizedTen));
+                    tbImportDetail.Percent = 0;
                     SetVatTuResult(tbImportDetail, normalizedTen, tbImportDetail.SoHieu, 0);
 
                     Console.WriteLine($"❌ Không tìm thấy vật tư cho: {normalizedTen}");
@@ -41778,6 +41771,18 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 return -1;
             }
         }
+
+
+
+        #region
+        private async void simpleButton3_Click(object sender, EventArgs e)
+        {
+            await Taihoadon();
+
+            //LoginAndGetTokenSelenium(txtuser.Text, txtpass.Text);
+            //Taihoadon(1);
+        }
+        #endregion
     }
 
 }

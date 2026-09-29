@@ -34,7 +34,15 @@
             this.thongKeBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.panelControl2 = new DevExpress.XtraEditors.PanelControl();
             this.btnXemchitiet = new DevExpress.XtraEditors.SimpleButton();
+            this.panelControl6 = new DevExpress.XtraEditors.PanelControl();
+            this.svgImageBox4 = new DevExpress.XtraEditors.SvgImageBox();
+            this.lblwarning0 = new DevExpress.XtraEditors.LabelControl();
+            this.checkEdit1 = new DevExpress.XtraEditors.CheckEdit();
             this.button3 = new System.Windows.Forms.Button();
+            this.panelControl3 = new DevExpress.XtraEditors.PanelControl();
+            this.svgImageBox1 = new DevExpress.XtraEditors.SvgImageBox();
+            this.lblwarning1 = new DevExpress.XtraEditors.LabelControl();
+            this.chkhoadonchuanhap = new DevExpress.XtraEditors.CheckEdit();
             this.button2 = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.btnExportExcelVao = new DevExpress.XtraEditors.SimpleButton();
@@ -66,10 +74,6 @@
             this.colTongTienPhi = new DevExpress.XtraGrid.Columns.GridColumn();
             this.colQueryType = new DevExpress.XtraGrid.Columns.GridColumn();
             this.clsKTHTBindingSource1 = new System.Windows.Forms.BindingSource(this.components);
-            this.panelControl3 = new DevExpress.XtraEditors.PanelControl();
-            this.svgImageBox1 = new DevExpress.XtraEditors.SvgImageBox();
-            this.lblwarning1 = new DevExpress.XtraEditors.LabelControl();
-            this.chkhoadonchuanhap = new DevExpress.XtraEditors.CheckEdit();
             this.panelControl4 = new DevExpress.XtraEditors.PanelControl();
             this.svgImageBox2 = new DevExpress.XtraEditors.SvgImageBox();
             this.lblwarning2 = new DevExpress.XtraEditors.LabelControl();
@@ -108,10 +112,7 @@
             this.labelControl8 = new DevExpress.XtraEditors.LabelControl();
             this.labelControl9 = new DevExpress.XtraEditors.LabelControl();
             this.panelControl1 = new DevExpress.XtraEditors.PanelControl();
-            this.panelControl6 = new DevExpress.XtraEditors.PanelControl();
-            this.svgImageBox4 = new DevExpress.XtraEditors.SvgImageBox();
-            this.lblwarning0 = new DevExpress.XtraEditors.LabelControl();
-            this.checkEdit1 = new DevExpress.XtraEditors.CheckEdit();
+            this.labelControl10 = new DevExpress.XtraEditors.LabelControl();
             this.panelControl7 = new DevExpress.XtraEditors.PanelControl();
             this.svgImageBox5 = new DevExpress.XtraEditors.SvgImageBox();
             this.lblwarining4 = new DevExpress.XtraEditors.LabelControl();
@@ -120,13 +121,17 @@
             ((System.ComponentModel.ISupportInitialize)(this.thongKeBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl2)).BeginInit();
             this.panelControl2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.gridView1)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.clsKTHTBindingSource1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.panelControl6)).BeginInit();
+            this.panelControl6.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox4)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.checkEdit1.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl3)).BeginInit();
             this.panelControl3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.svgImageBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.chkhoadonchuanhap.Properties)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.gridView1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.clsKTHTBindingSource1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl4)).BeginInit();
             this.panelControl4.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.svgImageBox2)).BeginInit();
@@ -140,10 +145,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.cbbNam.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl1)).BeginInit();
             this.panelControl1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl6)).BeginInit();
-            this.panelControl6.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox4)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.checkEdit1.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl7)).BeginInit();
             this.panelControl7.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.svgImageBox5)).BeginInit();
@@ -164,7 +165,9 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panelControl2.Controls.Add(this.btnXemchitiet);
+            this.panelControl2.Controls.Add(this.panelControl6);
             this.panelControl2.Controls.Add(this.button3);
+            this.panelControl2.Controls.Add(this.panelControl3);
             this.panelControl2.Controls.Add(this.button2);
             this.panelControl2.Controls.Add(this.button1);
             this.panelControl2.Controls.Add(this.btnExportExcelVao);
@@ -188,6 +191,50 @@
             this.btnXemchitiet.Text = "Xem chi tiết";
             this.btnXemchitiet.Click += new System.EventHandler(this.btnXemchitiet_Click);
             // 
+            // panelControl6
+            // 
+            this.panelControl6.Controls.Add(this.svgImageBox4);
+            this.panelControl6.Controls.Add(this.lblwarning0);
+            this.panelControl6.Controls.Add(this.checkEdit1);
+            this.panelControl6.Location = new System.Drawing.Point(5, 479);
+            this.panelControl6.Name = "panelControl6";
+            this.panelControl6.Size = new System.Drawing.Size(227, 38);
+            this.panelControl6.TabIndex = 4;
+            this.panelControl6.Visible = false;
+            // 
+            // svgImageBox4
+            // 
+            this.svgImageBox4.Location = new System.Drawing.Point(16, 5);
+            this.svgImageBox4.Name = "svgImageBox4";
+            this.svgImageBox4.Size = new System.Drawing.Size(33, 28);
+            this.svgImageBox4.SizeMode = DevExpress.XtraEditors.SvgImageSizeMode.Stretch;
+            this.svgImageBox4.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox4.SvgImage")));
+            this.svgImageBox4.TabIndex = 2;
+            this.svgImageBox4.Text = "svgImageBox4";
+            // 
+            // lblwarning0
+            // 
+            this.lblwarning0.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
+            this.lblwarning0.Appearance.Options.UseFont = true;
+            this.lblwarning0.Location = new System.Drawing.Point(179, 9);
+            this.lblwarning0.Name = "lblwarning0";
+            this.lblwarning0.Size = new System.Drawing.Size(11, 21);
+            this.lblwarning0.TabIndex = 1;
+            this.lblwarning0.Text = "0";
+            // 
+            // checkEdit1
+            // 
+            this.checkEdit1.Location = new System.Drawing.Point(56, 9);
+            this.checkEdit1.Name = "checkEdit1";
+            this.checkEdit1.Properties.Appearance.Font = new System.Drawing.Font("Tahoma", 8.25F, System.Drawing.FontStyle.Bold);
+            this.checkEdit1.Properties.Appearance.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.checkEdit1.Properties.Appearance.Options.UseFont = true;
+            this.checkEdit1.Properties.Appearance.Options.UseForeColor = true;
+            this.checkEdit1.Properties.Caption = "Hoá đơn đã nhập";
+            this.checkEdit1.Size = new System.Drawing.Size(164, 19);
+            this.checkEdit1.TabIndex = 0;
+            this.checkEdit1.CheckedChanged += new System.EventHandler(this.checkEdit1_CheckedChanged);
+            // 
             // button3
             // 
             this.button3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -201,6 +248,50 @@
             this.button3.Text = "Hoá đơn đã nhập vào phần mềm";
             this.button3.UseVisualStyleBackColor = false;
             this.button3.Visible = false;
+            // 
+            // panelControl3
+            // 
+            this.panelControl3.Controls.Add(this.svgImageBox1);
+            this.panelControl3.Controls.Add(this.lblwarning1);
+            this.panelControl3.Controls.Add(this.chkhoadonchuanhap);
+            this.panelControl3.Location = new System.Drawing.Point(238, 479);
+            this.panelControl3.Name = "panelControl3";
+            this.panelControl3.Size = new System.Drawing.Size(283, 38);
+            this.panelControl3.TabIndex = 3;
+            this.panelControl3.Visible = false;
+            // 
+            // svgImageBox1
+            // 
+            this.svgImageBox1.Location = new System.Drawing.Point(16, 5);
+            this.svgImageBox1.Name = "svgImageBox1";
+            this.svgImageBox1.Size = new System.Drawing.Size(33, 28);
+            this.svgImageBox1.SizeMode = DevExpress.XtraEditors.SvgImageSizeMode.Stretch;
+            this.svgImageBox1.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox1.SvgImage")));
+            this.svgImageBox1.TabIndex = 2;
+            this.svgImageBox1.Text = "svgImageBox1";
+            // 
+            // lblwarning1
+            // 
+            this.lblwarning1.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
+            this.lblwarning1.Appearance.Options.UseFont = true;
+            this.lblwarning1.Location = new System.Drawing.Point(224, 8);
+            this.lblwarning1.Name = "lblwarning1";
+            this.lblwarning1.Size = new System.Drawing.Size(11, 21);
+            this.lblwarning1.TabIndex = 1;
+            this.lblwarning1.Text = "0";
+            // 
+            // chkhoadonchuanhap
+            // 
+            this.chkhoadonchuanhap.Location = new System.Drawing.Point(56, 9);
+            this.chkhoadonchuanhap.Name = "chkhoadonchuanhap";
+            this.chkhoadonchuanhap.Properties.Appearance.Font = new System.Drawing.Font("Tahoma", 8.25F, System.Drawing.FontStyle.Bold);
+            this.chkhoadonchuanhap.Properties.Appearance.ForeColor = System.Drawing.Color.Red;
+            this.chkhoadonchuanhap.Properties.Appearance.Options.UseFont = true;
+            this.chkhoadonchuanhap.Properties.Appearance.Options.UseForeColor = true;
+            this.chkhoadonchuanhap.Properties.Caption = "Hoá đơn chưa được nhập";
+            this.chkhoadonchuanhap.Size = new System.Drawing.Size(164, 19);
+            this.chkhoadonchuanhap.TabIndex = 0;
+            this.chkhoadonchuanhap.CheckedChanged += new System.EventHandler(this.chkhoadonchuanhap_CheckedChanged);
             // 
             // button2
             // 
@@ -267,7 +358,7 @@
             this.gridControl1.MainView = this.gridView1;
             this.gridControl1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.gridControl1.Name = "gridControl1";
-            this.gridControl1.Size = new System.Drawing.Size(1249, 530);
+            this.gridControl1.Size = new System.Drawing.Size(1249, 462);
             this.gridControl1.TabIndex = 0;
             this.gridControl1.ViewCollection.AddRange(new DevExpress.XtraGrid.Views.Base.BaseView[] {
             this.gridView1});
@@ -557,62 +648,17 @@
             this.colQueryType.Caption = "QueryType";
             this.colQueryType.FieldName = "QueryType";
             this.colQueryType.Name = "colQueryType";
-            this.colQueryType.Visible = true;
-            this.colQueryType.VisibleIndex = 14;
             // 
             // clsKTHTBindingSource1
             // 
             this.clsKTHTBindingSource1.DataSource = typeof(SaovietTax.KTHT.clsKTHT);
-            // 
-            // panelControl3
-            // 
-            this.panelControl3.Controls.Add(this.svgImageBox1);
-            this.panelControl3.Controls.Add(this.lblwarning1);
-            this.panelControl3.Controls.Add(this.chkhoadonchuanhap);
-            this.panelControl3.Location = new System.Drawing.Point(243, 87);
-            this.panelControl3.Name = "panelControl3";
-            this.panelControl3.Size = new System.Drawing.Size(283, 38);
-            this.panelControl3.TabIndex = 3;
-            // 
-            // svgImageBox1
-            // 
-            this.svgImageBox1.Location = new System.Drawing.Point(16, 5);
-            this.svgImageBox1.Name = "svgImageBox1";
-            this.svgImageBox1.Size = new System.Drawing.Size(33, 28);
-            this.svgImageBox1.SizeMode = DevExpress.XtraEditors.SvgImageSizeMode.Stretch;
-            this.svgImageBox1.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox1.SvgImage")));
-            this.svgImageBox1.TabIndex = 2;
-            this.svgImageBox1.Text = "svgImageBox1";
-            // 
-            // lblwarning1
-            // 
-            this.lblwarning1.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
-            this.lblwarning1.Appearance.Options.UseFont = true;
-            this.lblwarning1.Location = new System.Drawing.Point(224, 8);
-            this.lblwarning1.Name = "lblwarning1";
-            this.lblwarning1.Size = new System.Drawing.Size(11, 21);
-            this.lblwarning1.TabIndex = 1;
-            this.lblwarning1.Text = "0";
-            // 
-            // chkhoadonchuanhap
-            // 
-            this.chkhoadonchuanhap.Location = new System.Drawing.Point(56, 9);
-            this.chkhoadonchuanhap.Name = "chkhoadonchuanhap";
-            this.chkhoadonchuanhap.Properties.Appearance.Font = new System.Drawing.Font("Tahoma", 8.25F, System.Drawing.FontStyle.Bold);
-            this.chkhoadonchuanhap.Properties.Appearance.ForeColor = System.Drawing.Color.Red;
-            this.chkhoadonchuanhap.Properties.Appearance.Options.UseFont = true;
-            this.chkhoadonchuanhap.Properties.Appearance.Options.UseForeColor = true;
-            this.chkhoadonchuanhap.Properties.Caption = "Hoá đơn chưa được nhập";
-            this.chkhoadonchuanhap.Size = new System.Drawing.Size(164, 19);
-            this.chkhoadonchuanhap.TabIndex = 0;
-            this.chkhoadonchuanhap.CheckedChanged += new System.EventHandler(this.chkhoadonchuanhap_CheckedChanged);
             // 
             // panelControl4
             // 
             this.panelControl4.Controls.Add(this.svgImageBox2);
             this.panelControl4.Controls.Add(this.lblwarning2);
             this.panelControl4.Controls.Add(this.chkhoadonsaitt);
-            this.panelControl4.Location = new System.Drawing.Point(532, 87);
+            this.panelControl4.Location = new System.Drawing.Point(12, 87);
             this.panelControl4.Name = "panelControl4";
             this.panelControl4.Size = new System.Drawing.Size(235, 38);
             this.panelControl4.TabIndex = 4;
@@ -655,7 +701,7 @@
             this.panelControl5.Controls.Add(this.svgImageBox3);
             this.panelControl5.Controls.Add(this.lblwarning3);
             this.panelControl5.Controls.Add(this.chkhoadonthieuhang);
-            this.panelControl5.Location = new System.Drawing.Point(773, 87);
+            this.panelControl5.Location = new System.Drawing.Point(253, 87);
             this.panelControl5.Name = "panelControl5";
             this.panelControl5.Size = new System.Drawing.Size(269, 38);
             this.panelControl5.TabIndex = 5;
@@ -941,12 +987,13 @@
             this.lbltshd1.Appearance.ForeColor = System.Drawing.Color.Red;
             this.lbltshd1.Appearance.Options.UseFont = true;
             this.lbltshd1.Appearance.Options.UseForeColor = true;
-            this.lbltshd1.Location = new System.Drawing.Point(922, 21);
+            this.lbltshd1.Location = new System.Drawing.Point(922, 22);
             this.lbltshd1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.lbltshd1.Name = "lbltshd1";
             this.lbltshd1.Size = new System.Drawing.Size(7, 13);
             this.lbltshd1.TabIndex = 29;
             this.lbltshd1.Text = "0";
+            this.lbltshd1.Click += new System.EventHandler(this.lbltshd1_Click);
             // 
             // lbltshd2
             // 
@@ -960,6 +1007,7 @@
             this.lbltshd2.Size = new System.Drawing.Size(7, 13);
             this.lbltshd2.TabIndex = 30;
             this.lbltshd2.Text = "0";
+            this.lbltshd2.Click += new System.EventHandler(this.lbltshd2_Click);
             // 
             // labelControl7
             // 
@@ -1013,6 +1061,7 @@
             // 
             this.panelControl1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.panelControl1.Controls.Add(this.labelControl10);
             this.panelControl1.Controls.Add(this.labelControl9);
             this.panelControl1.Controls.Add(this.labelControl8);
             this.panelControl1.Controls.Add(this.cbbNam);
@@ -1047,56 +1096,29 @@
             this.panelControl1.Name = "panelControl1";
             this.panelControl1.Size = new System.Drawing.Size(1259, 72);
             this.panelControl1.TabIndex = 1;
+            this.panelControl1.Paint += new System.Windows.Forms.PaintEventHandler(this.panelControl1_Paint);
             // 
-            // panelControl6
+            // labelControl10
             // 
-            this.panelControl6.Controls.Add(this.svgImageBox4);
-            this.panelControl6.Controls.Add(this.lblwarning0);
-            this.panelControl6.Controls.Add(this.checkEdit1);
-            this.panelControl6.Location = new System.Drawing.Point(10, 87);
-            this.panelControl6.Name = "panelControl6";
-            this.panelControl6.Size = new System.Drawing.Size(227, 38);
-            this.panelControl6.TabIndex = 4;
-            // 
-            // svgImageBox4
-            // 
-            this.svgImageBox4.Location = new System.Drawing.Point(16, 5);
-            this.svgImageBox4.Name = "svgImageBox4";
-            this.svgImageBox4.Size = new System.Drawing.Size(33, 28);
-            this.svgImageBox4.SizeMode = DevExpress.XtraEditors.SvgImageSizeMode.Stretch;
-            this.svgImageBox4.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox4.SvgImage")));
-            this.svgImageBox4.TabIndex = 2;
-            this.svgImageBox4.Text = "svgImageBox4";
-            // 
-            // lblwarning0
-            // 
-            this.lblwarning0.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
-            this.lblwarning0.Appearance.Options.UseFont = true;
-            this.lblwarning0.Location = new System.Drawing.Point(179, 9);
-            this.lblwarning0.Name = "lblwarning0";
-            this.lblwarning0.Size = new System.Drawing.Size(11, 21);
-            this.lblwarning0.TabIndex = 1;
-            this.lblwarning0.Text = "0";
-            // 
-            // checkEdit1
-            // 
-            this.checkEdit1.Location = new System.Drawing.Point(56, 9);
-            this.checkEdit1.Name = "checkEdit1";
-            this.checkEdit1.Properties.Appearance.Font = new System.Drawing.Font("Tahoma", 8.25F, System.Drawing.FontStyle.Bold);
-            this.checkEdit1.Properties.Appearance.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.checkEdit1.Properties.Appearance.Options.UseFont = true;
-            this.checkEdit1.Properties.Appearance.Options.UseForeColor = true;
-            this.checkEdit1.Properties.Caption = "Hoá đơn đã nhập";
-            this.checkEdit1.Size = new System.Drawing.Size(164, 19);
-            this.checkEdit1.TabIndex = 0;
-            this.checkEdit1.CheckedChanged += new System.EventHandler(this.checkEdit1_CheckedChanged);
+            this.labelControl10.Appearance.Font = new System.Drawing.Font("Tahoma", 8.5F, System.Drawing.FontStyle.Bold);
+            this.labelControl10.Appearance.ForeColor = System.Drawing.Color.Red;
+            this.labelControl10.Appearance.Options.UseFont = true;
+            this.labelControl10.Appearance.Options.UseForeColor = true;
+            this.labelControl10.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.labelControl10.Location = new System.Drawing.Point(966, 22);
+            this.labelControl10.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.labelControl10.Name = "labelControl10";
+            this.labelControl10.Size = new System.Drawing.Size(7, 13);
+            this.labelControl10.TabIndex = 36;
+            this.labelControl10.Text = "0";
+            this.labelControl10.Click += new System.EventHandler(this.labelControl10_Click);
             // 
             // panelControl7
             // 
             this.panelControl7.Controls.Add(this.svgImageBox5);
             this.panelControl7.Controls.Add(this.lblwarining4);
             this.panelControl7.Controls.Add(this.chkhoadondu);
-            this.panelControl7.Location = new System.Drawing.Point(1048, 87);
+            this.panelControl7.Location = new System.Drawing.Point(528, 87);
             this.panelControl7.Name = "panelControl7";
             this.panelControl7.Size = new System.Drawing.Size(221, 38);
             this.panelControl7.TabIndex = 5;
@@ -1140,10 +1162,8 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1272, 687);
             this.Controls.Add(this.panelControl7);
-            this.Controls.Add(this.panelControl6);
             this.Controls.Add(this.panelControl5);
             this.Controls.Add(this.panelControl4);
-            this.Controls.Add(this.panelControl3);
             this.Controls.Add(this.panelControl2);
             this.Controls.Add(this.panelControl1);
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
@@ -1158,14 +1178,19 @@
             ((System.ComponentModel.ISupportInitialize)(this.thongKeBindingSource)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl2)).EndInit();
             this.panelControl2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.gridView1)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.clsKTHTBindingSource1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.panelControl6)).EndInit();
+            this.panelControl6.ResumeLayout(false);
+            this.panelControl6.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox4)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.checkEdit1.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl3)).EndInit();
             this.panelControl3.ResumeLayout(false);
             this.panelControl3.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.svgImageBox1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.chkhoadonchuanhap.Properties)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.gridView1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.clsKTHTBindingSource1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl4)).EndInit();
             this.panelControl4.ResumeLayout(false);
             this.panelControl4.PerformLayout();
@@ -1182,11 +1207,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.panelControl1)).EndInit();
             this.panelControl1.ResumeLayout(false);
             this.panelControl1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl6)).EndInit();
-            this.panelControl6.ResumeLayout(false);
-            this.panelControl6.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox4)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.checkEdit1.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl7)).EndInit();
             this.panelControl7.ResumeLayout(false);
             this.panelControl7.PerformLayout();
@@ -1283,5 +1303,6 @@
         private DevExpress.XtraEditors.SvgImageBox svgImageBox5;
         private DevExpress.XtraEditors.LabelControl lblwarining4;
         private DevExpress.XtraEditors.CheckEdit chkhoadondu;
+        private DevExpress.XtraEditors.LabelControl labelControl10;
     }
 }

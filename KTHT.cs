@@ -1545,7 +1545,7 @@ namespace SaovietTax
 
                         if (loginRes.StatusCode == HttpStatusCode.Unauthorized)
                         {
-                            XtraMessageBox.Show("Đăng nhập thất bại (401): " + loginBody);
+                            //XtraMessageBox.Show("Đăng nhập thất bại (401): " + loginBody);
                             progressPanel1.Visible = false;
                             return;
                         }
@@ -1921,8 +1921,7 @@ namespace SaovietTax
             gridControl1.DataSource = null;
             gridControl1.RefreshDataSource();
             //LoadDanhsachExcel();
-            Dohoadon();
-
+            Dohoadon(); 
         }
         int slcoquanthue = 0;
         int slvb6 = 0;
@@ -2009,7 +2008,7 @@ namespace SaovietTax
             }
 
             for (int i = tuthang; i <= denthang; i++)
-            {
+            { 
                 string CurrentYear = $"HD{cbbNam.EditValue}";
                 string directoryPath = Path.Combine(savedPath, CurrentYear, typeHD, i.ToString()).Trim();
                 if (!Directory.Exists(directoryPath)) continue;
@@ -2237,9 +2236,9 @@ namespace SaovietTax
                     clsKTHT.GhiChu = "Hoá đơn nhập dư";
                     clsKTHTs.Add(clsKTHT);
                 }
-                LoadDatasource(); 
+                
             }
-        
+            LoadDatasource();
             progressPanel1.Caption = "";
             progressPanel1.Visible = false;
 
@@ -2254,6 +2253,8 @@ namespace SaovietTax
             lblwarning2.Text = lshoadonloi.ToString();
             lblwarning3.Text=slhangchuanhapma.ToString();
             lblwarning0.Text= $"{slhangdaimport.ToString("N0")}";
+            labelControl10.AllowHtmlString = true;
+            labelControl10.Text = $"<u>{slhangchuaiport.ToString("N0")}</u>";
             lblwarining4.Text = listRemain.Count.ToString();
         }
         private void LoadDatasource()
@@ -2610,6 +2611,31 @@ namespace SaovietTax
         private void chkhoadondu_CheckedChanged(object sender, EventArgs e)
         {
             LoadDatasource();
+        }
+
+        private void labelControl10_Click(object sender, EventArgs e)
+        {
+            var orgiginlist = clsKTHTs;
+            orgiginlist = orgiginlist.Where(m => m.Statustype == 1).ToList();
+            gridControl1.DataSource = orgiginlist;
+        }
+
+        private void panelControl1_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lbltshd1_Click(object sender, EventArgs e)
+        {
+            var orgiginlist = clsKTHTs;
+            orgiginlist = orgiginlist.Where(m => m.Statustype == 0).ToList();
+            gridControl1.DataSource = orgiginlist;
+        }
+
+        private void lbltshd2_Click(object sender, EventArgs e)
+        {
+            var orgiginlist = clsKTHTs;
+            gridControl1.DataSource = orgiginlist;
         }
 
         DataTable gettbChungtu;

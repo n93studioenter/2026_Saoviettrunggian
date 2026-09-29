@@ -127,7 +127,7 @@ namespace SaovietTax {
 
                 switch (content.Trim())
                 {
-                    case "1": Application.Run(new frmMain()); break;
+                    case "1": Application.Run(new Vanguard()); break;
                     case "2": Application.Run(new KTHT()); break;
                     case "3": Application.Run(new frmTaihoadonvb()); break;
                     case "4": Application.Run(new Form3()); break;

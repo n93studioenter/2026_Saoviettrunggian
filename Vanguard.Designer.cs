@@ -43,6 +43,7 @@
             this.svgImageBox1 = new DevExpress.XtraEditors.SvgImageBox();
             this.labelControl1 = new DevExpress.XtraEditors.LabelControl();
             this.panelControl1 = new DevExpress.XtraEditors.PanelControl();
+            this.simpleButton2 = new DevExpress.XtraEditors.SimpleButton();
             ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.warningDataBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridView1)).BeginInit();
@@ -146,8 +147,9 @@
             // 
             this.simpleButton1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.simpleButton1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
-            this.simpleButton1.ImageOptions.Image = global::SaovietTax.Properties.Resources.close_32x32;
-            this.simpleButton1.Location = new System.Drawing.Point(317, 6);
+            this.simpleButton1.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton1.ImageOptions.SvgImage")));
+            this.simpleButton1.Location = new System.Drawing.Point(321, 10);
+            this.simpleButton1.LookAndFeel.UseDefaultLookAndFeel = false;
             this.simpleButton1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.simpleButton1.Name = "simpleButton1";
             this.simpleButton1.Size = new System.Drawing.Size(39, 31);
@@ -164,17 +166,18 @@
             this.svgImageBox1.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox1.SvgImage")));
             this.svgImageBox1.TabIndex = 2;
             this.svgImageBox1.Text = "svgImageBox1";
+            this.svgImageBox1.Click += new System.EventHandler(this.svgImageBox1_Click);
             // 
             // labelControl1
             // 
-            this.labelControl1.Appearance.Font = new System.Drawing.Font("Tahoma", 7F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelControl1.Appearance.ForeColor = System.Drawing.Color.Black;
+            this.labelControl1.Appearance.Font = new System.Drawing.Font("Tahoma", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.labelControl1.Appearance.ForeColor = System.Drawing.Color.White;
             this.labelControl1.Appearance.Options.UseFont = true;
             this.labelControl1.Appearance.Options.UseForeColor = true;
             this.labelControl1.Location = new System.Drawing.Point(69, 18);
             this.labelControl1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl1.Name = "labelControl1";
-            this.labelControl1.Size = new System.Drawing.Size(185, 12);
+            this.labelControl1.Size = new System.Drawing.Size(210, 14);
             this.labelControl1.TabIndex = 3;
             this.labelControl1.Text = "CẢNH BÁO HỆ THỐNG THEO THÁNG";
             // 
@@ -185,8 +188,20 @@
             this.panelControl1.Location = new System.Drawing.Point(10, 50);
             this.panelControl1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.panelControl1.Name = "panelControl1";
-            this.panelControl1.Size = new System.Drawing.Size(351, 434);
+            this.panelControl1.Size = new System.Drawing.Size(351, 405);
             this.panelControl1.TabIndex = 4;
+            // 
+            // simpleButton2
+            // 
+            this.simpleButton2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.simpleButton2.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton2.ImageOptions.SvgImage")));
+            this.simpleButton2.ImageOptions.SvgImageSize = new System.Drawing.Size(30, 30);
+            this.simpleButton2.Location = new System.Drawing.Point(223, 462);
+            this.simpleButton2.Name = "simpleButton2";
+            this.simpleButton2.Size = new System.Drawing.Size(137, 31);
+            this.simpleButton2.TabIndex = 0;
+            this.simpleButton2.Text = "Tự động sửa lỗi";
+            this.simpleButton2.Click += new System.EventHandler(this.simpleButton2_Click);
             // 
             // Vanguard
             // 
@@ -194,7 +209,8 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackgroundImageLayoutStore = System.Windows.Forms.ImageLayout.Tile;
             this.BackgroundImageStore = ((System.Drawing.Image)(resources.GetObject("$this.BackgroundImageStore")));
-            this.ClientSize = new System.Drawing.Size(367, 493);
+            this.ClientSize = new System.Drawing.Size(367, 497);
+            this.Controls.Add(this.simpleButton2);
             this.Controls.Add(this.panelControl1);
             this.Controls.Add(this.labelControl1);
             this.Controls.Add(this.svgImageBox1);
@@ -232,5 +248,6 @@
         private DevExpress.XtraEditors.SvgImageBox svgImageBox1;
         private DevExpress.XtraEditors.LabelControl labelControl1;
         private DevExpress.XtraEditors.PanelControl panelControl1;
+        private DevExpress.XtraEditors.SimpleButton simpleButton2;
     }
 }

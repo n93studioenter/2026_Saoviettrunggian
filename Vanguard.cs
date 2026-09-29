@@ -50,6 +50,7 @@ namespace SaovietTax
         {
             public string SoHD { get; set; }
             public DateTime NLap { get; set; }
+            public DateTime NDung { get; set; }
             public string KHHD { get; set; }
             public string MST { get; set; }
             public double TienTrcThue { get; set; }
@@ -223,6 +224,7 @@ namespace SaovietTax
         // =====================================================================
         // PIPELINE CHÍNH — thay thế LoadMessageOld/LoadMessage/LoadMeaasgeold2/LoadGrid
         // =====================================================================
+        DataTable tbHttk { get; set; }
         private void RunWarningPipeline()
         {
             int currentYear = DateTime.Now.Year;
@@ -250,7 +252,8 @@ namespace SaovietTax
 
             tbImport = dtImport;
             gettbChungtu = ExecuteQuery("SELECT MaCT, MaLoai, SoHieu, MaTKTCNo, MaTKTCCo, SoPS, SoPS2No, SoPS2Co, NgayImport, MaVattu FROM ChungTu", null);
-
+            string qrGethttk = "select MaSo,SoHieu,Cap,Loai,TK_ID,TK_ID2 from HeThongTK";
+            tbHttk = ExecuteQuery(qrGethttk, null);
             // -------------------------------------------------------------
             // STEP 3: BUILD LOOKUP + DICTIONARIES (1 lần)
             // -------------------------------------------------------------
@@ -338,7 +341,7 @@ namespace SaovietTax
                     KHHD = row["KyHieu"].ToString(),
                     NgayCT = DateTime.Parse(row["NgayCT"].ToString())
                 };
-                if (item.SoHieu == "19817" && item.NgayCT.Month==9)
+                if (item.SoHieu == "192" && item.NgayCT.Month==9)
                 {
                     int test = 10;
                 }
@@ -603,7 +606,7 @@ namespace SaovietTax
                             string soHD = Helpers.RemoveLeadingZeros(row.Cell("D").Value.ToString()).Trim();
                             
                             if (!DateTime.TryParse(row.Cell("E").Value.ToString(), out var nLap)) continue;
-                            if (soHD == "543" && nLap.Date.Month == 8 && !isVao)
+                            if (soHD == "192" && nLap.Date.Month == 9 && !isVao)
                             {
                                 int test = 10;
                             }
@@ -619,8 +622,8 @@ namespace SaovietTax
                             }
                             else
                             {
-                                string colT = isVao ? "K" : "L";
-                                string colThue = isVao ? "L" : "M";
+                                string colT = isVao ? "K" : "K";
+                                string colThue = isVao ? "L" : "L";
                                 tienTrcThue = ParseMoney(row.Cell(colT).Value.ToString());
                                 tienThue = ParseMoney(row.Cell(colThue).Value.ToString());
                                 tongTien = ParseMoney(row.Cell("O").Value.ToString());
@@ -843,6 +846,8 @@ namespace SaovietTax
                         && m["MaTKTCCo"].ToString() != "14038"
                         && m["MaTKTCCo"].ToString() != "82"
                         && m["MaTKTCCo"].ToString() != "169"
+                             && m["MaTKTCCo"].ToString() != "125"
+                                  && m["MaTKTCCo"].ToString() != "126"
                         && m["MaTKTCNo"].ToString() != "160"
                         && m["MaTKTCNo"].ToString() != "161"
                         && (m["MaTKTCNo"].ToString() != "0" || m["MaTKTCCo"].ToString() != "0")
@@ -1107,6 +1112,7 @@ namespace SaovietTax
             if (string.IsNullOrWhiteSpace(s)) return 0;
             return double.TryParse(s, out double v) ? Math.Round(v) : 0;
         }
+        public static List<ChungTuHD> dsHoadonloi=new List<ChungTuHD>();
 
         private static string CompareHoaDon(HoaDonNhap hd, ChungTuHD ct)
         {
@@ -1126,12 +1132,20 @@ namespace SaovietTax
             if (hd.Type == 1)
             {
                 if (ct.NgayCT.Date != hd.NLap.Date && loi.Count == 0 && hd.Type == ct.Type && hd.MST==ct.MST)
+                {
                     loi.Add($"Ngày chứng từ bị sai {ct.NgayCT.Date.ToShortDateString()}, ngày đúng là {hd.NLap.Date.ToShortDateString()}");
+                    ct.NgayCT = hd.NLap.Date;
+                    dsHoadonloi.Add(ct);
+                }
             }
             else
             {
                 if (ct.NgayCT.Date != hd.NLap.Date && loi.Count == 0 && hd.Type == ct.Type)
+                {
                     loi.Add($"Ngày chứng từ bị sai {ct.NgayCT.Date.ToShortDateString()},  ngày đúng là {hd.NLap.Date.ToShortDateString()}");
+                    ct.NgayCT = hd.NLap.Date;
+                    dsHoadonloi.Add(ct);
+                }
             }
             //if (ct.Hangnull == 1)
             //{
@@ -1253,6 +1267,82 @@ namespace SaovietTax
             this.BringToFront();
             this.TopMost = true;
         }
+
+        private void svgImageBox1_Click(object sender, EventArgs e)
+        {
+            //Thực hiện fix lỗi ngày 
+            foreach (var d in dsHoadonloi)
+            {
+                try
+                {
+                    string query = @"UPDATE ChungTu SET NgayCT = ?,NgayGS=? where  MaCT = ?";
+
+                    var parameters = new OleDbParameter[]
+             {
+                                new OleDbParameter("?",d.NgayCT),
+                                  new OleDbParameter("?",d.NgayCT),
+                                    new OleDbParameter("?",d.MaCT),
+             };
+                    int rowsAffected = ExecuteQueryResult(query, parameters);
+                }
+                catch(Exception ex)
+                {
+
+                }
+            }
+            XtraMessageBox.Show("Đã thực hiện sửa lỗi ngày chứng từ bị sai");
+        }
+        public int ExecuteQueryResult(string query, params OleDbParameter[] parameters)
+        {
+            using (OleDbConnection connection = new OleDbConnection(connectionString))
+            {
+                connection.Open();
+                Console.WriteLine("Kết nối đến cơ sở dữ liệu thành công! " + query);
+
+                using (OleDbCommand command = new OleDbCommand(query, connection))
+                {
+                    // Thêm tham số
+                    if (parameters != null)
+                        command.Parameters.AddRange(parameters);
+
+                    // Thực thi INSERT, UPDATE, DELETE
+                    command.ExecuteNonQuery();
+                }
+
+                // Lấy ID vừa thêm bằng @@IDENTITY
+                using (OleDbCommand idCommand = new OleDbCommand("SELECT @@IDENTITY", connection))
+                {
+                    object result = idCommand.ExecuteScalar();
+                    return Convert.ToInt32(result);
+                }
+            }
+        }
+
+        private void simpleButton2_Click(object sender, EventArgs e)
+        {
+            //Thực hiện fix lỗi ngày 
+            foreach (var d in dsHoadonloi)
+            {
+                try
+                {
+                    string query = @"UPDATE ChungTu SET NgayCT = ?,NgayGS=? where  MaCT = ?";
+
+                     var parameters = new OleDbParameter[]
+                     {
+                                        new OleDbParameter("?",d.NgayCT),
+                                          new OleDbParameter("?",d.NgayCT),
+                                            new OleDbParameter("?",d.MaCT),
+                     };
+                    int rowsAffected = ExecuteQueryResult(query, parameters);
+                }
+                catch (Exception ex)
+                {
+
+                }
+            }
+            XtraMessageBox.Show("Đã thực hiện sửa lỗi ngày chứng từ bị sai");
+        }
+
         private void btnClose_Click(object sender, EventArgs e) => Close();
     }
 }
