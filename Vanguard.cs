@@ -341,7 +341,7 @@ namespace SaovietTax
                     KHHD = row["KyHieu"].ToString(),
                     NgayCT = DateTime.Parse(row["NgayCT"].ToString())
                 };
-                if (item.SoHieu == "192" && item.NgayCT.Month==9)
+                if (item.SoHieu == "105" )
                 {
                     int test = 10;
                 }
@@ -966,7 +966,7 @@ namespace SaovietTax
             bool hasWarning = monthData.Warnings.Count > 0;
 
             // ---- HEADER ----
-            int headerHeight = 52;
+            int headerHeight =32;
             var header = new Panel
             {
                 Location = new Point(0, 0),
@@ -977,20 +977,20 @@ namespace SaovietTax
                     : Color.FromArgb(248, 255, 248)
             };
 
-            var icon = new DevExpress.XtraEditors.SvgImageBox
-            {
-                Location = new Point(14, 12),
-                Size = new Size(28, 28),
-                SvgImage = GetCalendarSvg(hasWarning)
-            };
-            header.Controls.Add(icon);
+            //var icon = new DevExpress.XtraEditors.SvgImageBox
+            //{
+            //    Location = new Point(14, 12),
+            //    Size = new Size(28, 28),
+            //    SvgImage = GetCalendarSvg(hasWarning)
+            //};
+            //header.Controls.Add(icon);
 
             var lblMonth = new WinLabel
             {
                 Text = monthData.Month,
                 Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 37, 41),
-                Location = new Point(52, 14),
+                Location = new Point(12, 14),
                 AutoSize = true,
                 BackColor = Color.Transparent
             };
@@ -998,30 +998,30 @@ namespace SaovietTax
 
             if (hasWarning)
             {
-                var badge = new WinLabel
-                {
-                    Text = $"  {monthData.Warnings.Count} cảnh báo  ",
-                    Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                    ForeColor = Color.White,
-                    BackColor = Color.FromArgb(220, 53, 69),
-                    Location = new Point(52 + lblMonth.PreferredWidth + 14, 17),
-                    AutoSize = true,
-                    Padding = new Padding(4, 2, 4, 2)
-                };
-                header.Controls.Add(badge);
+                //var badge = new WinLabel
+                //{
+                //    Text = $"  {monthData.Warnings.Count} cảnh báo  ",
+                //    Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                //    ForeColor = Color.White,
+                //    BackColor = Color.FromArgb(220, 53, 69),
+                //    Location = new Point(52 + lblMonth.PreferredWidth + 14, 17),
+                //    AutoSize = true,
+                //    Padding = new Padding(4, 2, 4, 2)
+                //};
+                //header.Controls.Add(badge);
             }
             else
             {
-                var ok = new WinLabel
-                {
-                    Text = "✓ Không có cảnh báo",
-                    Font = new Font("Segoe UI", 8.5F, FontStyle.Italic),
-                    ForeColor = Color.FromArgb(40, 167, 69),
-                    Location = new Point(52 + lblMonth.PreferredWidth + 14, 18),
-                    AutoSize = true,
-                    BackColor = Color.Transparent
-                };
-                header.Controls.Add(ok);
+                //var ok = new WinLabel
+                //{
+                //    Text = "✓ Không có cảnh báo",
+                //    Font = new Font("Segoe UI", 8.5F, FontStyle.Italic),
+                //    ForeColor = Color.FromArgb(40, 167, 69),
+                //    Location = new Point(52 + lblMonth.PreferredWidth + 14, 18),
+                //    AutoSize = true,
+                //    BackColor = Color.Transparent
+                //};
+                //header.Controls.Add(ok);
             }
 
             // ---- BODY ----

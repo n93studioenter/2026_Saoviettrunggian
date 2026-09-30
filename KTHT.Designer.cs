@@ -34,15 +34,7 @@
             this.thongKeBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.panelControl2 = new DevExpress.XtraEditors.PanelControl();
             this.btnXemchitiet = new DevExpress.XtraEditors.SimpleButton();
-            this.panelControl6 = new DevExpress.XtraEditors.PanelControl();
-            this.svgImageBox4 = new DevExpress.XtraEditors.SvgImageBox();
-            this.lblwarning0 = new DevExpress.XtraEditors.LabelControl();
-            this.checkEdit1 = new DevExpress.XtraEditors.CheckEdit();
             this.button3 = new System.Windows.Forms.Button();
-            this.panelControl3 = new DevExpress.XtraEditors.PanelControl();
-            this.svgImageBox1 = new DevExpress.XtraEditors.SvgImageBox();
-            this.lblwarning1 = new DevExpress.XtraEditors.LabelControl();
-            this.chkhoadonchuanhap = new DevExpress.XtraEditors.CheckEdit();
             this.button2 = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.btnExportExcelVao = new DevExpress.XtraEditors.SimpleButton();
@@ -74,14 +66,8 @@
             this.colTongTienPhi = new DevExpress.XtraGrid.Columns.GridColumn();
             this.colQueryType = new DevExpress.XtraGrid.Columns.GridColumn();
             this.clsKTHTBindingSource1 = new System.Windows.Forms.BindingSource(this.components);
-            this.panelControl4 = new DevExpress.XtraEditors.PanelControl();
-            this.svgImageBox2 = new DevExpress.XtraEditors.SvgImageBox();
             this.lblwarning2 = new DevExpress.XtraEditors.LabelControl();
-            this.chkhoadonsaitt = new DevExpress.XtraEditors.CheckEdit();
-            this.panelControl5 = new DevExpress.XtraEditors.PanelControl();
-            this.svgImageBox3 = new DevExpress.XtraEditors.SvgImageBox();
             this.lblwarning3 = new DevExpress.XtraEditors.LabelControl();
-            this.chkhoadonthieuhang = new DevExpress.XtraEditors.CheckEdit();
             this.cbbChonthang = new DevExpress.XtraEditors.ComboBoxEdit();
             this.labelControl1 = new DevExpress.XtraEditors.LabelControl();
             this.radDauvao = new System.Windows.Forms.RadioButton();
@@ -112,43 +98,23 @@
             this.labelControl8 = new DevExpress.XtraEditors.LabelControl();
             this.labelControl9 = new DevExpress.XtraEditors.LabelControl();
             this.panelControl1 = new DevExpress.XtraEditors.PanelControl();
-            this.labelControl10 = new DevExpress.XtraEditors.LabelControl();
-            this.panelControl7 = new DevExpress.XtraEditors.PanelControl();
-            this.svgImageBox5 = new DevExpress.XtraEditors.SvgImageBox();
+            this.labelControl13 = new DevExpress.XtraEditors.LabelControl();
             this.lblwarining4 = new DevExpress.XtraEditors.LabelControl();
-            this.chkhoadondu = new DevExpress.XtraEditors.CheckEdit();
+            this.labelControl12 = new DevExpress.XtraEditors.LabelControl();
+            this.labelControl11 = new DevExpress.XtraEditors.LabelControl();
+            this.labelControl10 = new DevExpress.XtraEditors.LabelControl();
             ((System.ComponentModel.ISupportInitialize)(this.clsKTHTBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.thongKeBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl2)).BeginInit();
             this.panelControl2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl6)).BeginInit();
-            this.panelControl6.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox4)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.checkEdit1.Properties)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl3)).BeginInit();
-            this.panelControl3.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox1)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.chkhoadonchuanhap.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.clsKTHTBindingSource1)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl4)).BeginInit();
-            this.panelControl4.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox2)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.chkhoadonsaitt.Properties)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl5)).BeginInit();
-            this.panelControl5.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox3)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.chkhoadonthieuhang.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.cbbChonthang.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.cbbDenthang.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.cbbNam.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl1)).BeginInit();
             this.panelControl1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl7)).BeginInit();
-            this.panelControl7.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox5)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.chkhoadondu.Properties)).BeginInit();
             this.SuspendLayout();
             // 
             // clsKTHTBindingSource
@@ -165,18 +131,16 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panelControl2.Controls.Add(this.btnXemchitiet);
-            this.panelControl2.Controls.Add(this.panelControl6);
             this.panelControl2.Controls.Add(this.button3);
-            this.panelControl2.Controls.Add(this.panelControl3);
             this.panelControl2.Controls.Add(this.button2);
             this.panelControl2.Controls.Add(this.button1);
             this.panelControl2.Controls.Add(this.btnExportExcelVao);
             this.panelControl2.Controls.Add(this.progressPanel1);
             this.panelControl2.Controls.Add(this.gridControl1);
-            this.panelControl2.Location = new System.Drawing.Point(10, 130);
+            this.panelControl2.Location = new System.Drawing.Point(10, 86);
             this.panelControl2.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.panelControl2.Name = "panelControl2";
-            this.panelControl2.Size = new System.Drawing.Size(1280, 547);
+            this.panelControl2.Size = new System.Drawing.Size(1280, 591);
             this.panelControl2.TabIndex = 2;
             // 
             // btnXemchitiet
@@ -191,50 +155,6 @@
             this.btnXemchitiet.Text = "Xem chi tiết";
             this.btnXemchitiet.Click += new System.EventHandler(this.btnXemchitiet_Click);
             // 
-            // panelControl6
-            // 
-            this.panelControl6.Controls.Add(this.svgImageBox4);
-            this.panelControl6.Controls.Add(this.lblwarning0);
-            this.panelControl6.Controls.Add(this.checkEdit1);
-            this.panelControl6.Location = new System.Drawing.Point(5, 479);
-            this.panelControl6.Name = "panelControl6";
-            this.panelControl6.Size = new System.Drawing.Size(227, 38);
-            this.panelControl6.TabIndex = 4;
-            this.panelControl6.Visible = false;
-            // 
-            // svgImageBox4
-            // 
-            this.svgImageBox4.Location = new System.Drawing.Point(16, 5);
-            this.svgImageBox4.Name = "svgImageBox4";
-            this.svgImageBox4.Size = new System.Drawing.Size(33, 28);
-            this.svgImageBox4.SizeMode = DevExpress.XtraEditors.SvgImageSizeMode.Stretch;
-            this.svgImageBox4.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox4.SvgImage")));
-            this.svgImageBox4.TabIndex = 2;
-            this.svgImageBox4.Text = "svgImageBox4";
-            // 
-            // lblwarning0
-            // 
-            this.lblwarning0.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
-            this.lblwarning0.Appearance.Options.UseFont = true;
-            this.lblwarning0.Location = new System.Drawing.Point(179, 9);
-            this.lblwarning0.Name = "lblwarning0";
-            this.lblwarning0.Size = new System.Drawing.Size(11, 21);
-            this.lblwarning0.TabIndex = 1;
-            this.lblwarning0.Text = "0";
-            // 
-            // checkEdit1
-            // 
-            this.checkEdit1.Location = new System.Drawing.Point(56, 9);
-            this.checkEdit1.Name = "checkEdit1";
-            this.checkEdit1.Properties.Appearance.Font = new System.Drawing.Font("Tahoma", 8.25F, System.Drawing.FontStyle.Bold);
-            this.checkEdit1.Properties.Appearance.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.checkEdit1.Properties.Appearance.Options.UseFont = true;
-            this.checkEdit1.Properties.Appearance.Options.UseForeColor = true;
-            this.checkEdit1.Properties.Caption = "Hoá đơn đã nhập";
-            this.checkEdit1.Size = new System.Drawing.Size(164, 19);
-            this.checkEdit1.TabIndex = 0;
-            this.checkEdit1.CheckedChanged += new System.EventHandler(this.checkEdit1_CheckedChanged);
-            // 
             // button3
             // 
             this.button3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -248,50 +168,6 @@
             this.button3.Text = "Hoá đơn đã nhập vào phần mềm";
             this.button3.UseVisualStyleBackColor = false;
             this.button3.Visible = false;
-            // 
-            // panelControl3
-            // 
-            this.panelControl3.Controls.Add(this.svgImageBox1);
-            this.panelControl3.Controls.Add(this.lblwarning1);
-            this.panelControl3.Controls.Add(this.chkhoadonchuanhap);
-            this.panelControl3.Location = new System.Drawing.Point(238, 479);
-            this.panelControl3.Name = "panelControl3";
-            this.panelControl3.Size = new System.Drawing.Size(283, 38);
-            this.panelControl3.TabIndex = 3;
-            this.panelControl3.Visible = false;
-            // 
-            // svgImageBox1
-            // 
-            this.svgImageBox1.Location = new System.Drawing.Point(16, 5);
-            this.svgImageBox1.Name = "svgImageBox1";
-            this.svgImageBox1.Size = new System.Drawing.Size(33, 28);
-            this.svgImageBox1.SizeMode = DevExpress.XtraEditors.SvgImageSizeMode.Stretch;
-            this.svgImageBox1.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox1.SvgImage")));
-            this.svgImageBox1.TabIndex = 2;
-            this.svgImageBox1.Text = "svgImageBox1";
-            // 
-            // lblwarning1
-            // 
-            this.lblwarning1.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
-            this.lblwarning1.Appearance.Options.UseFont = true;
-            this.lblwarning1.Location = new System.Drawing.Point(224, 8);
-            this.lblwarning1.Name = "lblwarning1";
-            this.lblwarning1.Size = new System.Drawing.Size(11, 21);
-            this.lblwarning1.TabIndex = 1;
-            this.lblwarning1.Text = "0";
-            // 
-            // chkhoadonchuanhap
-            // 
-            this.chkhoadonchuanhap.Location = new System.Drawing.Point(56, 9);
-            this.chkhoadonchuanhap.Name = "chkhoadonchuanhap";
-            this.chkhoadonchuanhap.Properties.Appearance.Font = new System.Drawing.Font("Tahoma", 8.25F, System.Drawing.FontStyle.Bold);
-            this.chkhoadonchuanhap.Properties.Appearance.ForeColor = System.Drawing.Color.Red;
-            this.chkhoadonchuanhap.Properties.Appearance.Options.UseFont = true;
-            this.chkhoadonchuanhap.Properties.Appearance.Options.UseForeColor = true;
-            this.chkhoadonchuanhap.Properties.Caption = "Hoá đơn chưa được nhập";
-            this.chkhoadonchuanhap.Size = new System.Drawing.Size(164, 19);
-            this.chkhoadonchuanhap.TabIndex = 0;
-            this.chkhoadonchuanhap.CheckedChanged += new System.EventHandler(this.chkhoadonchuanhap_CheckedChanged);
             // 
             // button2
             // 
@@ -324,7 +200,7 @@
             // 
             this.btnExportExcelVao.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnExportExcelVao.ImageOptions.Image = global::SaovietTax.Properties.Resources.exporttoxlsx_16x16;
-            this.btnExportExcelVao.Location = new System.Drawing.Point(1145, 508);
+            this.btnExportExcelVao.Location = new System.Drawing.Point(1156, 560);
             this.btnExportExcelVao.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnExportExcelVao.Name = "btnExportExcelVao";
             this.btnExportExcelVao.Size = new System.Drawing.Size(99, 24);
@@ -358,7 +234,7 @@
             this.gridControl1.MainView = this.gridView1;
             this.gridControl1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.gridControl1.Name = "gridControl1";
-            this.gridControl1.Size = new System.Drawing.Size(1249, 462);
+            this.gridControl1.Size = new System.Drawing.Size(1249, 544);
             this.gridControl1.TabIndex = 0;
             this.gridControl1.ViewCollection.AddRange(new DevExpress.XtraGrid.Views.Base.BaseView[] {
             this.gridView1});
@@ -405,7 +281,7 @@
             this.colChecked.MinWidth = 21;
             this.colChecked.Name = "colChecked";
             this.colChecked.Visible = true;
-            this.colChecked.VisibleIndex = 13;
+            this.colChecked.VisibleIndex = 11;
             this.colChecked.Width = 53;
             // 
             // colSTT
@@ -433,7 +309,7 @@
             this.colSTTType.MinWidth = 21;
             this.colSTTType.Name = "colSTTType";
             this.colSTTType.Visible = true;
-            this.colSTTType.VisibleIndex = 12;
+            this.colSTTType.VisibleIndex = 10;
             this.colSTTType.Width = 98;
             // 
             // colKHMS
@@ -496,7 +372,7 @@
             this.colNgayNhap.MinWidth = 21;
             this.colNgayNhap.Name = "colNgayNhap";
             this.colNgayNhap.Visible = true;
-            this.colNgayNhap.VisibleIndex = 11;
+            this.colNgayNhap.VisibleIndex = 9;
             this.colNgayNhap.Width = 115;
             // 
             // colMST
@@ -549,8 +425,6 @@
             this.colTienTrcThue.FieldName = "TienTrcThue";
             this.colTienTrcThue.MinWidth = 21;
             this.colTienTrcThue.Name = "colTienTrcThue";
-            this.colTienTrcThue.Visible = true;
-            this.colTienTrcThue.VisibleIndex = 6;
             this.colTienTrcThue.Width = 126;
             // 
             // colTienTrcThueHD
@@ -562,7 +436,7 @@
             this.colTienTrcThueHD.MinWidth = 21;
             this.colTienTrcThueHD.Name = "colTienTrcThueHD";
             this.colTienTrcThueHD.Visible = true;
-            this.colTienTrcThueHD.VisibleIndex = 7;
+            this.colTienTrcThueHD.VisibleIndex = 6;
             this.colTienTrcThueHD.Width = 96;
             // 
             // colTienThue
@@ -575,8 +449,6 @@
             this.colTienThue.FieldName = "TienThue";
             this.colTienThue.MinWidth = 21;
             this.colTienThue.Name = "colTienThue";
-            this.colTienThue.Visible = true;
-            this.colTienThue.VisibleIndex = 8;
             this.colTienThue.Width = 121;
             // 
             // colTienThueHD
@@ -588,7 +460,7 @@
             this.colTienThueHD.MinWidth = 21;
             this.colTienThueHD.Name = "colTienThueHD";
             this.colTienThueHD.Visible = true;
-            this.colTienThueHD.VisibleIndex = 9;
+            this.colTienThueHD.VisibleIndex = 7;
             this.colTienThueHD.Width = 89;
             // 
             // colTongTienTT
@@ -624,7 +496,7 @@
             this.colGhiChu.MinWidth = 21;
             this.colGhiChu.Name = "colGhiChu";
             this.colGhiChu.Visible = true;
-            this.colGhiChu.VisibleIndex = 10;
+            this.colGhiChu.VisibleIndex = 8;
             this.colGhiChu.Width = 414;
             // 
             // colPath
@@ -653,100 +525,39 @@
             // 
             this.clsKTHTBindingSource1.DataSource = typeof(SaovietTax.KTHT.clsKTHT);
             // 
-            // panelControl4
-            // 
-            this.panelControl4.Controls.Add(this.svgImageBox2);
-            this.panelControl4.Controls.Add(this.lblwarning2);
-            this.panelControl4.Controls.Add(this.chkhoadonsaitt);
-            this.panelControl4.Location = new System.Drawing.Point(12, 87);
-            this.panelControl4.Name = "panelControl4";
-            this.panelControl4.Size = new System.Drawing.Size(235, 38);
-            this.panelControl4.TabIndex = 4;
-            // 
-            // svgImageBox2
-            // 
-            this.svgImageBox2.Location = new System.Drawing.Point(16, 5);
-            this.svgImageBox2.Name = "svgImageBox2";
-            this.svgImageBox2.Size = new System.Drawing.Size(33, 28);
-            this.svgImageBox2.SizeMode = DevExpress.XtraEditors.SvgImageSizeMode.Stretch;
-            this.svgImageBox2.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox2.SvgImage")));
-            this.svgImageBox2.TabIndex = 2;
-            this.svgImageBox2.Text = "svgImageBox2";
-            // 
             // lblwarning2
             // 
-            this.lblwarning2.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
+            this.lblwarning2.Appearance.Font = new System.Drawing.Font("Tahoma", 8.5F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))));
+            this.lblwarning2.Appearance.ForeColor = System.Drawing.Color.Blue;
             this.lblwarning2.Appearance.Options.UseFont = true;
-            this.lblwarning2.Location = new System.Drawing.Point(209, 10);
+            this.lblwarning2.Appearance.Options.UseForeColor = true;
+            this.lblwarning2.Location = new System.Drawing.Point(982, 9);
             this.lblwarning2.Name = "lblwarning2";
-            this.lblwarning2.Size = new System.Drawing.Size(11, 21);
+            this.lblwarning2.Size = new System.Drawing.Size(7, 13);
             this.lblwarning2.TabIndex = 1;
             this.lblwarning2.Text = "0";
-            // 
-            // chkhoadonsaitt
-            // 
-            this.chkhoadonsaitt.Location = new System.Drawing.Point(56, 9);
-            this.chkhoadonsaitt.Name = "chkhoadonsaitt";
-            this.chkhoadonsaitt.Properties.Appearance.Font = new System.Drawing.Font("Tahoma", 8.25F, System.Drawing.FontStyle.Bold);
-            this.chkhoadonsaitt.Properties.Appearance.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
-            this.chkhoadonsaitt.Properties.Appearance.Options.UseFont = true;
-            this.chkhoadonsaitt.Properties.Appearance.Options.UseForeColor = true;
-            this.chkhoadonsaitt.Properties.Caption = "Hoá đơn sai thông tin";
-            this.chkhoadonsaitt.Size = new System.Drawing.Size(142, 19);
-            this.chkhoadonsaitt.TabIndex = 0;
-            this.chkhoadonsaitt.CheckedChanged += new System.EventHandler(this.chkhoadonsaitt_CheckedChanged);
-            // 
-            // panelControl5
-            // 
-            this.panelControl5.Controls.Add(this.svgImageBox3);
-            this.panelControl5.Controls.Add(this.lblwarning3);
-            this.panelControl5.Controls.Add(this.chkhoadonthieuhang);
-            this.panelControl5.Location = new System.Drawing.Point(253, 87);
-            this.panelControl5.Name = "panelControl5";
-            this.panelControl5.Size = new System.Drawing.Size(269, 38);
-            this.panelControl5.TabIndex = 5;
-            // 
-            // svgImageBox3
-            // 
-            this.svgImageBox3.Location = new System.Drawing.Point(16, 5);
-            this.svgImageBox3.Name = "svgImageBox3";
-            this.svgImageBox3.Size = new System.Drawing.Size(33, 28);
-            this.svgImageBox3.SizeMode = DevExpress.XtraEditors.SvgImageSizeMode.Stretch;
-            this.svgImageBox3.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox3.SvgImage")));
-            this.svgImageBox3.TabIndex = 2;
-            this.svgImageBox3.Text = "svgImageBox3";
+            this.lblwarning2.Click += new System.EventHandler(this.lblwarning2_Click);
             // 
             // lblwarning3
             // 
-            this.lblwarning3.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
+            this.lblwarning3.Appearance.Font = new System.Drawing.Font("Tahoma", 8.5F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))));
+            this.lblwarning3.Appearance.ForeColor = System.Drawing.Color.Blue;
             this.lblwarning3.Appearance.Options.UseFont = true;
-            this.lblwarning3.Location = new System.Drawing.Point(224, 11);
+            this.lblwarning3.Appearance.Options.UseForeColor = true;
+            this.lblwarning3.Location = new System.Drawing.Point(982, 29);
             this.lblwarning3.Name = "lblwarning3";
-            this.lblwarning3.Size = new System.Drawing.Size(11, 21);
+            this.lblwarning3.Size = new System.Drawing.Size(7, 13);
             this.lblwarning3.TabIndex = 1;
             this.lblwarning3.Text = "0";
             // 
-            // chkhoadonthieuhang
-            // 
-            this.chkhoadonthieuhang.Location = new System.Drawing.Point(55, 11);
-            this.chkhoadonthieuhang.Name = "chkhoadonthieuhang";
-            this.chkhoadonthieuhang.Properties.Appearance.Font = new System.Drawing.Font("Tahoma", 8.25F, System.Drawing.FontStyle.Bold);
-            this.chkhoadonthieuhang.Properties.Appearance.ForeColor = System.Drawing.Color.Blue;
-            this.chkhoadonthieuhang.Properties.Appearance.Options.UseFont = true;
-            this.chkhoadonthieuhang.Properties.Appearance.Options.UseForeColor = true;
-            this.chkhoadonthieuhang.Properties.Caption = "Hoá đơn thiếu mã hàng";
-            this.chkhoadonthieuhang.Size = new System.Drawing.Size(170, 19);
-            this.chkhoadonthieuhang.TabIndex = 0;
-            this.chkhoadonthieuhang.CheckedChanged += new System.EventHandler(this.chkhoadonthieuhang_CheckedChanged);
-            // 
             // cbbChonthang
             // 
-            this.cbbChonthang.Location = new System.Drawing.Point(66, 13);
+            this.cbbChonthang.Location = new System.Drawing.Point(46, 13);
             this.cbbChonthang.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.cbbChonthang.Name = "cbbChonthang";
             this.cbbChonthang.Properties.Buttons.AddRange(new DevExpress.XtraEditors.Controls.EditorButton[] {
             new DevExpress.XtraEditors.Controls.EditorButton(DevExpress.XtraEditors.Controls.ButtonPredefines.Combo)});
-            this.cbbChonthang.Size = new System.Drawing.Size(91, 20);
+            this.cbbChonthang.Size = new System.Drawing.Size(66, 20);
             this.cbbChonthang.TabIndex = 5;
             this.cbbChonthang.SelectedIndexChanged += new System.EventHandler(this.cbbChonthang_SelectedIndexChanged);
             // 
@@ -755,15 +566,15 @@
             this.labelControl1.Location = new System.Drawing.Point(5, 15);
             this.labelControl1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl1.Name = "labelControl1";
-            this.labelControl1.Size = new System.Drawing.Size(44, 13);
+            this.labelControl1.Size = new System.Drawing.Size(30, 13);
             this.labelControl1.TabIndex = 6;
-            this.labelControl1.Text = "Từ tháng";
+            this.labelControl1.Text = "Tháng";
             // 
             // radDauvao
             // 
             this.radDauvao.AutoSize = true;
             this.radDauvao.Checked = true;
-            this.radDauvao.Location = new System.Drawing.Point(218, 46);
+            this.radDauvao.Location = new System.Drawing.Point(171, 46);
             this.radDauvao.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.radDauvao.Name = "radDauvao";
             this.radDauvao.Size = new System.Drawing.Size(66, 17);
@@ -776,7 +587,7 @@
             // radDaura
             // 
             this.radDaura.AutoSize = true;
-            this.radDaura.Location = new System.Drawing.Point(340, 46);
+            this.radDaura.Location = new System.Drawing.Point(288, 46);
             this.radDaura.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.radDaura.Name = "radDaura";
             this.radDaura.Size = new System.Drawing.Size(58, 17);
@@ -801,7 +612,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Tahoma", 7.8F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))));
-            this.label2.Location = new System.Drawing.Point(542, 47);
+            this.label2.Location = new System.Drawing.Point(443, 47);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(81, 13);
             this.label2.TabIndex = 11;
@@ -809,12 +620,12 @@
             // 
             // cbbDenthang
             // 
-            this.cbbDenthang.Location = new System.Drawing.Point(218, 13);
+            this.cbbDenthang.Location = new System.Drawing.Point(171, 13);
             this.cbbDenthang.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.cbbDenthang.Name = "cbbDenthang";
             this.cbbDenthang.Properties.Buttons.AddRange(new DevExpress.XtraEditors.Controls.EditorButton[] {
             new DevExpress.XtraEditors.Controls.EditorButton(DevExpress.XtraEditors.Controls.ButtonPredefines.Combo)});
-            this.cbbDenthang.Size = new System.Drawing.Size(90, 20);
+            this.cbbDenthang.Size = new System.Drawing.Size(66, 20);
             this.cbbDenthang.TabIndex = 12;
             this.cbbDenthang.SelectedIndexChanged += new System.EventHandler(this.cbbDenthang_SelectedIndexChanged);
             // 
@@ -824,7 +635,7 @@
             this.lblResult2.Appearance.ForeColor = System.Drawing.Color.Black;
             this.lblResult2.Appearance.Options.UseFont = true;
             this.lblResult2.Appearance.Options.UseForeColor = true;
-            this.lblResult2.Location = new System.Drawing.Point(671, 50);
+            this.lblResult2.Location = new System.Drawing.Point(572, 50);
             this.lblResult2.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.lblResult2.Name = "lblResult2";
             this.lblResult2.Size = new System.Drawing.Size(7, 13);
@@ -833,7 +644,7 @@
             // 
             // simpleButton2
             // 
-            this.simpleButton2.Location = new System.Drawing.Point(69, 46);
+            this.simpleButton2.Location = new System.Drawing.Point(46, 46);
             this.simpleButton2.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.simpleButton2.Name = "simpleButton2";
             this.simpleButton2.Size = new System.Drawing.Size(21, 15);
@@ -843,7 +654,7 @@
             // 
             // simpleButton3
             // 
-            this.simpleButton3.Location = new System.Drawing.Point(96, 46);
+            this.simpleButton3.Location = new System.Drawing.Point(73, 46);
             this.simpleButton3.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.simpleButton3.Name = "simpleButton3";
             this.simpleButton3.Size = new System.Drawing.Size(22, 15);
@@ -853,7 +664,7 @@
             // 
             // simpleButton4
             // 
-            this.simpleButton4.Location = new System.Drawing.Point(123, 46);
+            this.simpleButton4.Location = new System.Drawing.Point(100, 46);
             this.simpleButton4.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.simpleButton4.Name = "simpleButton4";
             this.simpleButton4.Size = new System.Drawing.Size(22, 15);
@@ -863,7 +674,7 @@
             // 
             // simpleButton5
             // 
-            this.simpleButton5.Location = new System.Drawing.Point(150, 45);
+            this.simpleButton5.Location = new System.Drawing.Point(127, 45);
             this.simpleButton5.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.simpleButton5.Name = "simpleButton5";
             this.simpleButton5.Size = new System.Drawing.Size(25, 16);
@@ -874,10 +685,10 @@
             // simpleButton6
             // 
             this.simpleButton6.ImageOptions.SvgImage = global::SaovietTax.Properties.Resources.actions_zoom1;
-            this.simpleButton6.Location = new System.Drawing.Point(421, 13);
+            this.simpleButton6.Location = new System.Drawing.Point(352, 10);
             this.simpleButton6.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.simpleButton6.Name = "simpleButton6";
-            this.simpleButton6.Size = new System.Drawing.Size(52, 46);
+            this.simpleButton6.Size = new System.Drawing.Size(44, 49);
             this.simpleButton6.TabIndex = 19;
             this.simpleButton6.Click += new System.EventHandler(this.simpleButton6_Click);
             // 
@@ -885,7 +696,7 @@
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("Tahoma", 7.8F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))));
-            this.label3.Location = new System.Drawing.Point(542, 10);
+            this.label3.Location = new System.Drawing.Point(443, 10);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(113, 13);
             this.label3.TabIndex = 20;
@@ -897,7 +708,7 @@
             this.lblResult3.Appearance.ForeColor = System.Drawing.Color.Black;
             this.lblResult3.Appearance.Options.UseFont = true;
             this.lblResult3.Appearance.Options.UseForeColor = true;
-            this.lblResult3.Location = new System.Drawing.Point(671, 21);
+            this.lblResult3.Location = new System.Drawing.Point(572, 31);
             this.lblResult3.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.lblResult3.Name = "lblResult3";
             this.lblResult3.Size = new System.Drawing.Size(7, 13);
@@ -907,7 +718,7 @@
             // simpleButton7
             // 
             this.simpleButton7.ImageOptions.Image = global::SaovietTax.Properties.Resources.bouser_16x16;
-            this.simpleButton7.Location = new System.Drawing.Point(507, 4);
+            this.simpleButton7.Location = new System.Drawing.Point(408, 4);
             this.simpleButton7.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.simpleButton7.Name = "simpleButton7";
             this.simpleButton7.Size = new System.Drawing.Size(29, 22);
@@ -916,7 +727,7 @@
             // simpleButton8
             // 
             this.simpleButton8.ImageOptions.Image = global::SaovietTax.Properties.Resources.tag_16x16;
-            this.simpleButton8.Location = new System.Drawing.Point(507, 41);
+            this.simpleButton8.Location = new System.Drawing.Point(408, 41);
             this.simpleButton8.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.simpleButton8.Name = "simpleButton8";
             this.simpleButton8.Size = new System.Drawing.Size(29, 22);
@@ -926,7 +737,7 @@
             // 
             this.labelControl2.Appearance.Font = new System.Drawing.Font("Tahoma", 7.8F, System.Drawing.FontStyle.Bold);
             this.labelControl2.Appearance.Options.UseFont = true;
-            this.labelControl2.Location = new System.Drawing.Point(671, 3);
+            this.labelControl2.Location = new System.Drawing.Point(572, 9);
             this.labelControl2.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl2.Name = "labelControl2";
             this.labelControl2.Size = new System.Drawing.Size(87, 13);
@@ -937,7 +748,7 @@
             // 
             this.labelControl3.Appearance.Font = new System.Drawing.Font("Tahoma", 7.8F, System.Drawing.FontStyle.Bold);
             this.labelControl3.Appearance.Options.UseFont = true;
-            this.labelControl3.Location = new System.Drawing.Point(793, 4);
+            this.labelControl3.Location = new System.Drawing.Point(694, 9);
             this.labelControl3.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl3.Name = "labelControl3";
             this.labelControl3.Size = new System.Drawing.Size(53, 13);
@@ -950,7 +761,7 @@
             this.labelControl5.Appearance.ForeColor = System.Drawing.Color.Black;
             this.labelControl5.Appearance.Options.UseFont = true;
             this.labelControl5.Appearance.Options.UseForeColor = true;
-            this.labelControl5.Location = new System.Drawing.Point(793, 50);
+            this.labelControl5.Location = new System.Drawing.Point(694, 50);
             this.labelControl5.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl5.Name = "labelControl5";
             this.labelControl5.Size = new System.Drawing.Size(7, 13);
@@ -963,7 +774,7 @@
             this.labelControl4.Appearance.ForeColor = System.Drawing.Color.Black;
             this.labelControl4.Appearance.Options.UseFont = true;
             this.labelControl4.Appearance.Options.UseForeColor = true;
-            this.labelControl4.Location = new System.Drawing.Point(793, 21);
+            this.labelControl4.Location = new System.Drawing.Point(694, 31);
             this.labelControl4.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl4.Name = "labelControl4";
             this.labelControl4.Size = new System.Drawing.Size(7, 13);
@@ -974,7 +785,7 @@
             // 
             this.labelControl6.Appearance.Font = new System.Drawing.Font("Tahoma", 7.8F, System.Drawing.FontStyle.Bold);
             this.labelControl6.Appearance.Options.UseFont = true;
-            this.labelControl6.Location = new System.Drawing.Point(922, 4);
+            this.labelControl6.Location = new System.Drawing.Point(774, 9);
             this.labelControl6.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl6.Name = "labelControl6";
             this.labelControl6.Size = new System.Drawing.Size(92, 13);
@@ -987,7 +798,7 @@
             this.lbltshd1.Appearance.ForeColor = System.Drawing.Color.Red;
             this.lbltshd1.Appearance.Options.UseFont = true;
             this.lbltshd1.Appearance.Options.UseForeColor = true;
-            this.lbltshd1.Location = new System.Drawing.Point(922, 22);
+            this.lbltshd1.Location = new System.Drawing.Point(774, 31);
             this.lbltshd1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.lbltshd1.Name = "lbltshd1";
             this.lbltshd1.Size = new System.Drawing.Size(7, 13);
@@ -1001,7 +812,7 @@
             this.lbltshd2.Appearance.ForeColor = System.Drawing.Color.Red;
             this.lbltshd2.Appearance.Options.UseFont = true;
             this.lbltshd2.Appearance.Options.UseForeColor = true;
-            this.lbltshd2.Location = new System.Drawing.Point(922, 49);
+            this.lbltshd2.Location = new System.Drawing.Point(774, 50);
             this.lbltshd2.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.lbltshd2.Name = "lbltshd2";
             this.lbltshd2.Size = new System.Drawing.Size(7, 13);
@@ -1011,12 +822,12 @@
             // 
             // labelControl7
             // 
-            this.labelControl7.Location = new System.Drawing.Point(162, 15);
+            this.labelControl7.Location = new System.Drawing.Point(131, 15);
             this.labelControl7.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl7.Name = "labelControl7";
-            this.labelControl7.Size = new System.Drawing.Size(51, 13);
+            this.labelControl7.Size = new System.Drawing.Size(30, 13);
             this.labelControl7.TabIndex = 31;
-            this.labelControl7.Text = "Đến tháng";
+            this.labelControl7.Text = "Tháng";
             // 
             // btnOpenFolder
             // 
@@ -1031,17 +842,17 @@
             // 
             // cbbNam
             // 
-            this.cbbNam.Location = new System.Drawing.Point(340, 13);
+            this.cbbNam.Location = new System.Drawing.Point(280, 13);
             this.cbbNam.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.cbbNam.Name = "cbbNam";
             this.cbbNam.Properties.Buttons.AddRange(new DevExpress.XtraEditors.Controls.EditorButton[] {
             new DevExpress.XtraEditors.Controls.EditorButton(DevExpress.XtraEditors.Controls.ButtonPredefines.Combo)});
-            this.cbbNam.Size = new System.Drawing.Size(75, 20);
+            this.cbbNam.Size = new System.Drawing.Size(66, 20);
             this.cbbNam.TabIndex = 33;
             // 
             // labelControl8
             // 
-            this.labelControl8.Location = new System.Drawing.Point(313, 15);
+            this.labelControl8.Location = new System.Drawing.Point(253, 15);
             this.labelControl8.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl8.Name = "labelControl8";
             this.labelControl8.Size = new System.Drawing.Size(21, 13);
@@ -1050,17 +861,23 @@
             // 
             // labelControl9
             // 
-            this.labelControl9.Location = new System.Drawing.Point(5, 46);
+            this.labelControl9.Location = new System.Drawing.Point(7, 46);
             this.labelControl9.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl9.Name = "labelControl9";
-            this.labelControl9.Size = new System.Drawing.Size(45, 13);
+            this.labelControl9.Size = new System.Drawing.Size(20, 13);
             this.labelControl9.TabIndex = 35;
-            this.labelControl9.Text = "Theo quý";
+            this.labelControl9.Text = "Quý";
             // 
             // panelControl1
             // 
             this.panelControl1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.panelControl1.Controls.Add(this.labelControl13);
+            this.panelControl1.Controls.Add(this.lblwarining4);
+            this.panelControl1.Controls.Add(this.lblwarning3);
+            this.panelControl1.Controls.Add(this.lblwarning2);
+            this.panelControl1.Controls.Add(this.labelControl12);
+            this.panelControl1.Controls.Add(this.labelControl11);
             this.panelControl1.Controls.Add(this.labelControl10);
             this.panelControl1.Controls.Add(this.labelControl9);
             this.panelControl1.Controls.Add(this.labelControl8);
@@ -1091,12 +908,69 @@
             this.panelControl1.Controls.Add(this.radDauvao);
             this.panelControl1.Controls.Add(this.labelControl1);
             this.panelControl1.Controls.Add(this.cbbChonthang);
-            this.panelControl1.Location = new System.Drawing.Point(10, 10);
+            this.panelControl1.Location = new System.Drawing.Point(11, 10);
             this.panelControl1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.panelControl1.Name = "panelControl1";
             this.panelControl1.Size = new System.Drawing.Size(1259, 72);
             this.panelControl1.TabIndex = 1;
             this.panelControl1.Paint += new System.Windows.Forms.PaintEventHandler(this.panelControl1_Paint);
+            // 
+            // labelControl13
+            // 
+            this.labelControl13.Appearance.Font = new System.Drawing.Font("Tahoma", 7.8F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))));
+            this.labelControl13.Appearance.ForeColor = System.Drawing.Color.Blue;
+            this.labelControl13.Appearance.Options.UseFont = true;
+            this.labelControl13.Appearance.Options.UseForeColor = true;
+            this.labelControl13.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.labelControl13.Location = new System.Drawing.Point(883, 51);
+            this.labelControl13.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.labelControl13.Name = "labelControl13";
+            this.labelControl13.Size = new System.Drawing.Size(46, 13);
+            this.labelControl13.TabIndex = 39;
+            this.labelControl13.Text = "Nhập dư";
+            this.labelControl13.Click += new System.EventHandler(this.labelControl13_Click);
+            // 
+            // lblwarining4
+            // 
+            this.lblwarining4.Appearance.Font = new System.Drawing.Font("Tahoma", 8.5F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))));
+            this.lblwarining4.Appearance.ForeColor = System.Drawing.Color.Blue;
+            this.lblwarining4.Appearance.Options.UseFont = true;
+            this.lblwarining4.Appearance.Options.UseForeColor = true;
+            this.lblwarining4.Location = new System.Drawing.Point(982, 50);
+            this.lblwarining4.Name = "lblwarining4";
+            this.lblwarining4.Size = new System.Drawing.Size(7, 13);
+            this.lblwarining4.TabIndex = 1;
+            this.lblwarining4.Text = "0";
+            // 
+            // labelControl12
+            // 
+            this.labelControl12.Appearance.Font = new System.Drawing.Font("Tahoma", 7.8F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))));
+            this.labelControl12.Appearance.ForeColor = System.Drawing.Color.Blue;
+            this.labelControl12.Appearance.Options.UseFont = true;
+            this.labelControl12.Appearance.Options.UseForeColor = true;
+            this.labelControl12.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.labelControl12.Location = new System.Drawing.Point(881, 30);
+            this.labelControl12.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.labelControl12.Name = "labelControl12";
+            this.labelControl12.Size = new System.Drawing.Size(83, 13);
+            this.labelControl12.TabIndex = 38;
+            this.labelControl12.Text = "Thiếu mã hàng";
+            this.labelControl12.Click += new System.EventHandler(this.labelControl12_Click);
+            // 
+            // labelControl11
+            // 
+            this.labelControl11.Appearance.Font = new System.Drawing.Font("Tahoma", 7.8F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))));
+            this.labelControl11.Appearance.ForeColor = System.Drawing.Color.Blue;
+            this.labelControl11.Appearance.Options.UseFont = true;
+            this.labelControl11.Appearance.Options.UseForeColor = true;
+            this.labelControl11.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.labelControl11.Location = new System.Drawing.Point(881, 9);
+            this.labelControl11.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.labelControl11.Name = "labelControl11";
+            this.labelControl11.Size = new System.Drawing.Size(62, 12);
+            this.labelControl11.TabIndex = 37;
+            this.labelControl11.Text = "Sai thông tin";
+            this.labelControl11.Click += new System.EventHandler(this.labelControl11_Click);
             // 
             // labelControl10
             // 
@@ -1105,7 +979,7 @@
             this.labelControl10.Appearance.Options.UseFont = true;
             this.labelControl10.Appearance.Options.UseForeColor = true;
             this.labelControl10.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.labelControl10.Location = new System.Drawing.Point(966, 22);
+            this.labelControl10.Location = new System.Drawing.Point(818, 31);
             this.labelControl10.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.labelControl10.Name = "labelControl10";
             this.labelControl10.Size = new System.Drawing.Size(7, 13);
@@ -1113,57 +987,11 @@
             this.labelControl10.Text = "0";
             this.labelControl10.Click += new System.EventHandler(this.labelControl10_Click);
             // 
-            // panelControl7
-            // 
-            this.panelControl7.Controls.Add(this.svgImageBox5);
-            this.panelControl7.Controls.Add(this.lblwarining4);
-            this.panelControl7.Controls.Add(this.chkhoadondu);
-            this.panelControl7.Location = new System.Drawing.Point(528, 87);
-            this.panelControl7.Name = "panelControl7";
-            this.panelControl7.Size = new System.Drawing.Size(221, 38);
-            this.panelControl7.TabIndex = 5;
-            // 
-            // svgImageBox5
-            // 
-            this.svgImageBox5.Location = new System.Drawing.Point(16, 5);
-            this.svgImageBox5.Name = "svgImageBox5";
-            this.svgImageBox5.Size = new System.Drawing.Size(33, 28);
-            this.svgImageBox5.SizeMode = DevExpress.XtraEditors.SvgImageSizeMode.Stretch;
-            this.svgImageBox5.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("svgImageBox5.SvgImage")));
-            this.svgImageBox5.TabIndex = 2;
-            this.svgImageBox5.Text = "svgImageBox5";
-            // 
-            // lblwarining4
-            // 
-            this.lblwarining4.Appearance.Font = new System.Drawing.Font("Tahoma", 13F, System.Drawing.FontStyle.Bold);
-            this.lblwarining4.Appearance.Options.UseFont = true;
-            this.lblwarining4.Location = new System.Drawing.Point(179, 9);
-            this.lblwarining4.Name = "lblwarining4";
-            this.lblwarining4.Size = new System.Drawing.Size(11, 21);
-            this.lblwarining4.TabIndex = 1;
-            this.lblwarining4.Text = "0";
-            // 
-            // chkhoadondu
-            // 
-            this.chkhoadondu.Location = new System.Drawing.Point(56, 9);
-            this.chkhoadondu.Name = "chkhoadondu";
-            this.chkhoadondu.Properties.Appearance.Font = new System.Drawing.Font("Tahoma", 8.25F, System.Drawing.FontStyle.Bold);
-            this.chkhoadondu.Properties.Appearance.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.chkhoadondu.Properties.Appearance.Options.UseFont = true;
-            this.chkhoadondu.Properties.Appearance.Options.UseForeColor = true;
-            this.chkhoadondu.Properties.Caption = "Hoá đơn dư";
-            this.chkhoadondu.Size = new System.Drawing.Size(98, 19);
-            this.chkhoadondu.TabIndex = 0;
-            this.chkhoadondu.CheckedChanged += new System.EventHandler(this.chkhoadondu_CheckedChanged);
-            // 
             // KTHT
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1272, 687);
-            this.Controls.Add(this.panelControl7);
-            this.Controls.Add(this.panelControl5);
-            this.Controls.Add(this.panelControl4);
             this.Controls.Add(this.panelControl2);
             this.Controls.Add(this.panelControl1);
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
@@ -1178,40 +1006,15 @@
             ((System.ComponentModel.ISupportInitialize)(this.thongKeBindingSource)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl2)).EndInit();
             this.panelControl2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl6)).EndInit();
-            this.panelControl6.ResumeLayout(false);
-            this.panelControl6.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox4)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.checkEdit1.Properties)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl3)).EndInit();
-            this.panelControl3.ResumeLayout(false);
-            this.panelControl3.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox1)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.chkhoadonchuanhap.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridView1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.clsKTHTBindingSource1)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl4)).EndInit();
-            this.panelControl4.ResumeLayout(false);
-            this.panelControl4.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox2)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.chkhoadonsaitt.Properties)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl5)).EndInit();
-            this.panelControl5.ResumeLayout(false);
-            this.panelControl5.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox3)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.chkhoadonthieuhang.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.cbbChonthang.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.cbbDenthang.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.cbbNam.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl1)).EndInit();
             this.panelControl1.ResumeLayout(false);
             this.panelControl1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.panelControl7)).EndInit();
-            this.panelControl7.ResumeLayout(false);
-            this.panelControl7.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.svgImageBox5)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.chkhoadondu.Properties)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -1252,18 +1055,8 @@
         private DevExpress.XtraGrid.Columns.GridColumn colTongTienPhi;
         private System.Windows.Forms.BindingSource thongKeBindingSource;
         private DevExpress.XtraEditors.SimpleButton btnXemchitiet;
-        private DevExpress.XtraEditors.PanelControl panelControl3;
-        private DevExpress.XtraEditors.SvgImageBox svgImageBox1;
-        private DevExpress.XtraEditors.LabelControl lblwarning1;
-        private DevExpress.XtraEditors.CheckEdit chkhoadonchuanhap;
-        private DevExpress.XtraEditors.PanelControl panelControl4;
-        private DevExpress.XtraEditors.SvgImageBox svgImageBox2;
         private DevExpress.XtraEditors.LabelControl lblwarning2;
-        private DevExpress.XtraEditors.CheckEdit chkhoadonsaitt;
-        private DevExpress.XtraEditors.PanelControl panelControl5;
-        private DevExpress.XtraEditors.SvgImageBox svgImageBox3;
         private DevExpress.XtraEditors.LabelControl lblwarning3;
-        private DevExpress.XtraEditors.CheckEdit chkhoadonthieuhang;
         private DevExpress.XtraEditors.ComboBoxEdit cbbChonthang;
         private DevExpress.XtraEditors.LabelControl labelControl1;
         private System.Windows.Forms.RadioButton radDauvao;
@@ -1294,15 +1087,11 @@
         private DevExpress.XtraEditors.LabelControl labelControl8;
         private DevExpress.XtraEditors.LabelControl labelControl9;
         private DevExpress.XtraEditors.PanelControl panelControl1;
-        private DevExpress.XtraEditors.PanelControl panelControl6;
-        private DevExpress.XtraEditors.SvgImageBox svgImageBox4;
-        private DevExpress.XtraEditors.LabelControl lblwarning0;
-        private DevExpress.XtraEditors.CheckEdit checkEdit1;
         private DevExpress.XtraGrid.Columns.GridColumn colQueryType;
-        private DevExpress.XtraEditors.PanelControl panelControl7;
-        private DevExpress.XtraEditors.SvgImageBox svgImageBox5;
         private DevExpress.XtraEditors.LabelControl lblwarining4;
-        private DevExpress.XtraEditors.CheckEdit chkhoadondu;
         private DevExpress.XtraEditors.LabelControl labelControl10;
+        private DevExpress.XtraEditors.LabelControl labelControl13;
+        private DevExpress.XtraEditors.LabelControl labelControl12;
+        private DevExpress.XtraEditors.LabelControl labelControl11;
     }
 }

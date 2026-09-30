@@ -183,22 +183,22 @@
             // 
             // panelControl1
             // 
-            this.panelControl1.Appearance.BackColor = System.Drawing.Color.Transparent;
+            this.panelControl1.Appearance.BackColor = System.Drawing.Color.Silver;
             this.panelControl1.Appearance.Options.UseBackColor = true;
-            this.panelControl1.Location = new System.Drawing.Point(10, 50);
+            this.panelControl1.Location = new System.Drawing.Point(-1, -6);
             this.panelControl1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.panelControl1.Name = "panelControl1";
-            this.panelControl1.Size = new System.Drawing.Size(351, 405);
+            this.panelControl1.Size = new System.Drawing.Size(369, 461);
             this.panelControl1.TabIndex = 4;
             // 
             // simpleButton2
             // 
             this.simpleButton2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.simpleButton2.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton2.ImageOptions.SvgImage")));
+            this.simpleButton2.ImageOptions.Image = global::SaovietTax.Properties.Resources.edittask_32x32;
             this.simpleButton2.ImageOptions.SvgImageSize = new System.Drawing.Size(30, 30);
-            this.simpleButton2.Location = new System.Drawing.Point(223, 462);
+            this.simpleButton2.Location = new System.Drawing.Point(228, 462);
             this.simpleButton2.Name = "simpleButton2";
-            this.simpleButton2.Size = new System.Drawing.Size(137, 31);
+            this.simpleButton2.Size = new System.Drawing.Size(132, 31);
             this.simpleButton2.TabIndex = 0;
             this.simpleButton2.Text = "Tự động sửa lỗi";
             this.simpleButton2.Click += new System.EventHandler(this.simpleButton2_Click);
@@ -207,8 +207,6 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackgroundImageLayoutStore = System.Windows.Forms.ImageLayout.Tile;
-            this.BackgroundImageStore = ((System.Drawing.Image)(resources.GetObject("$this.BackgroundImageStore")));
             this.ClientSize = new System.Drawing.Size(367, 497);
             this.Controls.Add(this.simpleButton2);
             this.Controls.Add(this.panelControl1);
@@ -216,11 +214,11 @@
             this.Controls.Add(this.svgImageBox1);
             this.Controls.Add(this.simpleButton1);
             this.Controls.Add(this.gridControl1);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.Name = "Vanguard";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Vanguard";
+            this.Text = "Cảnh báo hệ thống";
             this.Load += new System.EventHandler(this.Vanguard_Load);
             this.Shown += new System.EventHandler(this.Vanguard_Shown);
             ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).EndInit();

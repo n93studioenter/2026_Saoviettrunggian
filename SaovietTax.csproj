@@ -42,6 +42,9 @@
     <PackageReference Include="itext7">
       <Version>9.2.0</Version>
     </PackageReference>
+    <PackageReference Include="iTextSharp">
+      <Version>5.5.13.3</Version>
+    </PackageReference>
     <PackageReference Include="Microsoft.ML">
       <Version>4.0.2</Version>
     </PackageReference>
@@ -299,6 +302,8 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
+    <Reference Include="UIAutomationClient" />
+    <Reference Include="UIAutomationTypes" />
     <Reference Include="WebDriver, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Selenium.WebDriver.4.31.0\lib\netstandard2.0\WebDriver.dll</HintPath>
     </Reference>
@@ -340,6 +345,7 @@
     <Compile Include="DTO\FuzzySharpSimilarity.cs" />
     <Compile Include="DTO\Kiemtravattu.cs" />
     <Compile Include="DTO\Matdinhnganhang.cs" />
+    <Compile Include="DTO\PdfKeCotTieuDe.cs" />
     <Compile Include="DTO\Rootclass.cs" />
     <Compile Include="DTO\RootDetail.cs" />
     <Compile Include="DTO\ScheduleHelper.cs" />
@@ -1002,6 +1008,7 @@
     <None Include="Resources\fasticon.png" />
     <None Include="Resources\close_32x32.png" />
     <None Include="Resources\apply_32x32.png" />
+    <None Include="Resources\edittask_32x32.png" />
     <Content Include="Resources\favicon.ico" />
     <None Include="Resources\next.svg" />
     <None Include="Resources\next_16x16.png" />

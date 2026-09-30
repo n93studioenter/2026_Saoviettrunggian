@@ -136,6 +136,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Interop;
@@ -194,6 +195,7 @@ using Type = System.Type;
 using XmlElement = System.Xml.XmlElement;
 using XmlNode = System.Xml.XmlNode;
 using XmlNodeType = System.Xml.XmlNodeType;
+using System.Windows.Automation;
 
 namespace SaovietTax
 {
@@ -7518,6 +7520,8 @@ Chỉ trả lời: CÓ hoặc KHÔNG
 
         private async void frmMain_Load(object sender, EventArgs e)
         {
+           
+
             toolTip1.InitialDelay = 0;   // hiện ngay khi hover
             toolTip1.ReshowDelay = 0;
             toolTip1.AutoPopDelay = 100;
@@ -34389,7 +34393,27 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             // Thiết lập các thuộc tính của OpenFileDialog
             openFileDialog.Title = "Chọn file Excel";
             openFileDialog.Filter = "Excel Files (*.xls;*.xlsx)|*.xls;*.xlsx|All Files (*.*)|*.*";
-            openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+            DirectoryInfo parent = Directory.GetParent(savedPath);
+            string parentPath = parent.FullName; // C:\Users\Admin
+
+            // Rồi combine
+            string folNganhangir = Path.Combine(parentPath, "Tailieu", "Nganhangfilegoc");
+
+            if (!Directory.Exists(folNganhangir))
+            {
+                Directory.CreateDirectory(folNganhangir);
+            }
+            string folNganhangirdip = Path.Combine(parentPath, "Tailieu", "Nganhangdaimport");
+
+            if (!Directory.Exists(folNganhangirdip))
+            {
+                Directory.CreateDirectory(folNganhangirdip);
+            }
+
+            openFileDialog.InitialDirectory = folNganhangir;
+
+           // openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             string excelilePath = "";
             // Hiển thị hộp thoại và kiểm tra người dùng có chọn file không
             if (openFileDialog.ShowDialog() == DialogResult.OK)
@@ -35624,6 +35648,12 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                     filePath = System.IO.Path.Combine(directory,
                         $"NH_T{month}.xlsx");
+
+                    DirectoryInfo parent = Directory.GetParent(savedPath);
+                    string parentPath = parent.FullName; // C:\Users\Admin
+                    string folNganhangirdip = Path.Combine(parentPath, "Tailieu", "Nganhangdaimport");
+                    filePath= System.IO.Path.Combine(folNganhangirdip,
+                        $"sao_ke_T{month}.xlsx");
                 }
 
                 // --- Tùy chọn export ---
@@ -41772,9 +41802,575 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             }
         }
 
+        //private void btnClauseAi_Click(object sender, EventArgs e)
+        //{
+        //    Process.Start(new ProcessStartInfo
+        //    {
+        //        FileName = "claude://",
+        //        UseShellExecute = true  // Điểm mấu chốt: khởi chạy thông qua Shell, tránh vấn đề quyền
+        //    });
+        //    // Chờ Claude mở
+        //    Thread.Sleep(5000);
+
+        //    DumpClaudeControls();
+        //} 
+
+        private FileSystemWatcher _watcher; 
+
+        private const string Dir = @"C:\Users\Admin\Claude";
+        private const string PdfPath = Dir + @"\sao_ke.pdf";
+        private const string TxtPath = Dir + @"\sao_ke.txt";
+        private const string CsvPath = Dir + @"\sao_ke_ket_qua.csv";
+        private const string XlsPath = Dir + @"\sao_ke_ket_qua.xlsx";
+         
+
+        private void btnClauseAi_Click(object sender, EventArgs e)
+        {
+            try
+            { 
+                DirectoryInfo parent = Directory.GetParent(savedPath);
+                string parentPath = parent.FullName; // C:\Users\Admin
+
+                // Rồi combine
+                string folNganhangir = Path.Combine(parentPath, "Tailieu", "Nganhangfilegoc"); 
+
+                if (!Directory.Exists(folNganhangir))
+                {
+                    Directory.CreateDirectory(folNganhangir); 
+                }
+                string folNganhangirdip = Path.Combine(parentPath, "Tailieu", "Nganhangdaimport");
+
+                if (!Directory.Exists(folNganhangirdip))
+                {
+                    Directory.CreateDirectory(folNganhangirdip);
+                }
 
 
-        #region
+
+                Directory.CreateDirectory(Dir);
+
+                // 1. Xóa kết quả cũ
+                foreach (var f in new[] { CsvPath, XlsPath }) if (File.Exists(f)) File.Delete(f);
+
+                // 2. Theo dõi thư mục Claude và thư mục Downloads
+                StartWatching();
+
+                // 3. Prompt (PDF sẽ được kéo thả vào chat)
+                string prompt = $@"Đây là file sao kê ngân hàng (PDF đính kèm).
+
+Trích xuất toàn bộ giao dịch và tạo file CSV (UTF-8) với đúng các cột:
+Ngày giao dịch,Diễn giải,Ghi nợ,Ghi có,Số dư
+- Diễn giải nhiều dòng thì gộp thành 1 dòng, đặt trong dấu nháy kép.
+- Số tiền để dạng số thuần, không dấu phân cách; ô không có số thì để trống.
+- Xác định Ghi nợ/Ghi có theo đúng cột trong sao kê, và đối chiếu tổng với phần tổng kết trước khi lưu.
+Dùng tool filesystem lưu vào đúng đường dẫn: {CsvPath}
+Nếu không ghi được file thì tạo file sao_ke_ket_qua.csv để tôi tải về.
+Chỉ trả lời ngắn gọn khi xong.";
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = $"claude://claude.ai/new?q={Uri.EscapeDataString(prompt)}",
+                    UseShellExecute = true
+                });
+
+                // 4. Mở thư mục chứa PDF để kéo thả
+                Process.Start(new ProcessStartInfo { FileName = Dir, UseShellExecute = true });
+
+                //MessageBox.Show(
+                //    "1. Kéo file PDF từ thư mục vừa mở vào ô chat của Claude\n" +
+                //    "2. Bấm Enter\n" +
+                //    "3. Nếu Claude đưa nút tải file thì bấm Download\n\n" +
+                //    "App sẽ tự lưu CSV vào " + Dir + " và tạo Excel.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi:\r\n" + ex.Message);
+            }
+        }
+        private FileSystemWatcher _watcherDir, _watcherDl;
+        private bool _handled;
+
+     
+        private async Task OnCsvReady(string path)
+        {
+            if (_handled) return;
+            _handled = true;
+
+            // Chờ file ghi xong
+            await Task.Delay(1000);
+            for (int i = 0; i < 20; i++)
+            {
+                try { using (File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None)) { } break; }
+                catch (IOException) { await Task.Delay(300); }
+            }
+
+            try
+            {
+                // Nếu file nằm ở Downloads thì chép về C:\Users\Admin\Claude
+                if (!string.Equals(path, CsvPath, StringComparison.OrdinalIgnoreCase))
+                    File.Copy(path, CsvPath, true);
+
+                CsvToXlsx(CsvPath, XlsPath);
+
+                Invoke(new Action(() =>
+                {
+                    MessageBox.Show("Đã lưu:\n" + CsvPath + "\n" + XlsPath);
+                    Process.Start(new ProcessStartInfo(XlsPath) { UseShellExecute = true });
+                }));
+            }
+            catch (Exception ex)
+            {
+                Invoke(new Action(() => MessageBox.Show("Lỗi xử lý file:\r\n" + ex.Message)));
+            }
+        }
+        private static string PdfToStructuredTxt(string pdfPath)
+        {
+            var dateRx = new Regex(@"^\d{2}/\d{2}/\d{4}$");
+            var numRx = new Regex(@"^\d{1,3}(,\d{3})*$|^\d+$");
+            var sb = new StringBuilder();
+            double gdLeft = 0, gdRight = 0, debitLeft = 0, creditLeft = 0;
+            bool ok = false;
+
+            using (var pdf = UglyToad.PdfPig.PdfDocument.Open(pdfPath))
+            {
+                foreach (var page in pdf.GetPages())
+                {
+                    var words = page.GetWords().ToList();
+
+                    // Xác định vị trí cột từ dòng tiêu đề
+                    var gd = words.Where(w => w.Text == "GD").OrderByDescending(w => w.BoundingBox.Centroid.Y).FirstOrDefault();
+                    var ghi = words.Where(w => w.Text == "Ghi").OrderByDescending(w => w.BoundingBox.Centroid.Y)
+                                   .Take(2).OrderBy(w => w.BoundingBox.Left).ToList();
+                    if (gd != null && ghi.Count == 2)
+                    {
+                        gdLeft = gd.BoundingBox.Left; gdRight = gd.BoundingBox.Right;
+                        debitLeft = ghi[0].BoundingBox.Left; creditLeft = ghi[1].BoundingBox.Left;
+                        ok = true;
+                    }
+                    if (!ok) continue;
+
+                    // Chỉ lấy phần thân bảng, bên dưới tiêu đề
+                    double cutoff = double.MaxValue;
+                    var no = words.Where(w => w.Text == "No" && w.BoundingBox.Centroid.X < gdRight + 20)
+                                  .OrderByDescending(w => w.BoundingBox.Centroid.Y).FirstOrDefault();
+                    if (no != null) cutoff = no.BoundingBox.Bottom;
+                    var body = words.Where(w => w.BoundingBox.Centroid.Y < cutoff).ToList();
+
+                    var dates = body.Where(w => w.BoundingBox.Left < gdLeft - 5 && dateRx.IsMatch(w.Text))
+                                    .OrderByDescending(w => w.BoundingBox.Centroid.Y).ToList();
+                    if (dates.Count == 0) continue;
+
+                    // Mỗi từ thuộc về giao dịch có ngày gần nhất theo trục Y
+                    var groups = dates.ToDictionary(d => d, d => new List<UglyToad.PdfPig.Content.Word>());
+                    foreach (var w in body)
+                    {
+                        if (dates.Contains(w)) continue;
+                        var owner = dates.OrderBy(d => Math.Abs(d.BoundingBox.Centroid.Y - w.BoundingBox.Centroid.Y)).First();
+                        groups[owner].Add(w);
+                    }
+
+                    foreach (var d in dates)
+                    {
+                        var ws = groups[d];
+
+                        // Diễn giải: các từ nằm giữa cột "Số GD" và cột "Ghi nợ", đọc từ trên xuống, trái sang phải
+                        string desc = string.Join(" ", ws
+                            .Where(w => w.BoundingBox.Left > gdRight + 5 && w.BoundingBox.Left < debitLeft - 10)
+                            .OrderByDescending(w => Math.Round(w.BoundingBox.Centroid.Y / 3))
+                            .ThenBy(w => w.BoundingBox.Left)
+                            .Select(w => w.Text));
+
+                        // Các số: phải nhất là Số dư, còn lại chia Nợ/Có theo tọa độ cột
+                        var nums = ws.Where(w => w.BoundingBox.Left >= debitLeft - 10 && numRx.IsMatch(w.Text)).ToList();
+                        var bal = nums.OrderByDescending(w => w.BoundingBox.Right).FirstOrDefault();
+                        if (bal == null) continue;
+                        nums.Remove(bal);
+
+                        string no_ = "", co_ = "";
+                        foreach (var n in nums)
+                        {
+                            string v = n.Text.Replace(",", "");
+                            if (n.BoundingBox.Left < creditLeft - 15) no_ = v; else co_ = v;
+                        }
+
+                        sb.AppendLine(d.Text + " | NỢ=" + no_ + " | CÓ=" + co_ +
+                                      " | SỐ DƯ=" + bal.Text.Replace(",", "") + " | DIỄN GIẢI=" + desc);
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+        private void StartWatching()
+        {
+            _handled = false;
+            _watcher?.Dispose();
+            _watcher = new FileSystemWatcher(Dir, Path.GetFileName(CsvPath))
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                EnableRaisingEvents = true
+            };
+            _watcher.Created += async (s, e) => await OnCsvReady();
+            _watcher.Changed += async (s, e) => await OnCsvReady();
+        }
+
+        private async Task OnCsvReady()
+        {
+            if (_handled) return;
+            _handled = true;
+
+            await Task.Delay(1000); // chờ Claude ghi xong
+            for (int i = 0; i < 20; i++)
+            {
+                try { using (File.Open(CsvPath, FileMode.Open, FileAccess.Read, FileShare.None)) { } break; }
+                catch (IOException) { await Task.Delay(300); }
+            }
+
+            try
+            {
+                CsvToXlsx(CsvPath, XlsPath);
+                Invoke(new Action(() =>
+                {
+                   
+                    DirectoryInfo parent = Directory.GetParent(savedPath);
+                    string parentPath = parent.FullName; // C:\Users\Admin
+
+                    // Rồi combine
+                    string folNganhangir = Path.Combine(parentPath, "Tailieu", "Nganhangfilegoc");
+                    string newpath = Path.Combine(folNganhangir, $"sao_ke_{dtDenngay.DateTime.Month}.xlsx");
+                    File.Move(XlsPath, newpath);
+                    DongClaude();
+                    MessageBox.Show("Đã tạo Excel:\n" + newpath);
+                    //Process.Start(new ProcessStartInfo(newpath) { UseShellExecute = true });
+                }));
+            }
+            catch (Exception ex)
+            {
+                Invoke(new Action(() => MessageBox.Show("Lỗi tạo Excel:\r\n" + ex.Message)));
+            }
+        }
+        private static void DongClaude()
+        {
+            // Bản Claude Desktop có nhiều tiến trình cùng tên "claude"
+            foreach (var p in Process.GetProcessesByName("claude"))
+            {
+                try
+                {
+                    if (p.MainWindowHandle != IntPtr.Zero)
+                        p.CloseMainWindow();          // đóng nhẹ nhàng trước
+                }
+                catch { }
+            }
+
+            System.Threading.Thread.Sleep(1500);
+
+            foreach (var p in Process.GetProcessesByName("claude"))
+            {
+                try { if (!p.HasExited) p.Kill(); }   // còn sót thì tắt hẳn (cả tiến trình chạy nền ở khay hệ thống)
+                catch { }
+            }
+        }
+        private static void CsvToXlsx(string csvPath, string xlsxPath)
+        {
+             var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Sao kê");
+            int r = 1;
+            foreach (var line in File.ReadAllLines(csvPath, Encoding.UTF8))
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var cells = SplitCsv(line);
+                for (int c = 0; c < cells.Count; c++)
+                {
+                    string v = cells[c].Trim();
+                    if (r > 1 && c >= 2 && decimal.TryParse(v, out var num))
+                    {
+                        ws.Cell(r, c + 1).Value = num;
+                        ws.Cell(r, c + 1).Style.NumberFormat.Format = "#,##0";
+                    }
+                    else ws.Cell(r, c + 1).Value = v;
+                }
+                r++;
+            }
+            ws.Row(1).Style.Font.Bold = true;
+            ws.Columns().AdjustToContents();
+            wb.SaveAs(xlsxPath);
+        }
+
+        private static List<string> SplitCsv(string line)
+        {
+            var res = new List<string>();
+            var sb = new StringBuilder();
+            bool q = false;
+            for (int i = 0; i < line.Length; i++)
+            {
+                char ch = line[i];
+                if (ch == '"') { if (q && i + 1 < line.Length && line[i + 1] == '"') { sb.Append('"'); i++; } else q = !q; }
+                else if (ch == ',' && !q) { res.Add(sb.ToString()); sb.Clear(); }
+                else sb.Append(ch);
+            }
+            res.Add(sb.ToString());
+            return res;
+        }
+
+        // Tìm nút + linh hoạt hơn
+        private AutomationElement FindAddButton(AutomationElement parent)
+        {
+            // Danh sách tên có thể có
+            string[] possibleNames = {
+        "Add files, connectors, and more",
+        "Add files or photos",
+        "Attach",
+        "Upload",
+        "Add",
+        "+",
+        "paperclip",
+        "Attach file"
+    };
+
+            foreach (var name in possibleNames)
+            {
+                var btn = FindElements(parent, name, ControlType.Button);
+                if (btn != null) return btn;
+            }
+
+            // Tìm mọi Button rồi lọc
+            var allButtons = parent.FindAll(
+                TreeScope.Descendants,
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button));
+
+            foreach (AutomationElement btn in allButtons)
+            {
+                try
+                {
+                    string name = btn.Current.Name?.Trim() ?? "";
+                    string id = btn.Current.AutomationId ?? "";
+                    string help = btn.Current.HelpText ?? "";
+
+                    // Nếu tên rỗng nhưng có AutomationId chứa "attach" / "file" / "add"
+                    if (string.IsNullOrEmpty(name) &&
+                        (id.IndexOf("attach", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         id.IndexOf("file", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         id.IndexOf("add", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         help.IndexOf("file", StringComparison.OrdinalIgnoreCase) >= 0))
+                    {
+                        return btn;
+                    }
+
+                    if (name.IndexOf("file", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("attach", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("add", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        return btn;
+                    }
+                }
+                catch { }
+            }
+
+            return null;
+        }
+
+        // Dump cây control
+        private void DumpAutomationTree(AutomationElement root, int depth = 0)
+        {
+            if (root == null || depth > 12) return;
+
+            try
+            {
+                string indent = new string(' ', depth * 2);
+                string name = root.Current.Name ?? "";
+                string type = root.Current.ControlType.ProgrammaticName.Replace("ControlType.", "");
+                string id = root.Current.AutomationId ?? "";
+                string cls = root.Current.ClassName ?? "";
+
+                if (!string.IsNullOrWhiteSpace(name) ||
+                    type.Contains("Button") ||
+                    type.Contains("Edit") ||
+                    type.Contains("Menu") ||
+                    !string.IsNullOrWhiteSpace(id))
+                {
+                    Debug.WriteLine($"{indent}[{type}] Name=\"{name}\" Id=\"{id}\" Class=\"{cls}\"");
+                }
+
+                var children = root.FindAll(TreeScope.Children, Condition.TrueCondition);
+                foreach (AutomationElement child in children)
+                {
+                    DumpAutomationTree(child, depth + 1);
+                }
+            }
+            catch { }
+        }
+        private void InvokeElement(AutomationElement element)
+        {
+            if (element == null)
+                return;
+
+            try
+            {
+                // Button / MenuItem
+                if (element.TryGetCurrentPattern(
+                    InvokePattern.Pattern,
+                    out object pattern))
+                {
+                    ((InvokePattern)pattern).Invoke();
+                    return;
+                }
+
+                // Nếu Invoke không có thì thử SelectionItem
+                if (element.TryGetCurrentPattern(
+                    SelectionItemPattern.Pattern,
+                    out object selection))
+                {
+                    ((SelectionItemPattern)selection).Select();
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Không thể click control:\r\n" + ex.Message);
+            }
+        }
+        private AutomationElement FindClaudeWindow()
+    {
+        AutomationElement desktop =
+            AutomationElement.RootElement;
+
+        AutomationElementCollection windows =
+            desktop.FindAll(
+                TreeScope.Children,
+                new PropertyCondition(
+                    AutomationElement.ControlTypeProperty,
+                    ControlType.Window));
+
+        foreach (AutomationElement window in windows)
+        {
+            try
+            {
+                string name = window.Current.Name;
+
+                if (!string.IsNullOrEmpty(name) &&
+                    name.IndexOf(
+                        "Claude",
+                        StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return window;
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        return null;
+    }
+    private AutomationElement FindElements(
+    AutomationElement parent,
+    string name,
+    ControlType controlType)
+    {
+        try
+        {
+            Condition condition =
+                new AndCondition(
+
+                    new PropertyCondition(
+                        AutomationElement.NameProperty,
+                        name),
+
+                    new PropertyCondition(
+                        AutomationElement.ControlTypeProperty,
+                        controlType)
+                );
+
+            return parent.FindFirst(
+                TreeScope.Descendants,
+                condition);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+        //private void DumpClaudeControls()
+        //    {
+        //        try
+        //        {
+        //            // Tìm process Claude
+        //            Process[] processes = Process.GetProcesses();
+
+        //            foreach (Process p in processes)
+        //            {
+        //                try
+        //                {
+        //                    if (string.IsNullOrEmpty(p.MainWindowTitle))
+        //                        continue;
+
+        //                    string title = p.MainWindowTitle;
+
+        //                    if (title.IndexOf("Claude", StringComparison.OrdinalIgnoreCase) >= 0)
+        //                    {
+        //                        Debug.WriteLine("====================================");
+        //                        Debug.WriteLine("CLAUDE PROCESS");
+        //                        Debug.WriteLine("PID   : " + p.Id);
+        //                        Debug.WriteLine("TITLE : " + title);
+        //                        Debug.WriteLine("====================================");
+
+        //                        AutomationElement root =
+        //                            AutomationElement.FromHandle(p.MainWindowHandle);
+
+        //                        DumpElement(root, 0);
+        //                    }
+        //                }
+        //                catch
+        //                {
+        //                    // Bỏ qua process không truy cập được
+        //                }
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            MessageBox.Show(
+        //                "Lỗi DumpClaudeControls:\r\n" + ex.Message);
+        //        }
+        //    }
+        //    private void DumpElement(
+        //AutomationElement element,
+        //int level)
+        //    {
+        //        try
+        //        {
+        //            string indent = new string(' ', level * 2);
+
+        //            string name = element.Current.Name;
+        //            string type = element.Current.ControlType.ProgrammaticName;
+        //            string automationId = element.Current.AutomationId;
+        //            string className = element.Current.ClassName;
+
+        //            Debug.WriteLine(
+        //                indent +
+        //                $"Name=[{name}] " +
+        //                $"Type=[{type}] " +
+        //                $"AutomationId=[{automationId}] " +
+        //                $"Class=[{className}]"
+        //            );
+
+        //            AutomationElementCollection children =
+        //                element.FindAll(
+        //                    TreeScope.Children,
+        //                    Condition.TrueCondition);
+
+        //            foreach (AutomationElement child in children)
+        //            {
+        //                DumpElement(child, level + 1);
+        //            }
+        //        }
+        //        catch
+        //        {
+        //            // Một số control không cho đọc thuộc tính
+        //        }
+        //    }
+
+        #region Taihoadonmoi
         private async void simpleButton3_Click(object sender, EventArgs e)
         {
             await Taihoadon();

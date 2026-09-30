@@ -2249,10 +2249,10 @@ namespace SaovietTax
             labelControl5.Text= $"{cqt_tienthue.ToString("N0")}";
             lblResult3.Text= $"{vb6_tientrcthue.ToString("N0")}";
             labelControl4.Text= $"{vb6_tienthue.ToString("N0")}";
-            lblwarning1.Text = slhangchuaiport.ToString();
+           // lblwarning1.Text = slhangchuaiport.ToString();
             lblwarning2.Text = lshoadonloi.ToString();
             lblwarning3.Text=slhangchuanhapma.ToString();
-            lblwarning0.Text= $"{slhangdaimport.ToString("N0")}";
+           // lblwarning0.Text= $"{slhangdaimport.ToString("N0")}";
             labelControl10.AllowHtmlString = true;
             labelControl10.Text = $"<u>{slhangchuaiport.ToString("N0")}</u>";
             lblwarining4.Text = listRemain.Count.ToString();
@@ -2260,26 +2260,26 @@ namespace SaovietTax
         private void LoadDatasource()
         {
             var orgiginlist = clsKTHTs;
-            if (checkEdit1.Checked)
-            {
-                orgiginlist = orgiginlist.Where(m => m.Statustype == 0).ToList();
-            }
-            if (chkhoadonchuanhap.Checked)
-            {
-                orgiginlist = orgiginlist.Where(m => m.Statustype == 1).ToList();
-            }
-            if (chkhoadonsaitt.Checked)
-            {
-                orgiginlist = orgiginlist.Where(m => m.Statustype == 2).ToList();
-            }
-            if (chkhoadonthieuhang.Checked)
-            {
-                orgiginlist = orgiginlist.Where(m => m.Statustype == 3).ToList();
-            }
-            if (chkhoadondu.Checked)
-            {
-                orgiginlist= orgiginlist.Where(m => m.Statustype == 4).ToList();
-            }
+            //if (checkEdit1.Checked)
+            //{
+            //    orgiginlist = orgiginlist.Where(m => m.Statustype == 0).ToList();
+            //}
+            //if (chkhoadonchuanhap.Checked)
+            //{
+            //    orgiginlist = orgiginlist.Where(m => m.Statustype == 1).ToList();
+            //}
+            //if (chkhoadonsaitt.Checked)
+            //{
+            //    orgiginlist = orgiginlist.Where(m => m.Statustype == 2).ToList();
+            //}
+            //if (chkhoadonthieuhang.Checked)
+            //{
+            //    orgiginlist = orgiginlist.Where(m => m.Statustype == 3).ToList();
+            //}
+            //if (chkhoadondu.Checked)
+            //{
+            //    orgiginlist= orgiginlist.Where(m => m.Statustype == 4).ToList();
+            //}
             gridControl1.DataSource = orgiginlist;
         }
         private void Thietlapghichu(clsKTHT clsKTHT)
@@ -2535,35 +2535,20 @@ namespace SaovietTax
 
         private void chkhoadonchuanhap_CheckedChanged(object sender, EventArgs e)
         {
-            if (chkhoadonchuanhap.Checked)
-            {
-                checkEdit1.Checked = false;
-                chkhoadonsaitt.Checked = false;
-                chkhoadonthieuhang.Checked = false;
-            }
+       
            
             LoadDatasource();
         }
 
         private void chkhoadonsaitt_CheckedChanged(object sender, EventArgs e)
         {
-            if (chkhoadonsaitt.Checked)
-            {
-                checkEdit1.Checked = false;
-                chkhoadonchuanhap.Checked = false;
-                chkhoadonthieuhang.Checked = false;
-            }
+           
             LoadDatasource();
         }
 
         private void chkhoadonthieuhang_CheckedChanged(object sender, EventArgs e)
         {
-            if (chkhoadonthieuhang.Checked)
-            {
-                checkEdit1.Checked = false;
-                chkhoadonchuanhap.Checked = false;
-                chkhoadonsaitt.Checked = false;
-            }
+           
             LoadDatasource();
         }
 
@@ -2599,12 +2584,7 @@ namespace SaovietTax
 
         private void checkEdit1_CheckedChanged(object sender, EventArgs e)
         {
-            if (checkEdit1.Checked)
-            {
-                chkhoadonchuanhap.Checked = false;
-                chkhoadonsaitt.Checked = false;
-                chkhoadonthieuhang.Checked = false;
-            }
+            
             LoadDatasource();
         }
 
@@ -2636,6 +2616,82 @@ namespace SaovietTax
         {
             var orgiginlist = clsKTHTs;
             gridControl1.DataSource = orgiginlist;
+        }
+          
+        private void lblwarning2_Click(object sender, EventArgs e)
+        {
+          
+        }
+
+        private void labelControl11_Click(object sender, EventArgs e)
+        {
+            if(labelControl11.Appearance.ForeColor== System.Drawing.Color.Blue)
+            {
+                var orgiginlist = clsKTHTs;
+                orgiginlist = orgiginlist.Where(m => m.Statustype == 2).ToList();
+                gridControl1.DataSource = orgiginlist;
+                labelControl11.Appearance.ForeColor = System.Drawing.Color.Red;
+                lblwarning2.Appearance.ForeColor = System.Drawing.Color.Red;
+                labelControl12.Appearance.ForeColor = System.Drawing.Color.Blue;
+                lblwarning3.Appearance.ForeColor = System.Drawing.Color.Blue;
+                labelControl13.Appearance.ForeColor = System.Drawing.Color.Blue;
+                lblwarining4.Appearance.ForeColor = System.Drawing.Color.Blue;
+            }
+            else
+            {
+                var orgiginlist = clsKTHTs;
+                gridControl1.DataSource = orgiginlist;
+                labelControl11.Appearance.ForeColor = System.Drawing.Color.Blue;
+                lblwarning2.Appearance.ForeColor = System.Drawing.Color.Blue;
+               
+            }
+        }
+
+        private void labelControl12_Click(object sender, EventArgs e)
+        {
+            if (labelControl12.Appearance.ForeColor == System.Drawing.Color.Blue)
+            {
+                var orgiginlist = clsKTHTs;
+                orgiginlist = orgiginlist.Where(m => m.Statustype == 3).ToList();
+                gridControl1.DataSource = orgiginlist;
+                labelControl12.Appearance.ForeColor = System.Drawing.Color.Red;
+                lblwarning3.Appearance.ForeColor = System.Drawing.Color.Red;
+                labelControl11.Appearance.ForeColor = System.Drawing.Color.Blue;
+                lblwarning2.Appearance.ForeColor = System.Drawing.Color.Blue;
+                labelControl13.Appearance.ForeColor = System.Drawing.Color.Blue;
+                lblwarining4.Appearance.ForeColor = System.Drawing.Color.Blue;
+            }
+            else
+            {
+                var orgiginlist = clsKTHTs;
+                gridControl1.DataSource = orgiginlist;
+                labelControl12.Appearance.ForeColor = System.Drawing.Color.Blue;
+                lblwarning3.Appearance.ForeColor = System.Drawing.Color.Blue;
+            }
+        }
+
+        private void labelControl13_Click(object sender, EventArgs e)
+        {
+            if (labelControl13.Appearance.ForeColor == System.Drawing.Color.Blue)
+            {
+                var orgiginlist = clsKTHTs;
+                orgiginlist = orgiginlist.Where(m => m.Statustype == 4).ToList();
+                gridControl1.DataSource = orgiginlist;
+                labelControl13.Appearance.ForeColor = System.Drawing.Color.Red;
+                lblwarining4.Appearance.ForeColor = System.Drawing.Color.Red;
+                labelControl12.Appearance.ForeColor = System.Drawing.Color.Blue;
+                lblwarning3.Appearance.ForeColor = System.Drawing.Color.Blue;
+                labelControl11.Appearance.ForeColor = System.Drawing.Color.Blue;
+                lblwarning2.Appearance.ForeColor = System.Drawing.Color.Blue;
+
+            }
+            else
+            {
+                var orgiginlist = clsKTHTs;
+                gridControl1.DataSource = orgiginlist;
+                labelControl13.Appearance.ForeColor = System.Drawing.Color.Blue;
+                lblwarining4.Appearance.ForeColor = System.Drawing.Color.Blue;
+            }
         }
 
         DataTable gettbChungtu;
@@ -2717,6 +2773,10 @@ namespace SaovietTax
                 try
                 {
                     int mact = Convert.ToInt32(row["MaCT"]);
+                    if(mact== 5576)
+                    {
+                        int dasd = 100;
+                    }
                     if (processed.Contains(mact))
                         continue;
 
@@ -2726,6 +2786,10 @@ namespace SaovietTax
 
                     ChungTuHD item = new ChungTuHD();
                     item.MaCT = mact;
+                    if(item.MaCT== 37460)
+                    {
+                        int aa = 100;
+                    }
                     item.SoHieu = row["SoHieu"].ToString();
                     
                     if (DateTime.TryParse(row["NgayImport"]?.ToString(), out DateTime ngayImport))
@@ -2736,7 +2800,7 @@ namespace SaovietTax
                     {
                         item.NgayImport = DateTime.MinValue; // hoặc giá trị mặc định khác
                     }
-                    if (item.SoHieu == "192" )
+                    if (item.SoHieu == "105" && item.NgayCT.Month==6 )
                     {
                         int aaa = 10;
                     }
@@ -2826,7 +2890,7 @@ namespace SaovietTax
                                     }
                                     else
                                     {
-                                        if (maTK == "161" || maTK == "160" || maTK == "37")
+                                        if (maTK == "161" || maTK == "160" || maTK == "37" || maTK=="75" || maTK=="76" || maTK=="77")
                                         {
                                             tienTrcThue += soPS;
                                         }

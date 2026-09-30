@@ -155,6 +155,7 @@
             this.panelControl9 = new DevExpress.XtraEditors.PanelControl();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.panelControl12 = new DevExpress.XtraEditors.PanelControl();
+            this.btnClauseAi = new DevExpress.XtraEditors.SimpleButton();
             this.btnfolder = new DevExpress.XtraEditors.SimpleButton();
             this.btnImportChungtunganhang = new DevExpress.XtraEditors.SimpleButton();
             this.btnPdf24 = new DevExpress.XtraEditors.SimpleButton();
@@ -1810,7 +1811,7 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 43.88753F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 308F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 134F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 72F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 74F));
             this.tableLayoutPanel1.Controls.Add(this.panelControl12, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl11, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl10, 0, 0);
@@ -1827,6 +1828,7 @@
             // 
             // panelControl12
             // 
+            this.panelControl12.Controls.Add(this.btnClauseAi);
             this.panelControl12.Controls.Add(this.btnfolder);
             this.panelControl12.Controls.Add(this.btnImportChungtunganhang);
             this.panelControl12.Controls.Add(this.btnPdf24);
@@ -1837,11 +1839,23 @@
             this.panelControl12.Controls.Add(this.radVbDauvao1);
             this.panelControl12.Controls.Add(this.btnClearNganhang);
             this.panelControl12.Controls.Add(this.btnLocdulieuNganhang);
-            this.panelControl12.Location = new System.Drawing.Point(761, 2);
+            this.panelControl12.Location = new System.Drawing.Point(759, 2);
             this.panelControl12.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl12.Name = "panelControl12";
             this.panelControl12.Size = new System.Drawing.Size(304, 138);
             this.panelControl12.TabIndex = 5;
+            // 
+            // btnClauseAi
+            // 
+            this.btnClauseAi.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.btnClauseAi.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton16.ImageOptions.SvgImage")));
+            this.btnClauseAi.ImageOptions.SvgImageSize = new System.Drawing.Size(30, 30);
+            this.btnClauseAi.Location = new System.Drawing.Point(158, 4);
+            this.btnClauseAi.Margin = new System.Windows.Forms.Padding(2);
+            this.btnClauseAi.Name = "btnClauseAi";
+            this.btnClauseAi.Size = new System.Drawing.Size(39, 28);
+            this.btnClauseAi.TabIndex = 37;
+            this.btnClauseAi.Click += new System.EventHandler(this.btnClauseAi_Click);
             // 
             // btnfolder
             // 
@@ -1868,24 +1882,25 @@
             // btnPdf24
             // 
             this.btnPdf24.ImageOptions.Image = global::SaovietTax.Properties.Resources.projectfile_32x32;
-            this.btnPdf24.Location = new System.Drawing.Point(90, 9);
+            this.btnPdf24.Location = new System.Drawing.Point(112, 5);
             this.btnPdf24.Margin = new System.Windows.Forms.Padding(2);
             this.btnPdf24.Name = "btnPdf24";
-            this.btnPdf24.Size = new System.Drawing.Size(107, 23);
+            this.btnPdf24.Size = new System.Drawing.Size(42, 24);
             this.btnPdf24.TabIndex = 17;
-            this.btnPdf24.Text = "Pdf24";
             this.btnPdf24.Click += new System.EventHandler(this.btnPdf24_Click);
             // 
             // simpleButton4
             // 
             this.simpleButton4.AutoWidthInLayoutControl = true;
-            this.simpleButton4.ImageOptions.Image = ((System.Drawing.Image)(resources.GetObject("simpleButton4.ImageOptions.Image")));
+            this.simpleButton4.ImageOptions.Location = DevExpress.XtraEditors.ImageLocation.MiddleCenter;
+            this.simpleButton4.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton4.ImageOptions.SvgImage")));
+            this.simpleButton4.ImageOptions.SvgImageColorizationMode = DevExpress.Utils.SvgImageColorizationMode.Full;
+            this.simpleButton4.ImageOptions.SvgImageSize = new System.Drawing.Size(30, 20);
             this.simpleButton4.Location = new System.Drawing.Point(5, 5);
             this.simpleButton4.Margin = new System.Windows.Forms.Padding(2);
             this.simpleButton4.Name = "simpleButton4";
-            this.simpleButton4.Size = new System.Drawing.Size(81, 26);
+            this.simpleButton4.Size = new System.Drawing.Size(103, 26);
             this.simpleButton4.TabIndex = 15;
-            this.simpleButton4.Text = "Đọc pdf bbyy";
             this.simpleButton4.Click += new System.EventHandler(this.simpleButton4_Click);
             // 
             // btnDocfileExcel
@@ -1971,10 +1986,10 @@
             this.panelControl11.Controls.Add(this.btnOpenFolder);
             this.panelControl11.Controls.Add(this.btnRefresh);
             this.panelControl11.Controls.Add(this.btnimport);
-            this.panelControl11.Location = new System.Drawing.Point(428, 2);
+            this.panelControl11.Location = new System.Drawing.Point(427, 2);
             this.panelControl11.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl11.Name = "panelControl11";
-            this.panelControl11.Size = new System.Drawing.Size(329, 138);
+            this.panelControl11.Size = new System.Drawing.Size(328, 138);
             this.panelControl11.TabIndex = 4;
             // 
             // simpleButton5
@@ -2022,7 +2037,7 @@
             this.panelControl8.Location = new System.Drawing.Point(4, 73);
             this.panelControl8.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl8.Name = "panelControl8";
-            this.panelControl8.Size = new System.Drawing.Size(321, 34);
+            this.panelControl8.Size = new System.Drawing.Size(320, 34);
             this.panelControl8.TabIndex = 35;
             // 
             // lblImporttdra
@@ -2404,7 +2419,7 @@
             // 
             this.pictureEdit2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureEdit2.EditValue = ((object)(resources.GetObject("pictureEdit2.EditValue")));
-            this.pictureEdit2.Location = new System.Drawing.Point(1069, 2);
+            this.pictureEdit2.Location = new System.Drawing.Point(1067, 2);
             this.pictureEdit2.Margin = new System.Windows.Forms.Padding(2);
             this.pictureEdit2.Name = "pictureEdit2";
             this.pictureEdit2.Properties.ShowCameraMenuItem = DevExpress.XtraEditors.Controls.CameraMenuItemVisibility.Auto;
@@ -4995,5 +5010,6 @@
         private DevExpress.XtraEditors.LabelControl lblImporttdvao;
         private System.Windows.Forms.ToolTip toolTip1;
         private DevExpress.XtraGrid.Columns.GridColumn colKHHDon;
+        private DevExpress.XtraEditors.SimpleButton btnClauseAi;
     }
 }
