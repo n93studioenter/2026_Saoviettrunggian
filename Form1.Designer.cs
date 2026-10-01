@@ -1809,9 +1809,9 @@
             this.tableLayoutPanel1.ColumnCount = 5;
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 56.11247F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 43.88753F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 308F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 134F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 74F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 323F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 119F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 76F));
             this.tableLayoutPanel1.Controls.Add(this.panelControl12, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl11, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl10, 0, 0);
@@ -1839,16 +1839,16 @@
             this.panelControl12.Controls.Add(this.radVbDauvao1);
             this.panelControl12.Controls.Add(this.btnClearNganhang);
             this.panelControl12.Controls.Add(this.btnLocdulieuNganhang);
-            this.panelControl12.Location = new System.Drawing.Point(759, 2);
+            this.panelControl12.Location = new System.Drawing.Point(757, 2);
             this.panelControl12.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl12.Name = "panelControl12";
-            this.panelControl12.Size = new System.Drawing.Size(304, 138);
+            this.panelControl12.Size = new System.Drawing.Size(316, 138);
             this.panelControl12.TabIndex = 5;
             // 
             // btnClauseAi
             // 
             this.btnClauseAi.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.btnClauseAi.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton16.ImageOptions.SvgImage")));
+            this.btnClauseAi.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnClauseAi.ImageOptions.SvgImage")));
             this.btnClauseAi.ImageOptions.SvgImageSize = new System.Drawing.Size(30, 30);
             this.btnClauseAi.Location = new System.Drawing.Point(158, 4);
             this.btnClauseAi.Margin = new System.Windows.Forms.Padding(2);
@@ -1881,11 +1881,13 @@
             // 
             // btnPdf24
             // 
-            this.btnPdf24.ImageOptions.Image = global::SaovietTax.Properties.Resources.projectfile_32x32;
-            this.btnPdf24.Location = new System.Drawing.Point(112, 5);
+            this.btnPdf24.ImageOptions.Location = DevExpress.XtraEditors.ImageLocation.MiddleCenter;
+            this.btnPdf24.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnPdf24.ImageOptions.SvgImage")));
+            this.btnPdf24.ImageOptions.SvgImageSize = new System.Drawing.Size(20, 20);
+            this.btnPdf24.Location = new System.Drawing.Point(101, 5);
             this.btnPdf24.Margin = new System.Windows.Forms.Padding(2);
             this.btnPdf24.Name = "btnPdf24";
-            this.btnPdf24.Size = new System.Drawing.Size(42, 24);
+            this.btnPdf24.Size = new System.Drawing.Size(53, 24);
             this.btnPdf24.TabIndex = 17;
             this.btnPdf24.Click += new System.EventHandler(this.btnPdf24_Click);
             // 
@@ -1895,11 +1897,11 @@
             this.simpleButton4.ImageOptions.Location = DevExpress.XtraEditors.ImageLocation.MiddleCenter;
             this.simpleButton4.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton4.ImageOptions.SvgImage")));
             this.simpleButton4.ImageOptions.SvgImageColorizationMode = DevExpress.Utils.SvgImageColorizationMode.Full;
-            this.simpleButton4.ImageOptions.SvgImageSize = new System.Drawing.Size(30, 20);
+            this.simpleButton4.ImageOptions.SvgImageSize = new System.Drawing.Size(30, 13);
             this.simpleButton4.Location = new System.Drawing.Point(5, 5);
             this.simpleButton4.Margin = new System.Windows.Forms.Padding(2);
             this.simpleButton4.Name = "simpleButton4";
-            this.simpleButton4.Size = new System.Drawing.Size(103, 26);
+            this.simpleButton4.Size = new System.Drawing.Size(92, 26);
             this.simpleButton4.TabIndex = 15;
             this.simpleButton4.Click += new System.EventHandler(this.simpleButton4_Click);
             // 
@@ -1986,10 +1988,10 @@
             this.panelControl11.Controls.Add(this.btnOpenFolder);
             this.panelControl11.Controls.Add(this.btnRefresh);
             this.panelControl11.Controls.Add(this.btnimport);
-            this.panelControl11.Location = new System.Drawing.Point(427, 2);
+            this.panelControl11.Location = new System.Drawing.Point(426, 2);
             this.panelControl11.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl11.Name = "panelControl11";
-            this.panelControl11.Size = new System.Drawing.Size(328, 138);
+            this.panelControl11.Size = new System.Drawing.Size(327, 138);
             this.panelControl11.TabIndex = 4;
             // 
             // simpleButton5
@@ -2037,7 +2039,7 @@
             this.panelControl8.Location = new System.Drawing.Point(4, 73);
             this.panelControl8.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl8.Name = "panelControl8";
-            this.panelControl8.Size = new System.Drawing.Size(320, 34);
+            this.panelControl8.Size = new System.Drawing.Size(319, 34);
             this.panelControl8.TabIndex = 35;
             // 
             // lblImporttdra
@@ -2419,12 +2421,12 @@
             // 
             this.pictureEdit2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureEdit2.EditValue = ((object)(resources.GetObject("pictureEdit2.EditValue")));
-            this.pictureEdit2.Location = new System.Drawing.Point(1067, 2);
+            this.pictureEdit2.Location = new System.Drawing.Point(1080, 2);
             this.pictureEdit2.Margin = new System.Windows.Forms.Padding(2);
             this.pictureEdit2.Name = "pictureEdit2";
             this.pictureEdit2.Properties.ShowCameraMenuItem = DevExpress.XtraEditors.Controls.CameraMenuItemVisibility.Auto;
             this.pictureEdit2.Properties.SizeMode = DevExpress.XtraEditors.Controls.PictureSizeMode.Stretch;
-            this.pictureEdit2.Size = new System.Drawing.Size(130, 126);
+            this.pictureEdit2.Size = new System.Drawing.Size(115, 126);
             this.pictureEdit2.TabIndex = 2;
             // 
             // xtraTabControl2
@@ -2465,10 +2467,10 @@
             this.progressChitievao.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.progressChitievao.Appearance.BackColor = System.Drawing.Color.Transparent;
             this.progressChitievao.Appearance.Options.UseBackColor = true;
-            this.progressChitievao.Location = new System.Drawing.Point(1088, -28);
+            this.progressChitievao.Location = new System.Drawing.Point(1195, -39);
             this.progressChitievao.Margin = new System.Windows.Forms.Padding(2);
             this.progressChitievao.Name = "progressChitievao";
-            this.progressChitievao.Size = new System.Drawing.Size(959, 48);
+            this.progressChitievao.Size = new System.Drawing.Size(837, 48);
             this.progressChitievao.TabIndex = 5;
             this.progressChitievao.Text = "progressPanel5";
             this.progressChitievao.Visible = false;
@@ -2518,7 +2520,7 @@
             this.lblSofiles.AutoSize = true;
             this.lblSofiles.BackColor = System.Drawing.Color.WhiteSmoke;
             this.lblSofiles.Font = new System.Drawing.Font("Tahoma", 8F, System.Drawing.FontStyle.Bold);
-            this.lblSofiles.Location = new System.Drawing.Point(1077, 11);
+            this.lblSofiles.Location = new System.Drawing.Point(1058, 12);
             this.lblSofiles.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblSofiles.Name = "lblSofiles";
             this.lblSofiles.Size = new System.Drawing.Size(16, 13);
@@ -2932,16 +2934,16 @@
             // lblTKNganHangTitle
             // 
             this.lblTKNganHangTitle.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.lblTKNganHangTitle.Appearance.BackColor = System.Drawing.Color.Transparent;
-            this.lblTKNganHangTitle.Appearance.Font = new System.Drawing.Font("Tahoma", 7.8F, System.Drawing.FontStyle.Bold);
-            this.lblTKNganHangTitle.Appearance.ForeColor = System.Drawing.Color.RoyalBlue;
+            this.lblTKNganHangTitle.Appearance.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.lblTKNganHangTitle.Appearance.Font = new System.Drawing.Font("Tahoma", 9F, System.Drawing.FontStyle.Bold);
+            this.lblTKNganHangTitle.Appearance.ForeColor = System.Drawing.Color.Red;
             this.lblTKNganHangTitle.Appearance.Options.UseBackColor = true;
             this.lblTKNganHangTitle.Appearance.Options.UseFont = true;
             this.lblTKNganHangTitle.Appearance.Options.UseForeColor = true;
-            this.lblTKNganHangTitle.Location = new System.Drawing.Point(1090, 12);
+            this.lblTKNganHangTitle.Location = new System.Drawing.Point(1078, 11);
             this.lblTKNganHangTitle.Margin = new System.Windows.Forms.Padding(2);
             this.lblTKNganHangTitle.Name = "lblTKNganHangTitle";
-            this.lblTKNganHangTitle.Size = new System.Drawing.Size(9, 12);
+            this.lblTKNganHangTitle.Size = new System.Drawing.Size(12, 14);
             this.lblTKNganHangTitle.TabIndex = 8;
             this.lblTKNganHangTitle.Text = "...";
             // 
@@ -3015,10 +3017,10 @@
             // 
             this.btnChontknganhang.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnChontknganhang.ImageOptions.Image = global::SaovietTax.Properties.Resources.allowuserstoeditranges_32x32;
-            this.btnChontknganhang.Location = new System.Drawing.Point(922, 3);
+            this.btnChontknganhang.Location = new System.Drawing.Point(894, 3);
             this.btnChontknganhang.Margin = new System.Windows.Forms.Padding(2);
             this.btnChontknganhang.Name = "btnChontknganhang";
-            this.btnChontknganhang.Size = new System.Drawing.Size(165, 26);
+            this.btnChontknganhang.Size = new System.Drawing.Size(175, 27);
             this.btnChontknganhang.TabIndex = 1;
             this.btnChontknganhang.Text = "Chọn tài khoản ngân hàng";
             this.btnChontknganhang.Click += new System.EventHandler(this.btnChontknganhang_Click);

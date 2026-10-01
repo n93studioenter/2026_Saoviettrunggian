@@ -7325,6 +7325,7 @@ Chỉ trả lời: CÓ hoặc KHÔNG
                 dpiY = graphics.DpiY;
                 labelControl25.Text = ($"Màn hình: {screen.Bounds.Width}x{screen.Bounds.Height}");
             }
+            //2880x1800
             if (screen.Bounds.Width == 1920)
             {
                 strLayout = "layout_1920.xml";
@@ -32615,7 +32616,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             string[] headers = null;
             //Acb header
             //if (lblTKNganHangTitle.Text.ToLower().Contains("acb") || lblTKNganHangTitle.Text.ToLower().Contains("á châu"))
-            headers = new string[] { "Ngày", "Phát sinh nợ", "Phát sinh có", "Ngày tháng", "Ngay hieu luc", "Noi dung giao dich", "Ghi no", "Ghi co", "Chi tiết giao dịch", "Ngay giao dich", "Ngày giá trị", "Nợ", "Có", "Dien giai", "So du", "NGÀY GIAO DỊCH", "PHÁT SINH NỢ", "PHÁT SINH CÓ", "SỐ DƯ", "Ngày giao dịch", "Debit", "Credit", "Balance", "Remark", "Details", "Số tiền ghi nợ", "Số tiền ghi có", "Deposit", "Remarks", "Withdrawal", "Số tiền rút ra", "Số tiền gửi vào", "số dư", "GD", "Ghi nợ", "Ghi có", "Mô tả", "PHÁT SINH CÓ", "PHÁT SINH NỢ", "Số dư", "Nội dung", "Noi dung chi tiet", "Ngay GD", "So tien ghi no", "So tien ghi co", "Phát sinh co", "Số tiền rút", "Số tiền gửi" };
+            headers = new string[] { "Ngày", "Phát sinh nợ", "Phát sinh có", "Ngày tháng", "Ngay hieu luc", "Noi dung giao dich", "Ghi no", "Ghi co", "Chi tiết giao dịch", "Ngay giao dich", "Ngày giá trị", "Nợ", "Có", "Dien giai", "So du", "NGÀY GIAO DỊCH", "PHÁT SINH NỢ", "PHÁT SINH CÓ", "SỐ DƯ", "Ngày giao dịch", "Debit", "Credit", "Balance", "Remark", "Details", "Số tiền ghi nợ", "Số tiền ghi có", "Deposit", "Remarks", "Withdrawal", "Số tiền rút ra", "Số tiền gửi vào", "số dư", "GD", "Ghi nợ", "Ghi có", "Mô tả", "PHÁT SINH CÓ", "PHÁT SINH NỢ", "Số dư", "Nội dung", "Noi dung chi tiet", "Ngay GD", "So tien ghi no", "So tien ghi co", "Phát sinh co", "Số tiền rút", "Số tiền gửi", "TK nợ", "TK có" };
             int countcol = 0;
             bool isHeaderRow = false;
             for (int i = 1; i <= 12; i++)
@@ -32692,8 +32693,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     int DoiungIndex = 0;
                     string[] lstNgayGD = { "Ngày tháng", "Ngay hieu luc", "Ngay GD", "Ngày giá trị", "Ngày hiệu lực", "Ngày hạch toán", "Ngày HL", "Νɡàу ɡiаo ԁịch", "Ngày GD", "Ngày giao dịch", "NGÀY GIAO DỊCH", "Ngày giá trị", "Ngay hieu luc", "Ngày Date", "Transaction Date", "Ngày", "Date", "NGÀY GIAO DỊCH", "Transaction date" };
                     string[] lstNoidung = { "Noi dung giao dich", "Nội dung", "Nội dung giao dịch", "Diễn giải", "Details", "Description", "Mô tả", "Ghi chú", "Remarks", "Nội dung chi tiết", "Chi tiết giao dịch", "Remark", "Ghi chú Remark", "NỘI DUNG", "Transaction Comment", "Noi dung chi tiet" };
-                    string[] lstNo = { "Phát sinh nợ", "Số tiền rút ra", "Ghi no", "Phát sinh nợ", "So tien ghi no", "Số tiền rút", "Debit", "Số tiền ɡhi nợ", "Số tiền ghi nợ", "Ghi nợ", "Nợ", "Debt", "dr", "PHÁT SINH NỢ" };
-                    string[] lstCo = { "Phát sinh có", "Số tiền gửi vào", "Ghi co", "Phát sinh có", "Số tiền gửi", "Credit", "Số tiền ɡhi có", "So tien ghi co", "Số tiền ghi có", "Ghi có", "Có", "Credit", "Credit amount", "Có", "PHÁT SINH CÓ", "Phát sinh co" };
+                    string[] lstNo = {"TK nợ", "Phát sinh nợ", "Số tiền rút ra", "Ghi no", "Phát sinh nợ", "So tien ghi no", "Số tiền rút", "Debit", "Số tiền ɡhi nợ", "Số tiền ghi nợ", "Ghi nợ", "Nợ", "Debt", "dr", "PHÁT SINH NỢ" };
+                    string[] lstCo = { "TK có","Phát sinh có", "Số tiền gửi vào", "Ghi co", "Phát sinh có", "Số tiền gửi", "Credit", "Số tiền ɡhi có", "So tien ghi co", "Số tiền ghi có", "Ghi có", "Có", "Credit", "Credit amount", "Có", "PHÁT SINH CÓ", "Phát sinh co" };
                     string[] lstBalance = { "Số dư", "Balance", "Available Balance", "Số dư khả dụng", "Số dư tài khoản", "Số dư cuối", "Running balance", "SỐ DƯ" };
                     string[] lstDoiung = { "Tên tài khoản đối ứng", "Remitter's account name", "Đơn vị thụ hưởng", "Đơn vị chuyển", "Beneficiary", "Applicant" };
                     foreach (var worksheet in workbook.Worksheets)
@@ -33465,7 +33466,12 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     //Tìm dối tượng treo công nợ
 
                     System.Windows.Forms.BindingSource bindingSource = new System.Windows.Forms.BindingSource();
-                    bindingSource.DataSource = lstNganhan.OrderBy(m => m.Stt);
+                    lstNganhan = lstNganhan.OrderBy(m => m.NgayGD).ToList();
+                    foreach(var item in lstNganhan)
+                    {
+                        item.Stt = lstNganhan.IndexOf(item) + 1;
+                    }
+                    bindingSource.DataSource = lstNganhan;
                     gridControl3.DataSource = bindingSource;
 
                     gridControl3.RefreshDataSource(); // Làm mới để hiển thị dữ liệu mới
@@ -41826,6 +41832,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
         private void btnClauseAi_Click(object sender, EventArgs e)
         {
+            if (isdesign)
+                return;
             try
             { 
                 DirectoryInfo parent = Directory.GetParent(savedPath);
@@ -41858,14 +41866,29 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 // 3. Prompt (PDF sẽ được kéo thả vào chat)
                 string prompt = $@"Đây là file sao kê ngân hàng (PDF đính kèm).
 
-Trích xuất toàn bộ giao dịch và tạo file CSV (UTF-8) với đúng các cột:
-Ngày giao dịch,Diễn giải,Ghi nợ,Ghi có,Số dư
-- Diễn giải nhiều dòng thì gộp thành 1 dòng, đặt trong dấu nháy kép.
-- Số tiền để dạng số thuần, không dấu phân cách; ô không có số thì để trống.
-- Xác định Ghi nợ/Ghi có theo đúng cột trong sao kê, và đối chiếu tổng với phần tổng kết trước khi lưu.
-Dùng tool filesystem lưu vào đúng đường dẫn: {CsvPath}
-Nếu không ghi được file thì tạo file sao_ke_ket_qua.csv để tôi tải về.
-Chỉ trả lời ngắn gọn khi xong.";
+                Trích xuất toàn bộ giao dịch và tạo file CSV (UTF-8) với đúng các cột:
+                Ngày giao dịch,Diễn giải,Ghi nợ,Ghi có,Số dư
+
+                CỘT DIỄN GIẢI: gộp thành 1 dòng, đặt trong dấu nháy kép, và chỉ cắt bỏ phần rác do hệ thống ngân hàng tự sinh ra.
+                - GIỮ NGUYÊN, không rút gọn: tên bên chuyển/nhận, lý do thanh toán, và TOÀN BỘ thông tin về hóa đơn/hợp đồng/chứng từ: số hóa đơn, số hợp đồng, ngày ký hoặc ngày lập, kỳ thanh toán, tháng/năm, đợt thanh toán... Khi gặp cụm như 'THEO HD SO 45 KY NGAY 5/8/2026' thì giữ trọn cụm từ đầu đến cuối.
+                - Ngày tháng do người chuyển tiền viết trong nội dung (vd 5/8/2026, 6.8.2026, KY 12/2025) là thông tin nghiệp vụ, GIỮ LẠI.
+                - CHỈ BỎ những thứ do máy sinh ra, không có ý nghĩa với người đọc: mã tham chiếu/mã giao dịch nội bộ, chuỗi ký tự chữ-số ngẫu nhiên, mốc ngày-giờ tự động gắn cuối nội dung, số thẻ, và ký tự thừa.
+                - Chỉ bỏ khi chắc chắn là rác. Nếu phân vân thì giữ lại.
+                - Không tự thêm, không diễn giải lại, không sửa tên riêng. Chỉ cắt phần thừa từ nội dung gốc.
+                - Ví dụ minh họa (không phải danh sách đầy đủ, các sao kê khác có kiểu rác khác):
+                   'nap vao tai khoan cty FT26215650130767 GD 6215IBT1kCTBWQNA 030826-14:53:57' -> 'nap vao tai khoan cty'
+                   'CTY CHIEM BON THANH TOAN HD 3442-210826-16:01:27 6233ASCB02RYB1JG' -> 'CTY CHIEM BON THANH TOAN HD 3442'
+                   'CTY TNHH MY THUAT SX DV THUONG MAI PHUONG LONG-THEO HD SO 45 KY NGAY 5/8/2026' -> giữ nguyên toàn bộ
+
+                CÁC CỘT KHÁC:
+                - Ngày giao dịch định dạng dd/MM/yyyy.
+                - Số tiền để dạng số thuần, không dấu phân cách; ô không có số thì để trống.
+                - Xác định Ghi nợ/Ghi có theo đúng cột trong sao kê, và đối chiếu tổng với phần tổng kết trước khi lưu.
+                - Chỉ làm sạch cột Diễn giải, tuyệt đối không đổi số tiền hay số dư.
+
+                Dùng tool filesystem lưu vào đúng đường dẫn: {CsvPath}
+                Nếu không ghi được file thì tạo file sao_ke_ket_qua.csv để tôi tải về.
+                Chỉ trả lời ngắn gọn khi xong.";
 
                 Process.Start(new ProcessStartInfo
                 {
@@ -42030,17 +42053,34 @@ Chỉ trả lời ngắn gọn khi xong.";
                 CsvToXlsx(CsvPath, XlsPath);
                 Invoke(new Action(() =>
                 {
-                   
-                    DirectoryInfo parent = Directory.GetParent(savedPath);
-                    string parentPath = parent.FullName; // C:\Users\Admin
 
-                    // Rồi combine
+                    DirectoryInfo parent = Directory.GetParent(savedPath);
+                    string parentPath = parent.FullName;
+
                     string folNganhangir = Path.Combine(parentPath, "Tailieu", "Nganhangfilegoc");
-                    string newpath = Path.Combine(folNganhangir, $"sao_ke_{dtDenngay.DateTime.Month}.xlsx");
+
+                    // Tạo thư mục nếu chưa có
+                    Directory.CreateDirectory(folNganhangir);
+
+                    string newpath = Path.Combine(
+                        folNganhangir,
+                        $"sao_ke_{dtDenngay.DateTime.Month}.xlsx"
+                    );
+
+                    // Nếu file cũ tồn tại thì xóa
+                    if (File.Exists(newpath))
+                    {
+                        File.Delete(newpath);
+                    }
+
+                    // Di chuyển file mới vào
                     File.Move(XlsPath, newpath);
+
                     DongClaude();
+
                     MessageBox.Show("Đã tạo Excel:\n" + newpath);
-                    //Process.Start(new ProcessStartInfo(newpath) { UseShellExecute = true });
+
+                    // Process.Start(new ProcessStartInfo(newpath) { UseShellExecute = true });
                 }));
             }
             catch (Exception ex)

@@ -124,7 +124,7 @@
     <value>17, 17</value>
   </metadata>
   <assembly alias="DevExpress.Data.v22.1" name="DevExpress.Data.v22.1, Version=22.1.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" />
-  <data name="simpleButton16.ImageOptions.SvgImage" type="DevExpress.Utils.Svg.SvgImage, DevExpress.Data.v22.1" mimetype="application/x-microsoft.net.object.bytearray.base64">
+  <data name="btnClauseAi.ImageOptions.SvgImage" type="DevExpress.Utils.Svg.SvgImage, DevExpress.Data.v22.1" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         AAEAAAD/////AQAAAAAAAAAMAgAAAFlEZXZFeHByZXNzLkRhdGEudjIyLjEsIFZlcnNpb249MjIuMS4z
         LjAsIEN1bHR1cmU9bmV1dHJhbCwgUHVibGljS2V5VG9rZW49Yjg4ZDE3NTRkNzAwZTQ5YQUBAAAAHURl
@@ -208,6 +208,52 @@
         OpQCZkeNqDIsdwETwOMKy7Gz2bbCtsXnrJlnmeMbOeItismvwnWtAD8CbhpuLK56KMGfM4a73VHBSYE3
         H4Y/vcw9V8BzeCOw/pRo8qkN6TA3IRfB1XIh/C/HqDv8t1B3P8M+Xvrrfgss4sl/JVbZ8kH8Hz2qd+b+
         MjAQAAAAAElFTkSuQmCC
+</value>
+  </data>
+  <data name="btnPdf24.ImageOptions.SvgImage" type="DevExpress.Utils.Svg.SvgImage, DevExpress.Data.v22.1" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        AAEAAAD/////AQAAAAAAAAAMAgAAAFlEZXZFeHByZXNzLkRhdGEudjIyLjEsIFZlcnNpb249MjIuMS4z
+        LjAsIEN1bHR1cmU9bmV1dHJhbCwgUHVibGljS2V5VG9rZW49Yjg4ZDE3NTRkNzAwZTQ5YQUBAAAAHURl
+        dkV4cHJlc3MuVXRpbHMuU3ZnLlN2Z0ltYWdlAQAAAAREYXRhBwICAAAACQMAAAAPAwAAABoJAAAC77u/
+        PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz4NCjxzdmcgeD0iMHB4IiB5PSIwcHgi
+        IHdpZHRoPSI1NTAuODAxcHgiIGhlaWdodD0iNTUwLjgwMXB4IiB2aWV3Qm94PSIwIDAgNTUwLjgwMSA1
+        NTAuODAxIiB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1s
+        bnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHhtbDpzcGFjZT0icHJlc2VydmUi
+        IGlkPSJDYXBhXzEiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDU1MC44MDEgNTUwLjgw
+        MSI+DQogIDxnPg0KICAgIDxwYXRoIGQ9Ik0xNjAuMzgxLDI4Mi4yMjVjMC0xNC44MzItMTAuMjk5LTIz
+        LjY4NC0yOC40NzQtMjMuNjg0Yy03LjQxNCwwLTEyLjQzNywwLjcxNS0xNS4wNzEsMS40MzJWMzA3LjYg
+        ICBjMy4xMTQsMC43MDcsNi45NDIsMC45NDksMTIuMTkyLDAuOTQ5QzE0OC40MTksMzA4LjU0OSwxNjAu
+        MzgxLDI5OC43NCwxNjAuMzgxLDI4Mi4yMjV6IiAvPg0KICAgIDxwYXRoIGQ9Ik0yNzIuODc1LDI1OS4w
+        MTljLTguMTQ1LDAtMTMuMzk3LDAuNzE3LTE2LjUxOSwxLjQzNXYxMDUuNTIzYzMuMTE2LDAuNzI5LDgu
+        MTQyLDAuNzI5LDEyLjY5LDAuNzI5ICAgYzMzLjAxNywwLjIzMSw1NC41NTQtMTcuOTQ2LDU0LjU1NC01
+        Ni40NzRDMzIzLjg0MiwyNzYuNzE5LDMwNC4yMTUsMjU5LjAxOSwyNzIuODc1LDI1OS4wMTl6IiAvPg0K
+        ICAgIDxwYXRoIGQ9Ik00ODguNDI2LDE5Ny4wMTlINDc1LjJ2LTYzLjgxNmMwLTAuMzk4LTAuMDYzLTAu
+        Nzk5LTAuMTE2LTEuMjAyYy0wLjAyMS0yLjUzNC0wLjgyNy01LjAyMy0yLjU2Mi02Ljk5NUwzNjYuMzI1
+        LDMuNjk0ICAgYy0wLjAzMi0wLjAzMS0wLjA2My0wLjA0Mi0wLjA4NS0wLjA3NmMtMC42MzMtMC43MDct
+        MS4zNzEtMS4yOTUtMi4xNTEtMS44MDRjLTAuMjMxLTAuMTU1LTAuNDY0LTAuMjg1LTAuNzA2LTAuNDE5
+        ICAgYy0wLjY3Ni0wLjM2OS0xLjM5My0wLjY3NS0yLjEzMS0wLjg5NmMtMC4yLTAuMDU2LTAuMzgtMC4x
+        MzgtMC41OC0wLjE5QzM1OS44NywwLjExOSwzNTkuMDM3LDAsMzU4LjE5MywwSDk3LjIgICBjLTExLjkx
+        OCwwLTIxLjYsOS42OTMtMjEuNiwyMS42MDF2MTc1LjQxM0g2Mi4zNzdjLTE3LjA0OSwwLTMwLjg3Mywx
+        My44MTgtMzAuODczLDMwLjg3M3YxNjAuNTQ1ICAgYzAsMTcuMDQzLDEzLjgyNCwzMC44NywzMC44NzMs
+        MzAuODdoMTMuMjI0VjUyOS4yYzAsMTEuOTA3LDkuNjgyLDIxLjYwMSwyMS42LDIxLjYwMWgzNTYuNGMx
+        MS45MDcsMCwyMS42LTkuNjkzLDIxLjYtMjEuNjAxICAgVjQxOS4zMDJoMTMuMjI2YzE3LjA0NCwwLDMw
+        Ljg3MS0xMy44MjcsMzAuODcxLTMwLjg3di0xNjAuNTRDNTE5LjI5NywyMTAuODM4LDUwNS40NywxOTcu
+        MDE5LDQ4OC40MjYsMTk3LjAxOXogTTk3LjIsMjEuNjA1ICAgaDI1MC4xOTN2MTEwLjUxM2MwLDUuOTY3
+        LDQuODQxLDEwLjgsMTAuOCwxMC44aDk1LjQwN3Y1NC4xMDhIOTcuMlYyMS42MDV6IE0zNjIuMzU5LDMw
+        OS4wMjNjMCwzMC44NzYtMTEuMjQzLDUyLjE2NS0yNi44Miw2NS4zMzMgICBjLTE2Ljk3MSwxNC4xMTct
+        NDIuODIsMjAuODE0LTc0LjM5NiwyMC44MTRjLTE4LjksMC0zMi4yOTctMS4xOTctNDEuNDAxLTIuMzg5
+        VjIzNC4zNjVjMTMuMzk5LTIuMTQ5LDMwLjg3OC0zLjM0Niw0OS4zMDQtMy4zNDYgICBjMzAuNjEyLDAs
+        NTAuNDc4LDUuNTA4LDY2LjAzOSwxNy4yMjZDMzUxLjgyOCwyNjAuNjksMzYyLjM1OSwyODAuNTQ3LDM2
+        Mi4zNTksMzA5LjAyM3ogTTgwLjcsMzkzLjQ5OVYyMzQuMzY1ICAgYzExLjI0MS0xLjkwNCwyNy4wNDIt
+        My4zNDYsNDkuMjk2LTMuMzQ2YzIyLjQ5MSwwLDM4LjUyNyw0LjMwOCw0OS4yOTEsMTIuOTI4YzEwLjI5
+        Miw4LjEzMSwxNy4yMTUsMjEuNTM0LDE3LjIxNSwzNy4zMjggICBjMCwxNS43OTktNS4yNSwyOS4xOTgt
+        MTQuODI5LDM4LjI4NWMtMTIuNDQyLDExLjcyOC0zMC44NjUsMTYuOTk2LTUyLjQwNywxNi45OTZjLTQu
+        Nzc4LDAtOS4xLTAuMjQzLTEyLjQzNS0wLjcyM3Y1Ny42N0g4MC43ICAgVjM5My40OTl6IE00NTMuNjAx
+        LDUyMy4zNTNIOTcuMlY0MTkuMzAyaDM1Ni40VjUyMy4zNTN6IE00ODQuODk4LDI2Mi4xMjdoLTYxLjk4
+        OXYzNi44NTFoNTcuOTEzdjI5LjY3NGgtNTcuOTEzdjY0Ljg0OGgtMzYuNTkzICAgVjIzMi4yMTZoOTgu
+        NTgyVjI2Mi4xMjd6IiAvPg0KICA8L2c+DQogIDxnIC8+DQogIDxnIC8+DQogIDxnIC8+DQogIDxnIC8+
+        DQogIDxnIC8+DQogIDxnIC8+DQogIDxnIC8+DQogIDxnIC8+DQogIDxnIC8+DQogIDxnIC8+DQogIDxn
+        IC8+DQogIDxnIC8+DQogIDxnIC8+DQogIDxnIC8+DQogIDxnIC8+DQo8L3N2Zz4L
 </value>
   </data>
   <data name="simpleButton4.ImageOptions.SvgImage" type="DevExpress.Utils.Svg.SvgImage, DevExpress.Data.v22.1" mimetype="application/x-microsoft.net.object.bytearray.base64">
