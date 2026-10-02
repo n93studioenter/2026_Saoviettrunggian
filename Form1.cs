@@ -29076,11 +29076,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                         bool daTonTai = lookupHoaDonCT.Contains((mstnb, getSohd, getkhhd, getDateOnly, 1));
                         bool daTonTaiimport = lookupTbImportCQT.Contains((mstnb, getSohd, getDateOnly, 1));
-
+                      
                         // ✅ Gộp 2 điều kiện if trùng thành 1
                         if (getdate < tuNgay || getdate > denNgay || daTonTai || daTonTaiimport)
                             continue;
-
+                      
                         totalInvoices++;
                     }
                 }
@@ -32333,6 +32333,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 return;
             typeBank = 2;
             progressPanel4.Visible = true;
+            progressPanel4.Caption = "Đang tìm kiếm danh sách chứng từ ngân hàng";
             Application.DoEvents();
             xtraTabControl2.SelectedTabPage = xtraTabPage2;
             lstNganhan = new List<Nganhang>();
@@ -32365,6 +32366,22 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             };
 
             var dtnganhang = ExecuteQuery(queryCheckVatTu, parameterss);
+            if (dtnganhang.Rows.Count == 0)
+            {
+                if (isxoanganhang == false)
+                {
+                    XtraMessageBox.Show($"Không có chứng từ nào trong tháng {dtTungay.DateTime.Month}");
+                    progressPanel4.Caption = "...";
+                    progressPanel4.Visible = false;
+                }
+                else
+                {
+                    isxoanganhang = false;
+                }
+                    gridControl3.DataSource = lstNganhan.OrderBy(m => m.NgayGD).ToList();
+                gridControl3.RefreshDataSource();
+                return;
+            }
             //Dịch sang tbnganhang 
             foreach (DataRow item in dtnganhang.Rows)
             {
@@ -33472,6 +33489,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         item.Stt = lstNganhan.IndexOf(item) + 1;
                     }
                     bindingSource.DataSource = lstNganhan;
+                    if (lstNganhan.Count == 0)
+                    {
+                        XtraMessageBox.Show("Không còn chứng từ để import");
+                    }
                     gridControl3.DataSource = bindingSource;
 
                     gridControl3.RefreshDataSource(); // Làm mới để hiển thị dữ liệu mới
@@ -33491,7 +33512,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     XtraMessageBox.Show($"Có lỗi xảy ra: {ex.Message}");
                 }
             }
-
+            if (lstNganhan.Count > 0)
+            {
+             //  ExportToExcel(gridControl3, lstNganhan.FirstOrDefault().NgayGD.Month, "");
+            }
+            
         }
         static void OpenUrl(string url)
         {
@@ -33710,11 +33735,16 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             tbNganhang = ExecuteQuery("SELECT * FROM tbNganhang", null);
             btnLocdulieuNganhang.PerformClick();
         }
+        private bool isxoanganhang { get; set; }
         private void btnClearNganhang_Click(object sender, EventArgs e)
         {
             if (isdesign)
                 return;
+            isxoanganhang = true;
             XoaDulieunganhang();
+            progressPanel4.Caption = "...";
+            progressPanel4.Visible = false;
+
         }
         public int indexNgay = 0;
         public int indexNoidung = 0;
@@ -34425,7 +34455,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 excelilePath = openFileDialog.FileName;
-                if (excelilePath.Contains("NH_T"))
+                if (excelilePath.Contains("NHIP_T"))
                 {
                     ImportExcelNH(excelilePath);
                     return;
@@ -35659,7 +35689,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     string parentPath = parent.FullName; // C:\Users\Admin
                     string folNganhangirdip = Path.Combine(parentPath, "Tailieu", "Nganhangdaimport");
                     filePath= System.IO.Path.Combine(folNganhangirdip,
-                        $"sao_ke_T{month}.xlsx");
+                        $"NHIP_T{month}.xlsx");
                 }
 
                 // --- Tùy chọn export ---
@@ -41834,6 +41864,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         {
             if (isdesign)
                 return;
+            
+            if (lblTKNganHangTitle.Text == "...")
+            {
+                XtraMessageBox.Show("Vui lòng chọn tài khoản ngân hàng!");
+                xtraTabControl2.SelectedTabPageIndex = 2;
+                return;
+            }
             try
             { 
                 DirectoryInfo parent = Directory.GetParent(savedPath);
@@ -42413,10 +42450,59 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         #region Taihoadonmoi
         private async void simpleButton3_Click(object sender, EventArgs e)
         {
-            await Taihoadon();
+            //RunParallelAsync();
+              await Taihoadon();
+            int a = 10;
 
             //LoginAndGetTokenSelenium(txtuser.Text, txtpass.Text);
             //Taihoadon(1);
+        }
+        public async Task RunParallelAsync()
+        {
+            // Khởi động cả 3 task cùng lúc
+            Task<string> t1 = Task1Async();
+            Task<string> t2 = Task2Async();
+            Task<string> t3 = Task3Async();
+
+            // Chờ tất cả hoàn thành
+            string[] results = await Task.WhenAll(t1, t2, t3);
+
+            Console.WriteLine($"Task1: {results[0]}");
+            Console.WriteLine($"Task2: {results[1]}");
+            Console.WriteLine($"Task3: {results[2]}");
+
+            Console.WriteLine("Hoàn thành song song");
+        }
+        public async Task RunSequentialAsync()
+        {
+            var result1 = await Task1Async();
+            Console.WriteLine($"Task1: {result1}");
+
+            var result2 = await Task2Async();
+            Console.WriteLine($"Task2: {result2}");
+
+            var result3 = await Task3Async();
+            Console.WriteLine($"Task3: {result3}");
+
+            Console.WriteLine("Hoàn thành tuần tự");
+        }
+
+        private async Task<string> Task1Async()
+        {
+            await Task.Delay(1000);
+            return "Kết quả 1";
+        }
+
+        private async Task<string> Task2Async()
+        {
+            await Task.Delay(1000);
+            return "Kết quả 2";
+        }
+
+        private async Task<string> Task3Async()
+        {
+            await Task.Delay(1000);
+            return "Kết quả 3";
         }
         #endregion
     }
