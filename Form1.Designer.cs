@@ -1549,6 +1549,8 @@
             this.colNCC.FieldName = "NCC";
             this.colNCC.Name = "colNCC";
             this.colNCC.OptionsColumn.AllowEdit = false;
+            this.colNCC.Visible = true;
+            this.colNCC.VisibleIndex = 2;
             this.colNCC.Width = 82;
             // 
             // colNLap
@@ -1559,7 +1561,7 @@
             this.colNLap.Name = "colNLap";
             this.colNLap.OptionsColumn.AllowEdit = false;
             this.colNLap.Visible = true;
-            this.colNLap.VisibleIndex = 2;
+            this.colNLap.VisibleIndex = 3;
             this.colNLap.Width = 49;
             // 
             // colTen
@@ -1569,7 +1571,7 @@
             this.colTen.MinWidth = 23;
             this.colTen.Name = "colTen";
             this.colTen.Visible = true;
-            this.colTen.VisibleIndex = 3;
+            this.colTen.VisibleIndex = 4;
             this.colTen.Width = 291;
             // 
             // colMST
@@ -1579,7 +1581,7 @@
             this.colMST.MinWidth = 23;
             this.colMST.Name = "colMST";
             this.colMST.Visible = true;
-            this.colMST.VisibleIndex = 4;
+            this.colMST.VisibleIndex = 5;
             this.colMST.Width = 82;
             // 
             // colVat
@@ -1589,7 +1591,7 @@
             this.colVat.MinWidth = 23;
             this.colVat.Name = "colVat";
             this.colVat.Visible = true;
-            this.colVat.VisibleIndex = 5;
+            this.colVat.VisibleIndex = 6;
             this.colVat.Width = 27;
             // 
             // colVat2
@@ -1599,7 +1601,7 @@
             this.colVat2.MinWidth = 23;
             this.colVat2.Name = "colVat2";
             this.colVat2.Visible = true;
-            this.colVat2.VisibleIndex = 6;
+            this.colVat2.VisibleIndex = 7;
             this.colVat2.Width = 30;
             // 
             // colVat3
@@ -1609,7 +1611,7 @@
             this.colVat3.MinWidth = 23;
             this.colVat3.Name = "colVat3";
             this.colVat3.Visible = true;
-            this.colVat3.VisibleIndex = 7;
+            this.colVat3.VisibleIndex = 8;
             this.colVat3.Width = 30;
             // 
             // colTongTien
@@ -1622,7 +1624,7 @@
             this.colTongTien.Name = "colTongTien";
             this.colTongTien.OptionsColumn.AllowEdit = false;
             this.colTongTien.Visible = true;
-            this.colTongTien.VisibleIndex = 8;
+            this.colTongTien.VisibleIndex = 9;
             this.colTongTien.Width = 48;
             // 
             // colTKNo
@@ -1637,7 +1639,7 @@
             this.colTKNo.Name = "colTKNo";
             this.colTKNo.ToolTip = "Chọn mã công trình";
             this.colTKNo.Visible = true;
-            this.colTKNo.VisibleIndex = 9;
+            this.colTKNo.VisibleIndex = 10;
             this.colTKNo.Width = 100;
             // 
             // colTKCo
@@ -1650,7 +1652,7 @@
             this.colTKCo.MinWidth = 23;
             this.colTKCo.Name = "colTKCo";
             this.colTKCo.Visible = true;
-            this.colTKCo.VisibleIndex = 10;
+            this.colTKCo.VisibleIndex = 11;
             this.colTKCo.Width = 38;
             // 
             // colNoidung
@@ -1660,7 +1662,7 @@
             this.colNoidung.MinWidth = 23;
             this.colNoidung.Name = "colNoidung";
             this.colNoidung.Visible = true;
-            this.colNoidung.VisibleIndex = 11;
+            this.colNoidung.VisibleIndex = 12;
             this.colNoidung.Width = 215;
             // 
             // colChecked
@@ -1674,7 +1676,7 @@
             this.colChecked.OptionsColumn.AllowSort = DevExpress.Utils.DefaultBoolean.False;
             this.colChecked.OptionsFilter.FilterBySortField = DevExpress.Utils.DefaultBoolean.False;
             this.colChecked.Visible = true;
-            this.colChecked.VisibleIndex = 14;
+            this.colChecked.VisibleIndex = 15;
             this.colChecked.Width = 42;
             // 
             // colPath
@@ -1710,7 +1712,7 @@
             this.colInvoiceType.MinWidth = 10;
             this.colInvoiceType.Name = "colInvoiceType";
             this.colInvoiceType.Visible = true;
-            this.colInvoiceType.VisibleIndex = 13;
+            this.colInvoiceType.VisibleIndex = 14;
             this.colInvoiceType.Width = 30;
             // 
             // colNgayTaoVao
@@ -1719,7 +1721,7 @@
             this.colNgayTaoVao.FieldName = "Ngaytao";
             this.colNgayTaoVao.Name = "colNgayTaoVao";
             this.colNgayTaoVao.Visible = true;
-            this.colNgayTaoVao.VisibleIndex = 12;
+            this.colNgayTaoVao.VisibleIndex = 13;
             this.colNgayTaoVao.Width = 54;
             // 
             // gridColumn37
@@ -1734,7 +1736,7 @@
             this.gridColumn37.OptionsColumn.AllowSort = DevExpress.Utils.DefaultBoolean.False;
             this.gridColumn37.ToolTip = "Chọn thì VAT cộng vào tiền trước thuế.";
             this.gridColumn37.Visible = true;
-            this.gridColumn37.VisibleIndex = 15;
+            this.gridColumn37.VisibleIndex = 16;
             this.gridColumn37.Width = 98;
             // 
             // colKhmshdon
@@ -1811,7 +1813,7 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 43.88753F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 323F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 119F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 76F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 77F));
             this.tableLayoutPanel1.Controls.Add(this.panelControl12, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl11, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl10, 0, 0);
@@ -1839,7 +1841,7 @@
             this.panelControl12.Controls.Add(this.radVbDauvao1);
             this.panelControl12.Controls.Add(this.btnClearNganhang);
             this.panelControl12.Controls.Add(this.btnLocdulieuNganhang);
-            this.panelControl12.Location = new System.Drawing.Point(757, 2);
+            this.panelControl12.Location = new System.Drawing.Point(756, 2);
             this.panelControl12.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl12.Name = "panelControl12";
             this.panelControl12.Size = new System.Drawing.Size(316, 138);
@@ -1988,7 +1990,7 @@
             this.panelControl11.Controls.Add(this.btnOpenFolder);
             this.panelControl11.Controls.Add(this.btnRefresh);
             this.panelControl11.Controls.Add(this.btnimport);
-            this.panelControl11.Location = new System.Drawing.Point(426, 2);
+            this.panelControl11.Location = new System.Drawing.Point(425, 2);
             this.panelControl11.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl11.Name = "panelControl11";
             this.panelControl11.Size = new System.Drawing.Size(327, 138);
@@ -2421,7 +2423,7 @@
             // 
             this.pictureEdit2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureEdit2.EditValue = ((object)(resources.GetObject("pictureEdit2.EditValue")));
-            this.pictureEdit2.Location = new System.Drawing.Point(1080, 2);
+            this.pictureEdit2.Location = new System.Drawing.Point(1079, 2);
             this.pictureEdit2.Margin = new System.Windows.Forms.Padding(2);
             this.pictureEdit2.Name = "pictureEdit2";
             this.pictureEdit2.Properties.ShowCameraMenuItem = DevExpress.XtraEditors.Controls.CameraMenuItemVisibility.Auto;

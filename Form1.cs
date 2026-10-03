@@ -6514,29 +6514,31 @@ Connect Timeout=3;";
             {
                 Directory.CreateDirectory(folder2026);
                 Console.WriteLine($"\n📁 Đã tạo thư mục: HD2026");
-
-                // Tạo cấu trúc con
-                string[] subFolders = { "HDVao", "HDRa" };
-
-                foreach (string subFolder in subFolders)
-                {
-                    string subPath = Path.Combine(folder2026, subFolder);
-                    Directory.CreateDirectory(subPath);
-                    Console.WriteLine($"   ├── {subFolder}");
-
-                    // Tạo 12 thư mục tháng
-                    for (int month = 1; month <= 12; month++)
-                    {
-                        string monthPath = Path.Combine(subPath, month.ToString());
-                        Directory.CreateDirectory(monthPath);
-                    }
-
-                    Console.WriteLine($"   └── 12 thư mục tháng");
-                }
+                 
             }
             else
             {
                 Console.WriteLine($"\nℹ️ Thư mục HD2026 đã tồn tại");
+            }
+
+
+            // Tạo cấu trúc con
+            string[] subFolders = { "HDVao", "HDRa" };
+
+            foreach (string subFolder in subFolders)
+            {
+                string subPath = Path.Combine(folder2026, subFolder);
+                Directory.CreateDirectory(subPath);
+                Console.WriteLine($"   ├── {subFolder}");
+
+                // Tạo 12 thư mục tháng
+                for (int month = 1; month <= 12; month++)
+                {
+                    string monthPath = Path.Combine(subPath, month.ToString());
+                    Directory.CreateDirectory(monthPath);
+                }
+
+                Console.WriteLine($"   └── 12 thư mục tháng");
             }
         }
         public int NamTC = 0;
@@ -24746,6 +24748,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             {
 
             }
+
             maxlogin = 1;
             if (isdesign)
                 return;
@@ -24763,8 +24766,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     progressPanel2.Show();
                 SetCaption("Đang bắt đầu tiến hành tải dữ liệu...");
             }
-
-
+             
             if (!Kiemtranamtc(dtTungay.DateTime.Year))
                 return;
 
@@ -25393,26 +25395,30 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         }
         private void SetCaption(string caption)
         {
-            if (chkDauvao.Checked)
+            if (serverMode == "1")
             {
-                if (InvokeRequired)
-                    Invoke(new Action(() => progressPanel1.Caption = caption));
-                else
-                    progressPanel1.Caption = caption;
-
-                progressPanel1.Refresh();   // thay DoEvents
-            }
-            else
-            {
-                if (chkDaura.Checked)
+                if (chkDauvao.Checked)
                 {
                     if (InvokeRequired)
-                        Invoke(new Action(() => progressPanel2.Caption = caption));
+                        Invoke(new Action(() => progressPanel1.Caption = caption));
                     else
-                        progressPanel2.Caption = caption;
+                        progressPanel1.Caption = caption;
 
-                    progressPanel2.Refresh();   // thay DoEvents
+                    progressPanel1.Refresh();   // thay DoEvents
                 }
+                else
+                {
+                    if (chkDaura.Checked)
+                    {
+                        if (InvokeRequired)
+                            Invoke(new Action(() => progressPanel2.Caption = caption));
+                        else
+                            progressPanel2.Caption = caption;
+
+                        progressPanel2.Refresh();   // thay DoEvents
+                    }
+                }
+
             }
         }
        
@@ -42450,12 +42456,990 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         #region Taihoadonmoi
         private async void simpleButton3_Click(object sender, EventArgs e)
         {
-            //RunParallelAsync();
-              await Taihoadon();
+            if (isdesign)
+                return;
+            await Taihoadon();
+            // await sv_Taihoadon();
+
+            //RunParallelAsync(); 
+
             int a = 10;
 
             //LoginAndGetTokenSelenium(txtuser.Text, txtpass.Text);
             //Taihoadon(1);
+        }
+     
+
+        /// <summary>
+        /// Hiển thị MessageBox an toàn từ mọi thread.
+        /// </summary>
+        private void ShowMessageSafe(string message,
+            string caption = "",
+            MessageBoxButtons buttons = MessageBoxButtons.OK,
+            MessageBoxIcon icon = MessageBoxIcon.Information)
+        {
+            try
+            {
+                if (this.InvokeRequired)
+                {
+                    this.BeginInvoke(new Action(() =>
+                        XtraMessageBox.Show(message, caption, buttons, icon)));
+                }
+                else
+                {
+                    XtraMessageBox.Show(message, caption, buttons, icon);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("ShowMessageSafe lỗi: " + ex.Message);
+            }
+        }
+        public async Task sv_Xulyexelvao(string token, int _type)
+        {
+            string tenfileExcel = "";
+            if (_type == 1)
+                tenfileExcel = "File excel hoá đơn nhận mã";
+            else if (_type == 2)
+                tenfileExcel = "File excel hoá đơn không nhận mã";
+            else if (_type == 3)
+                tenfileExcel = "File Excel hoá đơn máy tính tiền";
+
+            // Tính ngày (từ đầu tháng → cuối tháng)
+            DateTime dtFrom = new DateTime(dtTungay.DateTime.Year, dtTungay.DateTime.Month, 1);
+            DateTime dtTo = dtFrom.AddMonths(1).AddDays(-1);
+
+            string formattedDate1 = dtFrom.ToString("dd/MM/yyyy") + "T00:00:00";
+            string formattedDate2 = dtTo.ToString("dd/MM/yyyy") + "T23:59:59";
+
+            string url, filename;
+            string action = "";
+            string endPoint = "/tra-cuu/tra-cuu-hoa-don";
+
+            switch (_type)
+            {
+                case 1:
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==5&type=purchase";
+                    filename = $"{mstcongty}_HDDienTuDaCapMa.xlsx";
+                    action = "Xuất excel (hóa đơn mua vào)";
+                    break;
+
+                case 2:
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==6&type=purchase";
+                    filename = $"{mstcongty}_HDDienTuKhongMa.xlsx";
+                    action = "Xuất excel (hóa đơn mua vào)";
+                    break;
+
+                case 3:
+                    url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==8&type=purchase";
+                    filename = $"{mstcongty}_HDDienTuMayTinhTien.xlsx";
+                    action = "Xuất excel (hóa đơn máy tính tiền mua vào)";
+                    break;
+
+                default:
+                    return;
+            }
+
+            string pathYear = $"HD{dtTungay.DateTime.Year}";
+            string directoryPath = Path.Combine(savedPath, pathYear, "HDVao", dtTungay.DateTime.Month.ToString());
+            string filePath = Path.Combine(directoryPath, filename);
+
+            try
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+            catch (Exception exDir)
+            {
+                System.Diagnostics.Debug.WriteLine("Không tạo được thư mục: " + exDir);
+                return;
+            }
+
+            // Nếu file đã tải gần đây (< 30 phút) thì bỏ qua
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    DateTime lastWriteTime = File.GetLastWriteTime(filePath);
+                    if ((DateTime.Now - lastWriteTime).TotalMinutes < 30)
+                    {
+                        Console.WriteLine($"File đã tồn tại gần đây: {filePath}");
+                        return;
+                    }
+                }
+            }
+            catch (Exception exFile)
+            {
+                System.Diagnostics.Debug.WriteLine("Lỗi kiểm tra file: " + exFile.Message);
+            }
+
+            int maxRetries = 3;
+            int retryDelayMs = 2500;
+            bool success = false;
+
+            using (var client = new HttpClient())
+            {
+                client.Timeout = TimeSpan.FromSeconds(90);
+
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Encoding", "gzip, deflate");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Google Chrome\";v=\"140\", \"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\"");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
+                client.DefaultRequestHeaders.ExpectContinue = false;
+
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
+                        if (serverMode == "1")
+                        {
+                            if (this.InvokeRequired)
+                                this.Invoke(new Action(() =>
+                                {
+                                    progressPanel1.Caption = $"Đang tải {tenfileExcel} (Lần {attempt}/{maxRetries})";
+                                }));
+                            else
+                                progressPanel1.Caption = $"Đang tải {tenfileExcel} (Lần {attempt}/{maxRetries})";
+                        }
+
+                        using (var request = new HttpRequestMessage(HttpMethod.Get, url))
+                        {
+                            request.Headers.TryAddWithoutValidation("Request-Id", Guid.NewGuid().ToString());
+                            request.Headers.TryAddWithoutValidation("End-Point", endPoint);
+                            if (!string.IsNullOrEmpty(action))
+                                request.Headers.TryAddWithoutValidation("Action", Uri.EscapeDataString(action));
+
+                            var response = await client.SendAsync(request);
+
+                            // Xử lý 403
+                            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                            {
+                                string errBody = await response.Content.ReadAsStringAsync();
+                                bool isHtml = errBody.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase);
+
+                                Console.WriteLine($"Bị 403 {(isHtml ? "(HTML/WAF)" : "")} - lần {attempt}");
+
+                                if (attempt < maxRetries)
+                                {
+                                    await Task.Delay(retryDelayMs * attempt);
+                                    continue;
+                                }
+                                else
+                                {
+                                    ToastMeaasge("● Lỗi", "Bị chặn 403 khi tải excel (có thể do WAF)");
+                                    return;
+                                }
+                            }
+
+                            // Xử lý 401 (token hết hạn)
+                            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                            {
+                                ToastMeaasge("● Lỗi", "Token hết hạn khi tải excel. Vui lòng đăng nhập lại.");
+                                return;
+                            }
+
+                            response.EnsureSuccessStatusCode();
+
+                            byte[] fileBytes = await response.Content.ReadAsByteArrayAsync();
+
+                            // File quá nhỏ → thường là lỗi JSON/HTML
+                            if (fileBytes.Length < 2048)
+                            {
+                                string errorContent = Encoding.UTF8.GetString(fileBytes);
+                                int previewLen = Math.Min(500, errorContent.Length);
+                                Console.WriteLine("Nội dung lỗi (file nhỏ): " + errorContent.Substring(0, previewLen));
+                                throw new Exception("File tải về quá nhỏ (có thể bị chặn hoặc không có dữ liệu)");
+                            }
+
+                            // Kiểm tra có phải file Excel thật không (PK header của ZIP/xlsx)
+                            if (fileBytes.Length > 4 && fileBytes[0] == 0x50 && fileBytes[1] == 0x4B)
+                            {
+                                // OK - là file zip/xlsx
+                            }
+                            else
+                            {
+                                string preview = Encoding.UTF8.GetString(fileBytes, 0, Math.Min(300, fileBytes.Length));
+                                throw new Exception("Dữ liệu trả về không phải file Excel: " + preview);
+                            }
+
+                            // Ghi file an toàn (tránh file hỏng nếu đang ghi thì lỗi)
+                            try
+                            {
+                                File.WriteAllBytes(filePath, fileBytes);
+                            }
+                            catch (Exception exWrite)
+                            {
+                                System.Diagnostics.Debug.WriteLine("Lỗi ghi file: " + exWrite);
+                                throw new Exception("Không ghi được file excel: " + exWrite.Message);
+                            }
+
+                            success = true;
+                            break;
+                        }
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        Console.WriteLine($"Timeout khi tải {tenfileExcel} (Lần {attempt}/{maxRetries})");
+
+                        if (attempt == maxRetries)
+                        {
+                            ToastMeaasge("● Lỗi", "Timeout khi tải file excel, sẽ thử lại sau 3s");
+                            await Task.Delay(3000);
+                            simpleButton3.PerformClick();
+                        }
+                        else
+                        {
+                            await Task.Delay(retryDelayMs * attempt);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi khi tải {tenfileExcel} (Lần {attempt}/{maxRetries}): {ex.Message}");
+
+                        if (attempt == maxRetries)
+                        {
+                            ToastMeaasge("● Lỗi", "Không tải được file excel, sẽ thử lại sau 3s");
+                            await Task.Delay(3000);
+                            simpleButton3.PerformClick();
+                        }
+                        else
+                        {
+                            await Task.Delay(retryDelayMs * attempt);
+                        }
+                    }
+                }
+            }
+
+            if (success)
+            {
+                Console.WriteLine($"Tải thành công: {filePath}");
+                if (serverMode == "1")
+                {
+                    if (this.InvokeRequired)
+                        this.Invoke(new Action(() =>
+                        {
+                            progressPanel1.Caption = $"Đã tải xong {tenfileExcel}";
+                        }));
+                    else
+                        progressPanel1.Caption = $"Đã tải xong {tenfileExcel}";
+                }
+            }
+        }
+        public async Task sv_Xulyexelra(string token, int _type)
+        {
+            string tenfileExcel = "";
+            if (_type == 1)
+                tenfileExcel = "Hoadondientu";
+            else if (_type == 2)
+                tenfileExcel = "HDDienTuMayTinhTien";
+
+            // Hardcode đặc biệt (giữ nguyên logic cũ)
+            if (mstcongty == "8046549703")
+                mstcongty = "048172000197";
+
+            // Kiểm tra null control
+            if (dtTungay == null) return;
+
+            // Tính ngày đầu tháng → cuối tháng
+            DateTime dtFrom = new DateTime(dtTungay.DateTime.Year, dtTungay.DateTime.Month, 1);
+            DateTime dtTo = dtFrom.AddMonths(1).AddDays(-1);
+
+            string formattedDate1 = dtFrom.ToString("dd/MM/yyyy") + "T00:00:00";
+            string formattedDate2 = dtTo.ToString("dd/MM/yyyy") + "T23:59:59";
+
+            string url, filename;
+            string action = "";
+            string endPoint = "/tra-cuu/tra-cuu-hoa-don";
+
+            // Lấy MST (giữ nguyên)
+            string getmst = null;
+            try
+            {
+                getmst = tbLicense.AsEnumerable().FirstOrDefault()?["MaSoThue"]?.ToString();
+            }
+            catch (Exception exMst)
+            {
+                System.Diagnostics.Debug.WriteLine("Lỗi lấy MaSoThue: " + exMst.Message);
+            }
+
+            switch (_type)
+            {
+                case 1: // Hóa đơn điện tử bán ra
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
+                    filename = $"{mstcongty}_Hoadondientu.xlsx";
+                    action = "Xuất excel (hóa đơn bán ra)";
+                    break;
+
+                case 2: // Máy tính tiền bán ra
+                    url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
+                    filename = $"{mstcongty}_HDDienTuMayTinhTien.xlsx";
+                    action = "Xuất excel (hóa đơn máy tính tiền bán ra)";
+                    break;
+
+                default:
+                    return;
+            }
+
+            string pathYear = $"HD{dtTungay.DateTime.Year}";
+            string directoryPath = Path.Combine(savedPath, pathYear, "HDRa", dtTungay.DateTime.Month.ToString());
+            string filePath = Path.Combine(directoryPath, filename);
+
+            try
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+            catch (Exception exDir)
+            {
+                System.Diagnostics.Debug.WriteLine("Không tạo được thư mục: " + exDir);
+                return;
+            }
+
+            // Nếu file đã tải gần đây (< 30 phút) thì bỏ qua
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    DateTime lastWriteTime = File.GetLastWriteTime(filePath);
+                    if ((DateTime.Now - lastWriteTime).TotalMinutes < 30)
+                    {
+                        Console.WriteLine($"File đã tồn tại gần đây: {filePath}");
+                        return;
+                    }
+                }
+            }
+            catch (Exception exFile)
+            {
+                System.Diagnostics.Debug.WriteLine("Lỗi kiểm tra file: " + exFile.Message);
+            }
+
+            int maxRetries = 3;
+            int retryDelayMs = 2500;
+            bool success = false;
+
+            using (var client = new HttpClient())
+            {
+                client.Timeout = TimeSpan.FromSeconds(90);
+
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Encoding", "gzip, deflate");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Google Chrome\";v=\"140\", \"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\"");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
+                client.DefaultRequestHeaders.ExpectContinue = false;
+
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
+                        if (serverMode == "1")
+                        {
+                            if (this.InvokeRequired)
+                                this.Invoke(new Action(() =>
+                                {
+                                    progressPanel2.Caption = $"Đang tải {tenfileExcel} (Lần {attempt}/{maxRetries})";
+                                }));
+                            else
+                                progressPanel2.Caption = $"Đang tải {tenfileExcel} (Lần {attempt}/{maxRetries})";
+                        }
+
+                        using (var request = new HttpRequestMessage(HttpMethod.Get, url))
+                        {
+                            // Header đặc thù GDT
+                            request.Headers.TryAddWithoutValidation("Request-Id", Guid.NewGuid().ToString());
+                            request.Headers.TryAddWithoutValidation("End-Point", endPoint);
+                            if (!string.IsNullOrEmpty(action))
+                                request.Headers.TryAddWithoutValidation("Action", Uri.EscapeDataString(action));
+
+                            var response = await client.SendAsync(request);
+
+                            // Xử lý 403
+                            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                            {
+                                string errBody = await response.Content.ReadAsStringAsync();
+                                bool isHtml = errBody.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase);
+
+                                Console.WriteLine($"Bị 403 {(isHtml ? "(HTML/WAF)" : "")} - lần {attempt}");
+
+                                if (attempt < maxRetries)
+                                {
+                                    await Task.Delay(retryDelayMs * attempt);
+                                    continue;
+                                }
+                                else
+                                {
+                                    ToastMeaasge("● Lỗi", "Bị chặn 403 khi tải excel bán ra");
+                                    return;
+                                }
+                            }
+
+                            // Xử lý 401 - token hết hạn
+                            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                            {
+                                ToastMeaasge("● Lỗi", "Token hết hạn khi tải excel bán ra. Vui lòng đăng nhập lại.");
+                                return;
+                            }
+
+                            response.EnsureSuccessStatusCode();
+
+                            byte[] fileBytes = await response.Content.ReadAsByteArrayAsync();
+
+                            // File quá nhỏ → thường là lỗi
+                            if (fileBytes.Length < 2048)
+                            {
+                                string errorContent = Encoding.UTF8.GetString(fileBytes);
+                                int previewLen = Math.Min(500, errorContent.Length);
+                                Console.WriteLine("Nội dung lỗi (file nhỏ): " + errorContent.Substring(0, previewLen));
+                                throw new Exception("File tải về quá nhỏ (có thể bị chặn hoặc không có dữ liệu)");
+                            }
+
+                            // Kiểm tra header ZIP/xlsx (PK)
+                            if (!(fileBytes.Length > 4 && fileBytes[0] == 0x50 && fileBytes[1] == 0x4B))
+                            {
+                                string preview = Encoding.UTF8.GetString(fileBytes, 0, Math.Min(300, fileBytes.Length));
+                                throw new Exception("Dữ liệu trả về không phải file Excel: " + preview);
+                            }
+
+                            // Ghi file an toàn
+                            try
+                            {
+                                File.WriteAllBytes(filePath, fileBytes);
+                            }
+                            catch (Exception exWrite)
+                            {
+                                System.Diagnostics.Debug.WriteLine("Lỗi ghi file: " + exWrite);
+                                throw new Exception("Không ghi được file excel: " + exWrite.Message);
+                            }
+
+                            success = true;
+                            break;
+                        }
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        Console.WriteLine($"Timeout khi tải {tenfileExcel} (Lần {attempt}/{maxRetries})");
+
+                        if (attempt == maxRetries)
+                        {
+                            ShowMessageSafe("Không thể tải file excel trong thời điểm hiện tại, vui lòng thử lại");
+                            return;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi khi tải {tenfileExcel} (Lần {attempt}/{maxRetries}): {ex.Message}");
+
+                        if (attempt == maxRetries)
+                        {
+                            ToastMeaasge("● Lỗi", "Không tải được file excel bán ra");
+                            return;
+                        }
+                    }
+
+                    // Chờ trước khi thử lại
+                    if (attempt < maxRetries)
+                    {
+                        await Task.Delay(retryDelayMs * attempt);
+                    }
+                }
+            }
+
+            if (success)
+            {
+                Console.WriteLine($"Tải thành công: {filePath}");
+                if (serverMode == "1")
+                {
+                    if (this.InvokeRequired)
+                        this.Invoke(new Action(() =>
+                        {
+                            progressPanel2.Caption = $"Đã tải xong {tenfileExcel}";
+                        }));
+                    else
+                        progressPanel2.Caption = $"Đã tải xong {tenfileExcel}";
+                }
+            }
+        }
+        /// <summary>
+        /// Gọi PerformClick an toàn từ mọi thread.
+        /// </summary>
+
+        private void sv_Kiemtrangayhethan()
+        {
+            try
+            {
+                // 1. Kiểm tra null / rỗng an toàn
+                if (tbRegister == null || tbRegister.Rows.Count == 0)
+                    return;
+
+                string dateExpertStr = tbRegister.Rows[0]["DateExpert"]?.ToString();
+
+                if (string.IsNullOrWhiteSpace(dateExpertStr))
+                    return;
+
+                // 2. Dùng TryParse với culture không phụ thuộc hệ thống
+                DateTime dateExpert;
+                bool parsed = DateTime.TryParseExact(
+                    dateExpertStr,
+                    new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "MM/dd/yyyy" },
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out dateExpert);
+
+                // Nếu không parse được theo format cố định, thử Parse theo culture hiện tại
+                if (!parsed)
+                    parsed = DateTime.TryParse(dateExpertStr, out dateExpert);
+
+                if (!parsed)
+                {
+                    // Có thể log lại để biết dữ liệu sai
+                    // Logger.Warn($"DateExpert không hợp lệ: {dateExpertStr}");
+                    return;
+                }
+
+                // 3. So sánh bằng DateTime, không so sánh chuỗi
+                DateTime sentinel = new DateTime(1980, 1, 1);
+                if (dateExpert.Date == sentinel)
+                    return;
+
+                double daysLeft = (dateExpert.Date - DateTime.Today).TotalDays;
+
+                if (daysLeft == 1)
+                {
+                    XtraMessageBox.Show("Mật khẩu còn 1 ngày nữa hết hạn, vui lòng đổi mật khẩu mới");
+                    return;
+                }
+
+                if (daysLeft <= 0)
+                {
+                    XtraMessageBox.Show("Mật khẩu đã hết hạn, vui lòng đổi mật khẩu mới");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                // 4. Không nuốt lỗi — ghi log hoặc hiển thị
+                // Logger.Error(ex, "Lỗi kiểm tra hạn mật khẩu");
+                // Hoặc tối thiểu:
+                System.Diagnostics.Debug.WriteLine(ex.ToString());
+                // Nếu cần thiết, show message cho user:
+                // XtraMessageBox.Show("Có lỗi xảy ra khi kiểm tra hạn mật khẩu.");
+            }
+        }
+        public async Task sv_Gettoken()
+        {
+            try
+            {
+                // Reset bộ đếm login mỗi lần vào hàm
+                maxlogin = 0;
+
+                var cookieContainer = new CookieContainer();
+                var handler = new HttpClientHandler()
+                {
+                    UseCookies = true,
+                    CookieContainer = cookieContainer,
+                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+                    AllowAutoRedirect = true
+                };
+
+                using (var client = new HttpClient(handler))
+                {
+                    client.Timeout = TimeSpan.FromSeconds(30);
+
+                    string ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+
+                    client.DefaultRequestHeaders.Clear();
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", ua);
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7");
+                    // Bỏ "br" vì .NET Framework không auto-decompress Brotli
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Encoding", "gzip, deflate");
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/");
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Google Chrome\";v=\"140\", \"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\"");
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
+                    client.DefaultRequestHeaders.ExpectContinue = false;
+
+                    void AddGdtHeaders(HttpRequestMessage req, string endPoint = "/", string action = "")
+                    {
+                        req.Headers.TryAddWithoutValidation("Request-Id", Guid.NewGuid().ToString());
+                        req.Headers.TryAddWithoutValidation("End-Point", string.IsNullOrEmpty(endPoint) ? "/" : endPoint);
+                        if (!string.IsNullOrEmpty(action))
+                            req.Headers.TryAddWithoutValidation("Action", Uri.EscapeDataString(action));
+                    }
+
+                    // ================= STEP 1: GET CAPTCHA =================
+                    if (serverMode == "1")
+                        SetCaption("Đang tải capcha");
+
+                    string capUrl = "https://hoadondientu.gdt.gov.vn/api/captcha";
+                    HttpResponseMessage resCap;
+
+                    using (var capReq = new HttpRequestMessage(HttpMethod.Get, capUrl))
+                    {
+                        AddGdtHeaders(capReq, "/");
+                        resCap = await client.SendAsync(capReq);
+                    }
+
+                    string capBody = await resCap.Content.ReadAsStringAsync();
+
+                    if (!resCap.IsSuccessStatusCode)
+                    {
+                        if (capBody.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase))
+                            ToastMeaasge("● Lỗi", "Bị WAF/403 HTML. Thử lại sau hoặc đổi IP/User-Agent");
+                        else
+                            ToastMeaasge("● Lỗi", $"Không lấy được captcha ({(int)resCap.StatusCode}), thử lại sau 2s");
+
+                        await Task.Delay(2000);
+                        Taihoadon();
+                        return;
+                    }
+
+                    MyJson capJson = JsonConvert.DeserializeObject<MyJson>(capBody);
+
+                    if (string.IsNullOrWhiteSpace(capJson?.Key) || string.IsNullOrWhiteSpace(capJson?.Content))
+                    {
+                        ToastMeaasge("● Lỗi", "Captcha response thiếu key/content");
+                        await Task.Delay(2000);
+                        Taihoadon();
+                        return;
+                    }
+
+                    string svgPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "captcha.svg");
+                    try
+                    {
+                        File.WriteAllText(svgPath, capJson.Content);
+                    }
+                    catch (Exception exFile)
+                    {
+                        ToastMeaasge("● Lỗi", "Không ghi được file captcha: " + exFile.Message);
+                        return;
+                    }
+
+                    // XSRF-TOKEN (nếu có)
+                    var cookies = cookieContainer.GetCookies(new Uri("https://hoadondientu.gdt.gov.vn"));
+                    string xsrfToken = cookies["XSRF-TOKEN"]?.Value;
+                    if (!string.IsNullOrEmpty(xsrfToken))
+                    {
+                        client.DefaultRequestHeaders.Remove("X-XSRF-TOKEN");
+                        client.DefaultRequestHeaders.TryAddWithoutValidation("X-XSRF-TOKEN", xsrfToken);
+                    }
+
+                    // ================= STEP 2: SOLVE CAPTCHA =================
+                    if (serverMode == "1")
+                        SetCaption("Đang giải mã capcha");
+
+                    string cvalue = "";
+                    try
+                    {
+                        string svgCaptcha = File.ReadAllText(svgPath);
+                        string base64 = SvgToBase64(svgCaptcha);
+                        Testimg2(base64);
+                        cvalue = Readcapcha();
+                    }
+                    catch (Exception exCap)
+                    {
+                        ToastMeaasge("● Lỗi", "Lỗi giải captcha: " + exCap.Message);
+                        await Task.Delay(1500);
+                        Taihoadon();
+                        return;
+                    }
+
+                    if (string.IsNullOrEmpty(cvalue) || cvalue.Length < 4)
+                    {
+                        ToastMeaasge("● Lỗi", "Captcha giải sai hoặc quá ngắn, thử lại sau 1.5s");
+                        await Task.Delay(1500);
+                        Taihoadon();
+                        return;
+                    }
+
+                    // ================= STEP 3: LOGIN =================
+                    if (serverMode == "1")
+                        SetCaption("Đang đăng nhập hệ thống Thuế...");
+
+                    string loginUrl = "https://hoadondientu.gdt.gov.vn/api/security-taxpayer/authenticate";
+
+                    var payload = new
+                    {
+                        username = txtuser.Text.Trim(),
+                        password = txtpass.Text,
+                        cvalue = cvalue,
+                        ckey = capJson.Key
+                    };
+
+                    string jsonPayload = JsonConvert.SerializeObject(payload);
+
+                    HttpResponseMessage loginRes;
+                    using (var loginReq = new HttpRequestMessage(HttpMethod.Post, loginUrl))
+                    {
+                        AddGdtHeaders(loginReq, "/", "");
+                        loginReq.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                        loginRes = await client.SendAsync(loginReq);
+                    }
+
+                    string loginBody = await loginRes.Content.ReadAsStringAsync();
+
+                    // Kiểm tra HTML/WAF
+                    if (loginBody.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ToastMeaasge("● Lỗi", "Login bị WAF trả HTML. Đổi User-Agent hoặc dùng browser thật");
+                        await Task.Delay(3000);
+                        sv_Taihoadon();
+                        return;
+                    }
+
+                    if (loginRes.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        try
+                        {
+                            var errObj = JsonConvert.DeserializeObject<LoginResponse2>(loginBody);
+                            if (errObj?.message != null &&
+                                errObj.message.IndexOf("Tên đăng nhập hoặc mật khẩu", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                XtraMessageBox.Show("Tên đăng nhập hoặc mật khẩu không đúng!");
+                                return;
+                            }
+                        }
+                        catch (Exception exParse)
+                        {
+                            System.Diagnostics.Debug.WriteLine("Parse login 401 lỗi: " + exParse.Message);
+                        }
+
+                        if (maxlogin < 3)
+                        {
+                            maxlogin++;
+                            ToastMeaasge("● Lỗi", $"Đăng nhập thất bại (401), thử lại ({maxlogin}/3)");
+                            await Task.Delay(2000);
+                            sv_Taihoadon();
+                            return;
+                        }
+                        else
+                        {
+                            XtraMessageBox.Show("Đăng nhập thất bại quá nhiều lần (401)");
+                            return;
+                        }
+                    }
+
+                    if (!loginRes.IsSuccessStatusCode)
+                    {
+                        string shortBody = loginBody ?? "";
+                        if (shortBody.Length > 300) shortBody = shortBody.Substring(0, 300);
+                        ToastMeaasge("● Lỗi", $"Login lỗi HTTP {(int)loginRes.StatusCode}: {shortBody}");
+                        await Task.Delay(2000);
+                        sv_Taihoadon();
+                        return;
+                    }
+
+                    // Lấy token
+                    var tokenData = JsonConvert.DeserializeObject<TokenResponse>(loginBody);
+                    if (string.IsNullOrEmpty(tokenData?.token))
+                    {
+                        var match = System.Text.RegularExpressions.Regex.Match(
+                            loginBody, @"""(eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+)""");
+
+                        if (match.Success)
+                            this.tokken = match.Groups[1].Value;
+                        else
+                        {
+                            ToastMeaasge("● Lỗi", "Không tìm thấy token trong response login");
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        this.tokken = tokenData.token;
+                    }
+
+                    // Reset bộ đếm sau khi login thành công
+                    maxlogin = 0;
+
+                    // ================= STEP 4: PROFILE =================
+                    try
+                    {
+                        using (var req = new HttpRequestMessage(HttpMethod.Get,
+                            "https://hoadondientu.gdt.gov.vn/api/security-taxpayer/profile"))
+                        {
+                            AddGdtHeaders(req, "/");
+                            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", this.tokken);
+
+                            var profRes = await client.SendAsync(req);
+                            if (profRes.IsSuccessStatusCode)
+                            {
+                                string profBody = await profRes.Content.ReadAsStringAsync();
+
+                                if (!profBody.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var prof = JsonConvert.DeserializeObject<ProfileResponse>(profBody);
+
+                                    if (prof != null && !string.IsNullOrWhiteSpace(prof.password_expire))
+                                    {
+                                        DateTime expireDate;
+                                        bool parsed = DateTime.TryParseExact(
+                                            prof.password_expire,
+                                            new[] {
+                                        "yyyy-MM-dd'T'HH:mm:ss",
+                                        "yyyy-MM-dd'T'HH:mm:ss.fff",
+                                        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                                        "yyyy-MM-dd HH:mm:ss",
+                                        "yyyy-MM-dd",
+                                        "dd/MM/yyyy HH:mm:ss",
+                                        "dd/MM/yyyy",
+                                        "MM/dd/yyyy"
+                                            },
+                                            CultureInfo.InvariantCulture,
+                                            DateTimeStyles.AssumeLocal,
+                                            out expireDate);
+
+                                        if (!parsed)
+                                            parsed = DateTime.TryParse(prof.password_expire, out expireDate);
+
+                                        if (parsed)
+                                        {
+                                            ExecuteQueryResult(
+                                                "UPDATE tbRegister SET DateExpert=?",
+                                                new OleDbParameter[] {
+                                            new OleDbParameter("?", expireDate.ToString("dd/MM/yyyy"))
+                                                });
+
+                                            TimeSpan remain = expireDate.Date - DateTime.Today;
+
+                                            if (remain.TotalDays <= 0)
+                                            {
+                                                XtraMessageBox.Show(
+                                                    $"Mật khẩu đã hết hạn ngày {expireDate:dd/MM/yyyy}.",
+                                                    "Hết hạn!",
+                                                    MessageBoxButtons.OK,
+                                                    MessageBoxIcon.Warning);
+                                                return;
+                                            }
+                                            else if (remain.TotalDays <= 3)
+                                            {
+                                                XtraMessageBox.Show(
+                                                    $"⚠ Mật khẩu sẽ hết hạn sau {remain.Days} ngày!\nNgày: {expireDate:dd/MM/yyyy}",
+                                                    "Cảnh báo",
+                                                    MessageBoxButtons.OK,
+                                                    MessageBoxIcon.Warning);
+                                            }
+                                            else if (remain.TotalDays <= 7)
+                                            {
+                                                ToastMeaasge("● Cảnh báo",
+                                                    $"Mật khẩu sắp hết hạn {expireDate:dd/MM/yyyy} (còn {remain.Days} ngày)");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            System.Diagnostics.Debug.WriteLine(
+                                                "Không parse được password_expire: " + prof.password_expire);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception exProf)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Profile lỗi: " + exProf);
+                        ToastMeaasge("● Lỗi", "Không kiểm tra được ngày hết hạn: " + exProf.Message);
+                    }
+
+                    // Lưu thời gian token
+                    try
+                    {
+                        ExecuteQueryResult(
+                            "UPDATE tbRegister SET TimeTokken=?",
+                            new OleDbParameter[] {
+                        new OleDbParameter("?", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
+                            });
+                    }
+                    catch (Exception exDb)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Lỗi lưu TimeTokken: " + exDb);
+                    }
+
+                    if (serverMode == "1")
+                        SetCaption("Đang bắt đầu tải hoá đơn...");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Lỗi sv_Gettoken: " + ex);
+                XtraMessageBox.Show("Lỗi đăng nhập hệ thống thuế: " + ex.Message);
+            }
+        }
+        public async Task sv_Taihoadon()
+        {
+            //Tạo thư mục hoá đơn nếu thiếu
+            Create2026Structure(savedPath);
+
+            //Kiểm tra ngày hết hạn
+            sv_Kiemtrangayhethan();
+
+            //Khai báo loại hoá đơn
+            string tenLoaihd = "";
+            int typeHd = 0;
+            if (chkDauvao.Checked)
+            {
+                progressPanel1.Visible = true;
+                tenLoaihd = "đầu vào";
+                typeHd = 1;
+            }
+            else
+            {
+                progressPanel2.Visible = true;
+                tenLoaihd = "đầu ra";
+                typeHd = 2;
+            }
+
+            SetCaption($"Đang tiến hành tải hoá đơn {tenLoaihd} tháng {dtTungay.DateTime.Month} từ cơ quan thuế...");
+
+            bool hasLogin = true;
+            if (tbRegister.Rows.Count > 0)
+            {
+
+            }
+            //Lấy tokken
+            if (hasLogin)
+              await sv_Gettoken();
+
+            //Tiến hành tải file excel
+
+            if (chkDauvao.Checked)
+            {
+                SetCaption("Đang tải hoá đơn điện tử.xlsx");
+                await sv_Xulyexelvao(tokken, 1);
+                SetCaption("Đang tải hoá đơn không nhận mã.xlsx");
+                await sv_Xulyexelvao(tokken, 2);
+                SetCaption("Đang tải hoá đơn máy tính tiền.xlsx");
+                await sv_Xulyexelvao(tokken, 3);
+                SetCaption("Đang đọc dữ liệu Excel...");
+            }
+            else
+            {
+                SetCaption("Đang tải hoá đơn điện tử.xlsx");
+                await sv_Xulyexelra(tokken, 1);
+                SetCaption("Đang tải hoá đơn máy tính tiền.xlsx");
+                await sv_Xulyexelra(tokken, 2); 
+            }
         }
         public async Task RunParallelAsync()
         {
