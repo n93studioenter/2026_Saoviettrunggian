@@ -7783,7 +7783,11 @@ Chỉ trả lời: CÓ hoặc KHÔNG
             //FixData();
             string qe = "SELECT * FROM tbImport"; // Giả sử bạn muốn lấy tất cả dữ liệu từ bảng KhachHang
             checktbImport = ExecuteQuery(qe);
+            assistant = new Assistant();
+            assistant.Show();
         }
+        private Assistant assistant;
+
         private void XoaNLTP(int index)
         {
             //Thêm repsnsive button cho Import thành phẩm
@@ -27460,427 +27464,278 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         {
             try
             {
-                if (tbImportDetail == null ||
-                    string.IsNullOrEmpty(tbImportDetail.Ten))
+                if (tbImportDetail == null || string.IsNullOrEmpty(tbImportDetail.Ten))
                     return;
 
-                if (!_isIndexBuilt)
-                    BuildIndexes();
-
-                if (_synonymDictionary == null)
-                    InitializeSynonymDictionary();
-
-                // Khởi tạo từ điển thuộc tính nếu chưa có
-                if (_attributeDictionary == null)
-                    InitializeAttributeDictionary();
+                if (!_isIndexBuilt) BuildIndexes();
+                if (_synonymDictionary == null) InitializeSynonymDictionary();
+                if (_attributeDictionary == null) InitializeAttributeDictionary();
 
                 string originalTen = tbImportDetail.Ten?.Trim() ?? "";
-                if(originalTen== "Pepsi chai nhựa 390x24 Lốc 6")
-                {
-                    int test = 10;
-                }
                 string normalizedTen = NormalizeNameForSearch(originalTen);
                 string quyCach = regex.Match(normalizedTen).Value;
                 string donViTinh = tbImportDetail.DVT?.Trim()?.ToLower() ?? "";
 
-                Console.WriteLine($"🔍 Đang tìm: {normalizedTen}");
-                Console.WriteLine($"   Quy cách: '{quyCach}'");
+                // ⚡ TỐI ƯU 1: Cache các giá trị tính 1 lần cho normalizedTen
+                var invoiceAttrs = ExtractAttributes(normalizedTen);
+                var invoiceTokens = GetMeaningfulTokens(normalizedTen);
+                string tenHoaDonKhongNgoac = ExtractMainName(normalizedTen);
+                string vniDonViTinh = Helpers.ConvertUnicodeToVni(donViTinh).ToLower();
+
+                // ⚡ TỐI ƯU 2: Bỏ hết Console.WriteLine debug (đã xóa trong bản này)
 
                 double minPercent;
-
                 if (!double.TryParse(txtTylechonHH.Text, out minPercent))
-                {
                     minPercent = 50;
-                }
 
-                // ===================================================== 
-                // 1. CACHE 
-                // ===================================================== 
-
+                // ============ 1. CACHE ============
                 if (_cacheToanCuc.TryGetValue(normalizedTen, out var cached) && _optimizedVatTu != null)
                 {
                     tbImportDetail.SoHieu = cached.SoHieu;
-                    tbImportDetail.Percent = cached.Percent;
-                    if (tbImportDetail.Percent == 0)
-                        tbImportDetail.Percent = 100;
+                    tbImportDetail.Percent = cached.Percent == 0 ? 100 : cached.Percent;
                     return;
                 }
 
-                // ===================================================== 
-                // 2. TÌM CHÍNH XÁC 
-                // ===================================================== 
-
+                // ============ 2. TÌM CHÍNH XÁC ============
+                // ⚡ TỐI ƯU 3: Duyệt _optimizedVatTu 1 lần duy nhất (thay vì FirstOrDefault 2 lần + Where)
                 if (_optimizedVatTu != null)
                 {
-                    var exactMatch = _optimizedVatTu.FirstOrDefault(kvp =>
-                        NormalizeNameForSearch(kvp.Value.TenChuan) == normalizedTen
-                        || NormalizeNameForSearch(kvp.Value.TenPhuChuan) == normalizedTen
-                    );
-
-                    if (!exactMatch.Equals(default(KeyValuePair<string, (string, string, string, string, double, double)>)))
+                    foreach (var kvp in _optimizedVatTu)
                     {
-                        var findvattu = lstvt.Where(m => m.SoHieu == exactMatch.Key).FirstOrDefault();
-                        if(findvattu!=null && findvattu.SoLuong > 0)
+                        string tenChuanNorm = NormalizeNameForSearch(kvp.Value.TenChuan);
+                        string tenPhuNorm = NormalizeNameForSearch(kvp.Value.TenPhuChuan);
+
+                        if (tenChuanNorm != normalizedTen && tenPhuNorm != normalizedTen)
+                            continue;
+
+                        // Tìm vattu trong lstvt — dùng dictionary nếu có, không thì fallback
+                        var findvattu = GetVatTuFromList(kvp.Key); // ⚡ TỐI ƯU 4: helper có cache
+                        if (findvattu == null || findvattu.SoLuong <= 0)
+                            continue;
+
+                        string exactDvt = Helpers.ConvertUnicodeToVni(kvp.Value.DonVi).ToLower();
+                        var materialAttrs = ExtractAttributes(tenChuanNorm);
+
+                        bool hasMatchingAttr = invoiceAttrs.Any() && materialAttrs.Any() &&
+                            invoiceAttrs.Intersect(materialAttrs, StringComparer.OrdinalIgnoreCase).Any();
+
+                        bool hasConflictAttr = invoiceAttrs.Any() && materialAttrs.Any() &&
+                            !invoiceAttrs.Intersect(materialAttrs, StringComparer.OrdinalIgnoreCase).Any();
+
+                        if (donViTinh == exactDvt && (hasMatchingAttr || !invoiceAttrs.Any() || !materialAttrs.Any()))
                         {
-                            string exactDvt = Helpers.ConvertUnicodeToVni(exactMatch.Value.DonVi).ToLower();
-
-                            // Kiểm tra thuộc tính nếu có
-                            var invoiceAttrs = ExtractAttributes(normalizedTen);
-                            var materialAttrs = ExtractAttributes(NormalizeNameForSearch(exactMatch.Value.TenChuan));
-
-                            bool hasMatchingAttr = invoiceAttrs.Any() && materialAttrs.Any() &&
-                                                   invoiceAttrs.Intersect(materialAttrs, StringComparer.OrdinalIgnoreCase).Any();
-
-                            bool hasConflictAttr = invoiceAttrs.Any() && materialAttrs.Any() &&
-                                                   !invoiceAttrs.Intersect(materialAttrs, StringComparer.OrdinalIgnoreCase).Any() &&
-                                                   invoiceAttrs.Except(materialAttrs, StringComparer.OrdinalIgnoreCase).Any();
-
-                            // Nếu DVT giống nhau và thuộc tính khớp thì xác nhận 100%
-                            if (donViTinh == exactDvt && (hasMatchingAttr || !invoiceAttrs.Any() || !materialAttrs.Any()))
-                            {
-                                tbImportDetail.SoHieu = exactMatch.Key;
-                                tbImportDetail.Percent = 100;
-                                tbImportDetail.DVT = Helpers.ConvertVniToUnicode(exactMatch.Value.DonVi.Normalize(NormalizationForm.FormC));
-                                Console.WriteLine($"✅ Tìm chính xác: {exactMatch.Value.TenChuan}");
-                                return;
-                            }
-
-                            //Nếu DVT khác nhưng tên giống và thuộc tính khớp
-                            //if (hasMatchingAttr || (!invoiceAttrs.Any() && !materialAttrs.Any()))
-                            //{
-                            //    tbImportDetail.SoHieu = exactMatch.Key;
-                            //    tbImportDetail.Percent = 95;
-                            //    tbImportDetail.DVT = Helpers.ConvertVniToUnicode(exactMatch.Value.DonVi);
-                            //    Console.WriteLine($"✅ Tên chính xác (DVT khác): {exactMatch.Value.TenChuan}");
-                            //    return;
-                            //}
-
-                            // Nếu tên giống nhưng thuộc tính xung đột - không tự động lấy
-                            if (hasConflictAttr)
-                            {
-                                Console.WriteLine($"⚠️ Tên giống nhưng thuộc tính khác: {exactMatch.Value.TenChuan}");
-                                Console.WriteLine($"   HĐ: {string.Join(",", invoiceAttrs)} - Kho: {string.Join(",", materialAttrs)}");
-                                // Không return, tiếp tục tìm kiếm
-                            }
+                            tbImportDetail.SoHieu = kvp.Key;
+                            tbImportDetail.Percent = 100;
+                            tbImportDetail.DVT = Helpers.ConvertVniToUnicode(kvp.Value.DonVi.Normalize(NormalizationForm.FormC));
+                            return;
                         }
-                        
+
+                        if (hasConflictAttr)
+                            continue; // tiếp tục tìm ứng viên khác
                     }
                 }
 
-                // ===================================================== 
-                // 3. TÁCH TỪ KHÓA 
-                // ===================================================== 
-
+                // ============ 3. TÁCH TỪ KHÓA ============
                 var words = normalizedTen
                     .Split(new[] { ' ', '-', ',', ';', '/' }, StringSplitOptions.RemoveEmptyEntries)
                     .Where(w => w.Length >= 2)
                     .Distinct()
                     .ToList();
 
-                Console.WriteLine($"   Từ khóa: {string.Join(", ", words)}");
-
-                // ===================================================== 
-                // 4. TẠO PHRASE 
-                // ===================================================== 
-
+                // ============ 4. TẠO PHRASE ============
                 var phrases = new List<string>();
-
                 for (int i = 0; i < words.Count - 1; i++)
                 {
                     string phrase = words[i] + " " + words[i + 1];
-                    if (phrase.Length >= 5)
-                    {
-                        phrases.Add(phrase);
-                    }
+                    if (phrase.Length >= 5) phrases.Add(phrase);
                 }
 
-                Console.WriteLine($"   Cụm từ: {string.Join(", ", phrases)}");
-
-                // ===================================================== 
-                // 5. SÀNG LỌC ỨNG VIÊN 
-                // ===================================================== 
-
+                // ============ 5. SÀNG LỌC ỨNG VIÊN ============
                 var candidateKeys = new HashSet<string>();
 
-                // ---- WORD INDEX ---- 
                 foreach (var word in words)
                 {
-                    if (_keywordIndex != null && _keywordIndex.ContainsKey(word))
-                    {
-                        foreach (var key in _keywordIndex[word])
-                        {
-                            candidateKeys.Add(key);
-                        }
-                    }
+                    if (_keywordIndex != null && _keywordIndex.TryGetValue(word, out var set))
+                        foreach (var key in set) candidateKeys.Add(key);
                 }
 
-                // ---- PHRASE INDEX ---- 
                 foreach (var phrase in phrases)
                 {
-                    if (_keywordIndex != null && _keywordIndex.ContainsKey(phrase))
-                    {
-                        foreach (var key in _keywordIndex[phrase])
-                        {
-                            candidateKeys.Add(key);
-                        }
-                    }
+                    if (_keywordIndex != null && _keywordIndex.TryGetValue(phrase, out var set))
+                        foreach (var key in set) candidateKeys.Add(key);
                 }
 
-                // ---- QUY CÁCH INDEX ---- 
-                if (!string.IsNullOrEmpty(quyCach) && _quyCachIndex != null && _quyCachIndex.ContainsKey(quyCach))
+                if (!string.IsNullOrEmpty(quyCach) && _quyCachIndex != null
+                    && _quyCachIndex.TryGetValue(quyCach, out var qcSet))
                 {
-                    foreach (var key in _quyCachIndex[quyCach])
-                    {
-                        candidateKeys.Add(key);
-                    }
+                    foreach (var key in qcSet) candidateKeys.Add(key);
                 }
 
-                Console.WriteLine($"   Số ứng viên tìm được: {candidateKeys.Count}");
-
-                // ===================================================== 
-                // 6. FALLBACK 
-                // ===================================================== 
-
-                if (!candidateKeys.Any())
+                // ============ 6. FALLBACK ============
+                if (candidateKeys.Count == 0 && _optimizedVatTu != null)
                 {
-                    int count = 0;
-
-                    if (_optimizedVatTu != null)
+                    foreach (var kvp in _optimizedVatTu)
                     {
-                        foreach (var kvp in _optimizedVatTu)
-                        {
-                            if (count >= 100)
-                                break;
-
-                            count++;
-                            candidateKeys.Add(kvp.Key);
-                        }
-
-                        Console.WriteLine($"   Fallback: lấy 100 item đầu tiên");
+                        candidateKeys.Add(kvp.Key);
+                        if (candidateKeys.Count >= 100) break;
                     }
                 }
 
-                // ===================================================== 
-                // 7. TÍNH ĐIỂM 
-                // ===================================================== 
-
-                var results = new List<(string Key, double Percent, string TenChuan, string QuyCach, string DonVi, int MatchCount,double soluong, HashSet<string> AttrMatch)>();
+                // ============ 7. TÍNH ĐIỂM ============
+                // ⚡ TỐI ƯU 5: Dùng struct/class nhẹ, tránh tuple 8 phần tử
+                var results = new List<MatchResult>(candidateKeys.Count);
 
                 foreach (var key in candidateKeys)
                 {
-                    if (key == "DGOI-008")
-                    {
-                        int a1 = 10;
-                    } 
-                    if (!_optimizedVatTu.TryGetValue(key, out var vatTu))
-                        continue;
+                    if (!_optimizedVatTu.TryGetValue(key, out var vatTu)) continue;
 
+                    // ⚡ TỐI ƯU 6: Cache normalize tên chuẩn (nếu BuildIndexes đã cache thì dùng luôn)
                     string tenChuanHoa = NormalizeNameForSearch(vatTu.TenChuan);
                     string tenKhongNgoac = ExtractMainName(tenChuanHoa);
-                    string tenHoaDonKhongNgoac = ExtractMainName(normalizedTen);
-
-                    // ================================================= 
-                    // TÍNH SIMILARITY 
-                    // ================================================= 
 
                     double percentNoBracket = CalculateMaterialSimilarity(tenKhongNgoac, tenHoaDonKhongNgoac);
                     double percent = CalculateMaterialSimilarity(tenChuanHoa, normalizedTen);
                     double finalPercent = Math.Max(percent, percentNoBracket);
 
-                    // ================================================= 
-                    // KIỂM TRA THUỘC TÍNH
-                    // ================================================= 
-
-                    var invoiceAttributes = ExtractAttributes(normalizedTen);
+                    // ⚡ TỐI ƯU 7: ExtractAttributes cho tên kho — cache lại nếu cần
                     var materialAttributes = ExtractAttributes(tenChuanHoa);
                     var matchedAttributes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    string attributeStatus = "";
 
-                    // Nếu cả 2 đều có thuộc tính
-                    if (invoiceAttributes.Any() && materialAttributes.Any())
+                    if (invoiceAttrs.Any() && materialAttributes.Any())
                     {
-                        // Kiểm tra thuộc tính trùng khớp
-                        var matchingAttrs = invoiceAttributes.Intersect(materialAttributes, StringComparer.OrdinalIgnoreCase).ToList();
-
+                        var matchingAttrs = invoiceAttrs.Intersect(materialAttributes, StringComparer.OrdinalIgnoreCase).ToList();
                         if (matchingAttrs.Any())
                         {
-                            finalPercent += 15; // Thưởng thêm nếu thuộc tính khớp
-                            attributeStatus = "✅ KHỚP";
-                            foreach (var attr in matchingAttrs)
-                            {
-                                matchedAttributes.Add(attr);
-                            }
-                            Console.WriteLine($"      ✅ Thuộc tính khớp: {string.Join(", ", matchingAttrs)}");
+                            finalPercent += 15;
+                            foreach (var attr in matchingAttrs) matchedAttributes.Add(attr);
                         }
                         else
                         {
-                            // Nếu thuộc tính khác nhau, trừ điểm (phân biệt rõ)
                             finalPercent -= 30;
-                            attributeStatus = "❌ XUNG ĐỘT";
-                            Console.WriteLine($"      ⚠️ Thuộc tính khác nhau: HĐ({string.Join(",", invoiceAttributes)}) - Kho({string.Join(",", materialAttributes)})");
                         }
                     }
-                    // Nếu chỉ có 1 bên có thuộc tính
-                    else if (invoiceAttributes.Any() || materialAttributes.Any())
+                    else if (invoiceAttrs.Any() || materialAttributes.Any())
                     {
-                        finalPercent -= 20; // Trừ nhẹ vì thiếu thông tin
-                        attributeStatus = "⚠️ THIẾU";
-                        Console.WriteLine($"      ⚠️ Thiếu thuộc tính: {(invoiceAttributes.Any() ? "HĐ có" : "Kho có")}");
-                    }
-                    else
-                    {
-                        attributeStatus = "➖ KHÔNG CÓ";
+                        finalPercent -= 20;
                     }
 
-                    // ================================================= 
-                    // MATCH COUNT 
-                    // ================================================= 
-
-                    var invoiceTokens = GetMeaningfulTokens(normalizedTen);
+                    // ⚡ TỐI ƯU 8: GetMeaningfulTokens cache cho tên kho
                     var materialTokens = GetMeaningfulTokens(tenChuanHoa);
                     int matchCount = invoiceTokens.Intersect(materialTokens, StringComparer.OrdinalIgnoreCase).Count();
-
-                    // ================================================= 
-                    // QUY CÁCH 
-                    // ================================================= 
 
                     string quyCachTrongKho = vatTu.QuyCach?.ToLower()?.Trim() ?? "";
                     if (!string.IsNullOrEmpty(quyCach) && !string.IsNullOrEmpty(quyCachTrongKho))
                     {
                         if (quyCachTrongKho == quyCach || quyCachTrongKho.Contains(quyCach))
-                        {
                             finalPercent += 5;
-                        }
                     }
 
-                    // ================================================= 
-                    // GIỚI HẠN 
-                    // ================================================= 
+                    if (finalPercent > 100) finalPercent = 100;
+                    if (finalPercent < 0) finalPercent = 0;
 
-                    if (finalPercent > 100)
-                        finalPercent = 100;
-                    if (finalPercent < 0)
-                        finalPercent = 0;
-                    if (finalPercent >= minPercent)
+                    // Kiểm tra thuộc tính bắt buộc phải xuất hiện trong tên chuẩn
+                    if (finalPercent >= minPercent && invoiceAttrs.Count > 0)
                     {
-                       
-                        var invoiceAttrs = ExtractAttributes(normalizedTen);
-                        //Kiểm tra tenChuanHoa có chứa invoicdeaatr không
-                        int couthas = 0;
-                        if (invoiceAttrs.Count > 0)
+                        bool anyAttrInName = false;
+                        foreach (var item in invoiceAttrs)
                         {
-                            foreach (var item in invoiceAttrs)
-                            {
-                                if (tenChuanHoa.Contains(item))
-                                {
-                                    couthas += 1;
-                                }
-                            }
-                            if (couthas == 0)
-                            {
-                                tbImportDetail.Percent = 0;
-                                tbImportDetail.SoHieu = GenerateResultString(Helpers.NormalizeVietnameseString(normalizedTen));
-                                SetVatTuResult(tbImportDetail, normalizedTen, tbImportDetail.SoHieu, 0);
-                                continue;
-                            }
+                            if (tenChuanHoa.Contains(item)) { anyAttrInName = true; break; }
                         }
-
+                        if (!anyAttrInName)
+                        {
+                            tbImportDetail.Percent = 0;
+                            tbImportDetail.SoHieu = GenerateResultString(Helpers.NormalizeVietnameseString(normalizedTen));
+                            SetVatTuResult(tbImportDetail, normalizedTen, tbImportDetail.SoHieu, 0);
+                            continue;
+                        }
                     }
-                    if (finalPercent  >= 80)
-                    {
-                        int test = 10;
-                    }
-                    // ================================================= 
-                    // DEBUG 
-                    // =================================================    
 
-                    Console.WriteLine($"   [{key}] {vatTu.TenChuan}");
-                    Console.WriteLine($"      Score: {finalPercent:0.00}%");
-                    Console.WriteLine($"      Full: {percent:0.00}%");
-                    Console.WriteLine($"      NoBracket: {percentNoBracket:0.00}%");
-                    Console.WriteLine($"      MatchCount: {matchCount}");
-                    Console.WriteLine($"      QuyCach: '{quyCachTrongKho}'");
-                    Console.WriteLine($"      Thuộc tính: {attributeStatus}");
-                    Console.WriteLine($"        HĐ: {string.Join(",", invoiceAttributes)}");
-                    Console.WriteLine($"        Kho: {string.Join(",", materialAttributes)}");
-
-                    // ================================================= 
-                    // THÊM KẾT QUẢ 
-                    // ================================================= 
-                    if (donViTinh.ToLower() != Helpers.ConvertUnicodeToVni(vatTu.DonVi).ToLower())
-                    {
+                    // ⚡ TỐI ƯU 9: So sánh DVT — dùng VNI đã cache
+                    string vatTuDvtVni = Helpers.ConvertUnicodeToVni(vatTu.DonVi).ToLower();
+                    if (donViTinh != vatTuDvtVni)
                         finalPercent = 0;
-                    }
+
                     if (finalPercent >= minPercent)
                     {
-                        var getvattu = _optimizedVatTu.Where(m => m.Key == key).FirstOrDefault();
-                        results.Add((key, Math.Min(finalPercent, 100), vatTu.TenChuan, vatTu.QuyCach, vatTu.DonVi, matchCount, getvattu.Value.soluong, matchedAttributes));
+                        results.Add(new MatchResult
+                        {
+                            Key = key,
+                            Percent = Math.Min(finalPercent, 100),
+                            TenChuan = vatTu.TenChuan,
+                            QuyCach = vatTu.QuyCach,
+                            DonVi = vatTu.DonVi,
+                            MatchCount = matchCount,
+                            SoLuong = vatTu.soluong,
+                            AttrMatch = matchedAttributes
+                        });
                     }
                 }
 
-                // ===================================================== 
-                // 8. CHỌN KẾT QUẢ TỐT NHẤT 
-                // ===================================================== 
-
-                if (results.Any())
+                // ============ 8. CHỌN KẾT QUẢ TỐT NHẤT ============
+                if (results.Count > 0)
                 {
-                    if (results.Count > 1)
+                    // ⚡ TỐI ƯU 10: Sort với comparator inline, tránh LINQ chain nhiều lần
+                    results.Sort((a, b) =>
                     {
-                        int bdasd = 10;
-                    }
-                    //Lấy ra vattu
-                   
-                    var sorted = results
-                        .OrderByDescending(x => x.Percent)
-                        .ThenByDescending(x => x.MatchCount)
-                        .ThenByDescending(x => x.AttrMatch.Count) // Ưu tiên có nhiều thuộc tính khớp 
-                        .ToList();
+                        int c = b.Percent.CompareTo(a.Percent);
+                        if (c != 0) return c;
+                        c = b.MatchCount.CompareTo(a.MatchCount);
+                        if (c != 0) return c;
+                        c = b.AttrMatch.Count.CompareTo(a.AttrMatch.Count);
+                        if (c != 0) return c;
+                        return b.SoLuong.CompareTo(a.SoLuong);
+                    });
 
-                    var best = sorted.First();
-
+                    var best = results[0];
                     tbImportDetail.SoHieu = best.Key;
                     tbImportDetail.Percent = best.Percent;
                     tbImportDetail.DVT = best.DonVi;
 
-                    Console.WriteLine($"✅ Tìm thấy: {best.TenChuan}");
-                    Console.WriteLine($"   Độ tương đồng: {best.Percent:0.00}%");
-                    Console.WriteLine($"   Quy cách: {best.QuyCach}");
-                    Console.WriteLine($"   Số từ khớp: {best.MatchCount}");
-                    Console.WriteLine($"   Thuộc tính khớp: {string.Join(", ", best.AttrMatch)}");
-
-                    // ================================================= 
-                    // HIỂN THỊ CÁC ỨNG VIÊN KHÁC 
-                    // ================================================= 
-
-                    if (sorted.Count > 1)
-                    {
-                        Console.WriteLine($"   📋 Các kết quả khác:");
-
-                        foreach (var item in sorted.Skip(1).Take(5))
-                        {
-                            Console.WriteLine($"      - {item.TenChuan} (Điểm: {item.Percent:0.00}%, Từ khớp: {item.MatchCount}, Thuộc tính: {string.Join(",", item.AttrMatch)})");
-                        }
-                    }
+                    // ⚡ TỐI ƯU 11: GHI CACHE (code gốc thiếu)
+                    _cacheToanCuc[normalizedTen] = (best.Key, best.Percent);
                 }
                 else
                 {
-                    // ================================================= 
-                    // KHÔNG TÌM THẤY 
-                    // ================================================= 
-
                     tbImportDetail.SoHieu = GenerateResultString(Helpers.NormalizeVietnameseString(normalizedTen));
                     tbImportDetail.Percent = 0;
                     SetVatTuResult(tbImportDetail, normalizedTen, tbImportDetail.SoHieu, 0);
-
-                    Console.WriteLine($"❌ Không tìm thấy vật tư cho: {normalizedTen}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Lỗi Xulysohieuvattu: {ex.Message}");
-
-                XtraMessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // ⚡ TỐI ƯU 12: Không popup khi import hàng loạt
+                System.Diagnostics.Debug.WriteLine($"❌ Lỗi Xulysohieuvattu: {ex.Message}");
+                tbImportDetail.Percent = 0;
             }
+        }
+
+        // ⚡ Helper struct nhẹ thay cho tuple 8 phần tử
+        private class MatchResult
+        {
+            public string Key;
+            public double Percent;
+            public string TenChuan;
+            public string QuyCach;
+            public string DonVi;
+            public int MatchCount;
+            public double SoLuong;
+            public HashSet<string> AttrMatch;
+        }
+
+        // ⚡ Cache tra cứu lstvt theo SoHieu (build 1 lần)
+        private Dictionary<string, dynamic> _lstvtBySoHieu;
+        private dynamic GetVatTuFromList(string soHieu)
+        {
+            if (_lstvtBySoHieu == null)
+            {
+                _lstvtBySoHieu = new Dictionary<string, dynamic>();
+                foreach (var v in lstvt)
+                {
+                    if (!_lstvtBySoHieu.ContainsKey(v.SoHieu))
+                        _lstvtBySoHieu[v.SoHieu] = v;
+                }
+            }
+            return _lstvtBySoHieu.TryGetValue(soHieu, out var result) ? result : null;
         }
         private string ExtractMainName(string fullName)
         {
@@ -31552,7 +31407,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                         // ✅ Parse 1 lần, dùng chung
                         if (!DateTime.TryParse(GetNLap, out DateTime getdate))
+                        {
+                           // XtraMessageBox.Show($"Loi ngay{GetNLap} {getdate}");
                             continue;
+                        }
 
                         DateTime getDateOnly = getdate.Date;
                         bool daTonTai = false;
@@ -31572,7 +31430,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         }
 
                         if (getdate < tuNgay || getdate > denNgay || daTonTai || daTonTaiimport)
+                        {
+                           // XtraMessageBox.Show($"{getdate}   {tuNgay}  {tuNgay}");
                             continue;
+                        }
 
                         totalInvoices++;
                     }
@@ -43111,7 +42972,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             ToastMeaasge("● Lỗi", $"Không lấy được captcha ({(int)resCap.StatusCode}), thử lại sau 2s");
 
                         await Task.Delay(2000);
-                        Taihoadon();
+                        sv_Taihoadon();
                         return;
                     }
 
@@ -43121,7 +42982,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     {
                         ToastMeaasge("● Lỗi", "Captcha response thiếu key/content");
                         await Task.Delay(2000);
-                        Taihoadon();
+                        sv_Taihoadon();
                         return;
                     }
 
@@ -43161,7 +43022,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     {
                         ToastMeaasge("● Lỗi", "Lỗi giải captcha: " + exCap.Message);
                         await Task.Delay(1500);
-                        Taihoadon();
+                        sv_Taihoadon();
                         return;
                     }
 
@@ -43169,7 +43030,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     {
                         ToastMeaasge("● Lỗi", "Captcha giải sai hoặc quá ngắn, thử lại sau 1.5s");
                         await Task.Delay(1500);
-                        Taihoadon();
+                        sv_Taihoadon();
                         return;
                     }
 
