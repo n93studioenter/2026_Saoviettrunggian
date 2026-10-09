@@ -29,6 +29,7 @@ namespace SaovietTax
 
         public Assistant()
         {
+            
             InitializeComponent();
         }
 
@@ -44,6 +45,7 @@ namespace SaovietTax
             PositionBottomRight();
             this.Invalidate();
             this.Refresh();
+            //this.Visible = true;
         }
 
         // ============ SETUP ============

@@ -191,6 +191,16 @@ namespace SaovietTax.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap clauseai {
+            get {
+                object obj = ResourceManager.GetObject("clauseai", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type DevExpress.Utils.Svg.SvgImage.
         /// </summary>
         internal static DevExpress.Utils.Svg.SvgImage clearheaderandfooter {
@@ -247,6 +257,16 @@ namespace SaovietTax.Properties {
             get {
                 object obj = ResourceManager.GetObject("customerprofilereport", resourceCulture);
                 return ((DevExpress.Utils.Svg.SvgImage)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap cyber {
+            get {
+                object obj = ResourceManager.GetObject("cyber", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -653,6 +673,16 @@ namespace SaovietTax.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap Softdreamico {
+            get {
+                object obj = ResourceManager.GetObject("Softdreamico", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap tag_16x16 {
             get {
                 object obj = ResourceManager.GetObject("tag_16x16", resourceCulture);
@@ -687,6 +717,16 @@ namespace SaovietTax.Properties {
             get {
                 object obj = ResourceManager.GetObject("viewmergeddata", resourceCulture);
                 return ((DevExpress.Utils.Svg.SvgImage)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap Visnam {
+            get {
+                object obj = ResourceManager.GetObject("Visnam", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         

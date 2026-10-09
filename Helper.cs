@@ -661,5 +661,6 @@ namespace SaovietTax
             int code = int.Parse(hexCode, System.Globalization.NumberStyles.HexNumber);
             return (char)code;
         }
+
     }
 }
