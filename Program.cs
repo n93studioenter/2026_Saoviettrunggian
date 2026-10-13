@@ -1,5 +1,4 @@
-﻿using DevExpress.XtraEditors;
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 using System;
 using System.Configuration;
 using System.Data;
@@ -10,26 +9,24 @@ using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace SaovietTax {
-    static class Program {
-        /// <summary>
-        /// The main entry point for the application.
-        /// </summary>
-        /// 
+namespace SaovietTax
+{
+    static class Program
+    {
+        // ★ ĐƯỜNG DẪN TUYỆT ĐỐI TỚI SharedDLLs ★
+        private static readonly string SharedDllsPath = @"C:\apps\SharedDLLs";
+
         static Mutex mutex;
 
         [STAThread]
-        static void Main(string[] args) { 
+        static void Main(string[] args)
+        {
+            // ★ ĐĂNG KÝ RESOLVER TRƯỚC KHI LÀM BẤT CỨ GÌ ★
+            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
 
-            //Application.ThreadException += new ThreadExceptionEventHandler(Application_ThreadException);
-            //AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
-
-           // mutex = new Mutex(false, "Global\\MyCompany_MyProduct_SingleInstance");
-            bool isAutoStart = args.Length > 0 && args[0] == "-autostart"; 
+            bool isAutoStart = args.Length > 0 && args[0] == "-autostart";
             try
-            { 
-
-                
+            {
             }
             catch (Exception ex)
             {
@@ -37,191 +34,171 @@ namespace SaovietTax {
             }
             finally
             {
-                //if (isAutoStart)
-                //    mutex.ReleaseMutex();
             }
+
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             ServicePointManager.ServerCertificateValidationCallback = (a, b, c, d) => true;
 
-            //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            //ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
-            //ServicePointManager.DefaultConnectionLimit = 100;
-            //ServicePointManager.Expect100Continue = false;
-            // Số + tiền theo en-US (1,234,567.89)
-
-
-            // QUAN TRỌNG: Đăng ký event dịch string – đây là cách chính thức!
-            // AddToStartup(); // 👈 GỌI Ở ĐÂY
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
             if (isAutoStart)
-            { 
-                //mutex.WaitOne();
+            {
                 SaveConfig("Mode", "2");
                 Application.Run(new frmMain());
-              
-               // Application.Run(new frmAutotaiNew());
             }
             else
             {
                 SaveConfig("Mode", "1");
                 string appPath = Assembly.GetExecutingAssembly().Location;
-
-                // Lấy thư mục chứa ứng dụng
                 string directoryPath = Path.GetDirectoryName(appPath);
-
-                // Xóa phần \bin\Debug để lấy đường dẫn gốc
                 string rootDirectory = Path.GetFullPath(Path.Combine(directoryPath, @"..\.."));
-
-                // Tạo đường dẫn đến file dpPath.txt trong thư mục hoadon
                 string filePaths = Path.Combine(rootDirectory, "hoadon", "status.txt");
                 string content = "1";
 
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
+                // ★ GỌI DEVEXPRESS QUA REFLECTION để tránh using DevExpress ở đầu file ★
+                try
+                {
+                    var settingsType = Type.GetType(
+                        "DevExpress.XtraEditors.WindowsFormsSettings, DevExpress.XtraEditors");
+                    if (settingsType != null)
+                    {
+                        var method = settingsType.GetMethod("SetDPIAware",
+                            BindingFlags.Public | BindingFlags.Static);
+                        method?.Invoke(null, null);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Lỗi khởi tạo DevExpress: " + ex.Message);
+                }
 
-                // Bắt buộc DevExpress nhận biết DPI đúng
-                WindowsFormsSettings.SetDPIAware();   // Dòng quan trọng nhất!
-
-                // Force font chuẩn cho toàn app (nếu cần)
-                // WindowsFormsSettings.DefaultFont = new Font("Tahoma", 8.25f);
-
-                // Force font cho grid header (nếu vẫn to)
-                //DevExpress.Utils.AppearanceObject.DefaultFont = new Font("Tahoma", 8.25f);
                 try
                 {
                     content = File.ReadAllText(filePaths);
                 }
                 catch (Exception ex)
                 {
-
                 }
 
-                //if (content.Trim() == "1")
-                //    Application.Run(new frmMain());
-                //else
-                //{
-                //    if (content.Trim() == "2")
-                //        Application.Run(new KTHT());
-                //    else
-                //    {
-                //        if (content.Trim() == "3")
-                //            Application.Run(new frmTaihoadonvb());
-                //        else
-                //        {
-                //            if (content.Trim() == "4")
-                //                Application.Run(new Form3());
-                //            else
-                //            {
-                //                if (content.Trim() == "5")
-                //                    Application.Run(new APIInvoice());
-                //                else
-                //                {
-                //                    if (content.Trim() == "6")
-                //                        Application.Run(new BkavInvoice());
-                //                }
-                //            }
-                //        }
-                //    }
-                //}
-
+                // ★ CÁC FORM DEVEXPRESS ĐƯỢC TẠO QUA REFLECTION ★
+                // (vì nếu new trực tiếp, C# compiler sẽ cần DevExpress reference → OK,
+                //  vì đã có resolver, nhưng vẫn an toàn hơn nếu dùng reflection)
                 switch (content.Trim())
                 {
-                    case "1": Application.Run(new frmMain()); break;
-                    case "2": Application.Run(new KTHT()); break;
-                    case "3": Application.Run(new frmTaihoadonvb()); break;
-                    case "4": Application.Run(new Form3()); break;
-                    case "5": Application.Run(new APIInvoice()); break;
-                    case "6": Application.Run(new BkavInvoice()); break;
-                    case "7": Application.Run(new VNPTInvoice()); break;
-                    case "8": Application.Run(new TendoInvoice()); break;
-                    case "9": Application.Run(new frmQrcode()); break;
-                    case "10": Application.Run(new vb6Xemhoadon()); break;
-                    case "11": Application.Run(new Vanguard()); break;
-                    case "12": Application.Run(new Updater()); break;
-                    case "13": Application.Run(new ExportExcelBC()); break;
-                    case "14": Application.Run(new frmKiemtraUpdate()); break;
-                    case "15": Application.Run(new frmTuKhoaHang()); break;
+                    case "1": Application.Run(CreateForm("SaovietTax.frmMain")); break;
+                    case "2": Application.Run(CreateForm("SaovietTax.KTHT")); break;
+                    case "3": Application.Run(CreateForm("SaovietTax.frmTaihoadonvb")); break;
+                    case "4": Application.Run(CreateForm("SaovietTax.Form3")); break;
+                    case "5": Application.Run(CreateForm("SaovietTax.APIInvoice")); break;
+                    case "6": Application.Run(CreateForm("SaovietTax.BkavInvoice")); break;
+                    case "7": Application.Run(CreateForm("SaovietTax.VNPTInvoice")); break;
+                    case "8": Application.Run(CreateForm("SaovietTax.TendoInvoice")); break;
+                    case "9": Application.Run(CreateForm("SaovietTax.frmQrcode")); break;
+                    case "10": Application.Run(CreateForm("SaovietTax.vb6Xemhoadon")); break;
+                    case "11": Application.Run(CreateForm("SaovietTax.Vanguard")); break;
+                    case "12": Application.Run(CreateForm("SaovietTax.Updater")); break;
+                    case "13": Application.Run(CreateForm("SaovietTax.ExportExcelBC")); break;
+                    case "14": Application.Run(CreateForm("SaovietTax.frmKiemtraUpdate")); break;
+                    case "15": Application.Run(CreateForm("SaovietTax.frmTuKhoaHang")); break;
                 }
             }
         }
+
+        // ★ HÀM TẠO FORM QUA REFLECTION — tránh new trực tiếp
+        private static Form CreateForm(string fullTypeName)
+        {
+            var type = Type.GetType(fullTypeName + ", SaovietTax");
+            if (type == null)
+                throw new Exception("Không tìm thấy form: " + fullTypeName);
+            return (Form)Activator.CreateInstance(type);
+        }
+
+        // ★ HÀM RESOLVER — TÌM DLL TRONG SharedDLLs ★
+        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            var name = new AssemblyName(args.Name).Name;
+
+            // 1. Tìm trong SharedDLLs (DLL chính)
+            var path = Path.Combine(SharedDllsPath, name + ".dll");
+            if (File.Exists(path))
+                return Assembly.LoadFrom(path);
+
+            // 2. Tìm theo culture (de, fr, ja, zh-cn, zh-tw...)
+            var culture = Thread.CurrentThread.CurrentUICulture.Name;
+            if (!string.IsNullOrEmpty(culture))
+            {
+                path = Path.Combine(SharedDllsPath, culture, name + ".dll");
+                if (File.Exists(path))
+                    return Assembly.LoadFrom(path);
+            }
+
+            // 3. Fallback: tìm trong thư mục chạy (DLL riêng của công ty)
+            path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, name + ".dll");
+            if (File.Exists(path))
+                return Assembly.LoadFrom(path);
+
+            return null;
+        }
+
         public static void SaveConfig(string key, string value)
         {
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
             if (config.AppSettings.Settings[key] != null)
                 config.AppSettings.Settings[key].Value = value;
             else
                 config.AppSettings.Settings.Add(key, value);
-
             config.Save(ConfigurationSaveMode.Modified);
             ConfigurationManager.RefreshSection("appSettings");
         }
+
         public static string connectionString;
+
         public static System.Data.DataTable ExecuteQuery(string query, params OleDbParameter[] parameters)
         {
             System.Data.DataTable dataTable = new System.Data.DataTable();
-
             using (OleDbConnection connection = new OleDbConnection(connectionString))
             {
                 try
                 {
                     connection.Open();
-
                     using (OleDbCommand command = new OleDbCommand(query, connection))
                     {
-                        // Thêm các tham số vào command
                         if (parameters != null)
-                        {
                             command.Parameters.AddRange(parameters);
-                        }
 
                         using (OleDbDataAdapter dataAdapter = new OleDbDataAdapter(command))
-                        {
                             dataAdapter.Fill(dataTable);
-                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message);
                 }
-
             }
-
-            return dataTable; // Trả về DataTable chứa dữ liệu
+            return dataTable;
         }
+
         static void AddToStartup()
         {
             string appPath = Assembly.GetExecutingAssembly().Location;
-
-            // Lấy thư mục chứa ứng dụng
             string directoryPath = Path.GetDirectoryName(appPath);
-
-            // Xóa phần \bin\Debug để lấy đường dẫn gốc
             string rootDirectory = Path.GetFullPath(Path.Combine(directoryPath, @"..\.."));
-
-            // Tạo đường dẫn đến file dpPath.txt trong thư mục hoadon
             string filePaths = Path.Combine(rootDirectory, "hoadon", "dpPath.txt");
-            string  pathThumuc = Path.Combine(rootDirectory);
+            string pathThumuc = Path.Combine(rootDirectory);
             string dbPath = "";
-            //MessageBox.Show(pathThumuc);
             try
             {
                 string content = File.ReadAllText(filePaths);
-                 dbPath = content;
+                dbPath = content;
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Lỗi khi đọc file: " + ex.Message);
             }
 
-
-            // Đọc toàn bộ nội dung tệp
             string password = "1@35^7*9)1";
             connectionString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={password};";
-
-
 
             string queryGetdetail = @"SELECT * FROM tbregister";
             DataTable tbImportdetails = ExecuteQuery(queryGetdetail);
@@ -234,16 +211,5 @@ namespace SaovietTax {
             if (rk.GetValue(appName) == null)
                 rk.SetValue(appName, exePath);
         }
-
-        //static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
-        //{
-        //    MessageBox.Show($"Lỗi UI Thread: {e.Exception.Message}");
-        //}
-
-        //static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
-        //{
-        //    Exception ex = (Exception)e.ExceptionObject;
-        //    File.WriteAllText("error.log", $"Lỗi không xử lý: {ex.Message}\n{ex.StackTrace}");
-        //}
     }
 }

@@ -7552,7 +7552,7 @@ Chỉ trả lời: CÓ hoặc KHÔNG
             //byte[] captchaBytes = File.ReadAllBytes(rawPath);
             //File.WriteAllBytes(rawPath, captchaBytes);
 
-            //var result = Kingsofthp.OcrCaptchaByPython(captchaBytes);
+            //var result = Kingsofthp.OcrCaptcha(captchaBytes);
 
             toolTip1.InitialDelay = 0;   // hiện ngay khi hover
             toolTip1.ReshowDelay = 0;
@@ -11704,7 +11704,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             {
                 var handler = new HttpClientHandler()
                 {
-                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate ,
+                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
                     UseProxy = false,
                     AllowAutoRedirect = true
                 };
@@ -11831,11 +11831,19 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 if (!string.IsNullOrEmpty(token))
                     UpdateToken(token);
 
-                const int maxRetries = 3;
+                // ═══════════════════════════════════════════════════════════
+                // CẤU HÌNH
+                // ═══════════════════════════════════════════════════════════
+                const int MAX_RETRIES = 3;                // số lần thử lại
+                const int HEADER_TIMEOUT_SEC = 10;        // timeout chờ headers
+                const int STREAM_TIMEOUT_SEC = 10;       // timeout đọc stream
+                const int MIN_FILE_SIZE = 100;            // file tối thiểu 100 bytes
+                const int COPY_BUFFER_SIZE = 81920;       // 80KB buffer
+
                 int retryCount = 0;
                 var sw = Stopwatch.StartNew();
 
-                while (retryCount < maxRetries)
+                while (retryCount < MAX_RETRIES)
                 {
                     try
                     {
@@ -11848,10 +11856,18 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                             AddGdtHeaders(request, action: action);
 
-                            using (var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
-                                                               .ConfigureAwait(false))
+                            // ═══════════════════════════════════════════════════════
+                            // TIMEOUT CHO GIAI ĐOẠN GỬI REQUEST + NHẬN HEADERS
+                            // ═══════════════════════════════════════════════════════
+                            using (var headerCts = new CancellationTokenSource(TimeSpan.FromSeconds(HEADER_TIMEOUT_SEC)))
+                            using (var response = await _client.SendAsync(
+                                request,
+                                HttpCompletionOption.ResponseHeadersRead,
+                                headerCts.Token).ConfigureAwait(false))
                             {
-                                // ✅ KIỂM TRA STATUS TRƯỚC, đọc body lỗi nếu có
+                                // ═══════════════════════════════════════════════════
+                                // KIỂM TRA STATUS
+                                // ═══════════════════════════════════════════════════
                                 if (!response.IsSuccessStatusCode)
                                 {
                                     string errBody = "";
@@ -11861,92 +11877,167 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                     }
                                     catch { }
 
-                                    // Xử lý 401
+                                    // 401 — Token hết hạn
                                     if (response.StatusCode == HttpStatusCode.Unauthorized)
                                         throw new UnauthorizedAccessException("Token hết hạn hoặc sai!");
 
-                                    // Xử lý 403
+                                    // 403 — Bị chặn (WAF/HTML)
                                     if (response.StatusCode == HttpStatusCode.Forbidden)
                                     {
                                         bool isHtml = errBody.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase);
-                                        throw new Exception($"Bị 403 {(isHtml ? "(HTML/WAF)" : "")}: {errBody.Substring(0, Math.Min(300, errBody.Length))}");
+                                        throw new Exception(
+                                            $"Bị 403 {(isHtml ? "(HTML/WAF)" : "")}: " +
+                                            $"{errBody.Substring(0, Math.Min(300, errBody.Length))}");
                                     }
 
-                                    // ✅ Log chi tiết lỗi 500/501
+                                    // Các lỗi khác
                                     throw new Exception(
                                         $"HTTP {(int)response.StatusCode} {response.StatusCode} - {response.ReasonPhrase}\n" +
                                         $"URL: {url}\n" +
                                         $"Body: {errBody.Substring(0, Math.Min(500, errBody.Length))}");
                                 }
 
-                                // ✅ Tạo thư mục
+                                // ═══════════════════════════════════════════════════
+                                // TẠO THƯ MỤC
+                                // ═══════════════════════════════════════════════════
                                 string dir = Path.GetDirectoryName(savePath);
                                 if (!string.IsNullOrEmpty(dir))
                                     Directory.CreateDirectory(dir);
 
-                                // ✅ Đọc stream 1 LẦN DUY NHẤT
+                                // ═══════════════════════════════════════════════════
+                                // TIMEOUT CHO GIAI ĐOẠN ĐỌC STREAM
+                                // ═══════════════════════════════════════════════════
+                                using (var streamCts = new CancellationTokenSource(TimeSpan.FromSeconds(STREAM_TIMEOUT_SEC)))
                                 using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                                using (var fs = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
+                                using (var fs = new FileStream(
+                                    savePath,
+                                    FileMode.Create,
+                                    FileAccess.Write,
+                                    FileShare.None,
+                                    COPY_BUFFER_SIZE,
+                                    true))
                                 {
-                                    await stream.CopyToAsync(fs).ConfigureAwait(false);
+                                    await stream.CopyToAsync(fs, COPY_BUFFER_SIZE, streamCts.Token)
+                                                .ConfigureAwait(false);
                                 }
                             }
                         }
 
-                        // ✅ Kiểm tra file sau khi tải
+                        // ═══════════════════════════════════════════════════════════
+                        // KIỂM TRA FILE SAU KHI TẢI
+                        // ═══════════════════════════════════════════════════════════
                         var fi = new FileInfo(savePath);
-                        if (!fi.Exists || fi.Length < 100)
+                        if (!fi.Exists || fi.Length < MIN_FILE_SIZE)
                         {
-                            string content = fi.Exists ? File.ReadAllText(savePath) : "(file không tồn tại)";
-                            throw new Exception($"File tải về quá nhỏ ({fi.Length} bytes): {content.Substring(0, Math.Min(200, content.Length))}");
+                            string content = fi.Exists ? $"(size {fi.Length} bytes)" : "(file không tồn tại)";
+                            throw new Exception($"File tải về quá nhỏ: {content}");
                         }
 
-                        // ✅ Kiểm tra có phải HTML lỗi không (server đôi khi trả 200 nhưng body là HTML lỗi)
-                        string firstBytes = File.ReadAllText(savePath).Substring(0, Math.Min(200, (int)fi.Length));
+                        // ═══════════════════════════════════════════════════════════
+                        // ĐỌC 200 BYTE ĐẦU ĐỂ CHECK HTML (không đọc cả file)
+                        // ═══════════════════════════════════════════════════════════
+                        byte[] checkBuffer = new byte[200];
+                        int bytesRead;
+                        using (var fsCheck = new FileStream(savePath, FileMode.Open, FileAccess.Read))
+                        {
+                            bytesRead = fsCheck.Read(checkBuffer, 0, checkBuffer.Length);
+                        }
+                        string firstBytes = System.Text.Encoding.UTF8.GetString(checkBuffer, 0, bytesRead);
+
                         if (firstBytes.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase) ||
                             firstBytes.TrimStart().StartsWith("<html", StringComparison.OrdinalIgnoreCase))
                         {
-                            throw new Exception($"Server trả về HTML thay vì file: {firstBytes}");
+                            throw new Exception(
+                                $"Server trả về HTML thay vì file: " +
+                                $"{firstBytes.Substring(0, Math.Min(200, firstBytes.Length))}");
                         }
 
+                        // ═══════════════════════════════════════════════════════════
+                        // THÀNH CÔNG
+                        // ═══════════════════════════════════════════════════════════
                         sw.Stop();
-                        Console.WriteLine($"Tải thành công: {Path.GetFileName(savePath)} - {sw.ElapsedMilliseconds} ms");
+                        Console.WriteLine($"✅ Tải thành công: {Path.GetFileName(savePath)} - {sw.ElapsedMilliseconds} ms");
 
-                        try { ExtractZipXMLAsynce(savePath); }
-                        catch (Exception exZip) { Console.WriteLine($"Lỗi giải nén: {exZip.Message}"); }
+                        // Giải nén ZIP → XML
+                        try
+                        {
+                            ExtractZipXMLAsynce(savePath);
+                        }
+                        catch (Exception exZip)
+                        {
+                            Console.WriteLine($"⚠️ Lỗi giải nén: {exZip.Message}");
+                        }
 
-                        currentProgress += 1;
-                        completionCallback?.Invoke(true, $"Tải thành công: {Path.GetFileName(savePath)}", currentProgress);
+                        Interlocked.Increment(ref currentProgress);
+                        completionCallback?.Invoke(
+                            true,
+                            $"Tải thành công: {Path.GetFileName(savePath)}",
+                            currentProgress);
+
                         return;
                     }
+                    // ═══════════════════════════════════════════════════════════
+                    // 401 — KHÔNG RETRY
+                    // ═══════════════════════════════════════════════════════════
                     catch (UnauthorizedAccessException)
                     {
-                        throw; // Không retry
+                        throw;
                     }
-                    catch (Exception ex) when (retryCount < maxRetries - 1)
+                    // ═══════════════════════════════════════════════════════════
+                    // TIMEOUT — RETRY
+                    // ═══════════════════════════════════════════════════════════
+                    catch (OperationCanceledException)
                     {
-                        taithatbai++;
+                        Interlocked.Increment(ref taithatbai);
                         retryCount++;
-                        Console.WriteLine($"Lỗi tải lần {retryCount}: {ex.Message}");
+                        Console.WriteLine($"⏰ Timeout lần {retryCount}: {Path.GetFileName(savePath)}");
 
-                        // ✅ Chỉ báo callback khi là lần retry cuối hoặc muốn theo dõi
-                        if (retryCount >= maxRetries - 1)
-                            completionCallback?.Invoke(false, $"Lỗi tải lần {retryCount}: {ex.Message}", currentProgress);
+                        if (retryCount >= MAX_RETRIES)
+                        {
+                            string errorMsg = $"Tải file thất bại sau {MAX_RETRIES} lần (timeout): {Path.GetFileName(savePath)}";
+                            Console.WriteLine($"❌ {errorMsg}");
+                            completionCallback?.Invoke(false, errorMsg, currentProgress);
+                            throw new Exception(errorMsg);
+                        }
+
+                        // Backoff: 1.5s, 3s, 4.5s
+                        await Task.Delay(1500 * retryCount).ConfigureAwait(false);
+                    }
+                    // ═══════════════════════════════════════════════════════════
+                    // LỖI KHÁC — RETRY (trừ lần cuối)
+                    // ═══════════════════════════════════════════════════════════
+                    catch (Exception ex) when (retryCount < MAX_RETRIES - 1)
+                    {
+                        Interlocked.Increment(ref taithatbai);
+                        retryCount++;
+                        Console.WriteLine($"⚠️ Lỗi tải lần {retryCount}: {ex.Message}");
+
+                        // Chỉ báo callback khi là lần retry cuối
+                        if (retryCount >= MAX_RETRIES - 1)
+                        {
+                            completionCallback?.Invoke(
+                                false,
+                                $"Lỗi tải lần {retryCount}: {ex.Message}",
+                                currentProgress);
+                        }
 
                         await Task.Delay(1500 * retryCount).ConfigureAwait(false);
                     }
+                    // ═══════════════════════════════════════════════════════════
+                    // LỖI CUỐI CÙNG — THROW
+                    // ═══════════════════════════════════════════════════════════
                     catch (Exception ex)
                     {
                         sw.Stop();
-                        string errorMsg = $"Tải file thất bại sau {maxRetries} lần: {Path.GetFileName(savePath)} - {ex.Message}";
-                        Console.WriteLine(errorMsg);
+                        string errorMsg = $"Tải file thất bại sau {MAX_RETRIES} lần: {Path.GetFileName(savePath)} - {ex.Message}";
+                        Console.WriteLine($"❌ {errorMsg}");
                         completionCallback?.Invoke(false, errorMsg, currentProgress);
                         throw new Exception(errorMsg, ex);
                     }
                 }
             }
         }
-        public class InfoKNM
+            public class InfoKNM
         {
             public string MST { get; set; }
             public string KHHD { get; set; }
@@ -13482,12 +13573,19 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             lock (_lstImportLock)
             {
                 var currentList = type == 1 ? lstdsVao : lstdsRa;
-                if (currentList != null && currentList.Count > 0)
+                try
                 {
-                    isDupCurrent = currentList.Any(m =>
-                        m.SHDon == tbImport.SHDon
-                        && m.NLap.Date == tbImport.NLap.Date
-                        && m.Mst == tbImport.Mst);
+                    if (currentList != null && currentList.Count > 0)
+                    {
+                        isDupCurrent = currentList.Any(m =>
+                            m.SHDon == tbImport.SHDon
+                            && m.NLap.Date == tbImport.NLap.Date
+                            && m.Mst == tbImport.Mst);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogToFile("CheckDupCurrent", ex, tbImport.SHDon);
                 }
             }
             if (isDupCurrent) return null;
@@ -19034,10 +19132,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             await Task.Run(async () =>
             {
                 ChromeOptions options = new ChromeOptions();
-                // options.AddArgument("--headless=new");
+                 options.AddArgument("--headless=new");
                 options.AddArgument("--disable-gpu");
                 options.AddArgument("--window-size=1920,1080");
-                options.AddArgument("--disable-notifications");
+                options.AddArgument("--disable-notifications"); 
                 options.AddArgument("--disable-infobars");
                 options.AddArgument("--no-first-run");
                 options.AddArgument("--no-default-browser-check");
@@ -19192,11 +19290,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             });
         }
         public async Task TaiHDVNPT(
-      bool toggle,
-      string mst,
-      string shdon,
-      string KHHDon,
-      string mabm)
+    bool toggle,
+    string mst,
+    string shdon,
+    string KHHDon,
+    string mabm)
         {
             string downloadPath = "";
 
@@ -19224,6 +19322,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             }
 
             Directory.CreateDirectory(downloadPath);
+
             await Task.Run(async () =>
             {
                 ChromeOptions options = new ChromeOptions();
@@ -19234,92 +19333,66 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 options.AddArgument("--window-size=1920,1080");
 
                 options.AddUserProfilePreference(
-                    "download.default_directory",
-                    downloadPath);
-
+                    "download.default_directory", downloadPath);
                 options.AddUserProfilePreference(
-                    "download.prompt_for_download",
-                    false);
-
+                    "download.prompt_for_download", false);
                 options.AddUserProfilePreference(
-                    "download.directory_upgrade",
-                    true);
-
+                    "download.directory_upgrade", true);
                 options.AddUserProfilePreference(
-                    "safebrowsing.enabled",
-                    true);
+                    "safebrowsing.enabled", true);
 
                 using (IWebDriver driver = new ChromeDriver(options))
                 {
                     WebDriverWait wait = new WebDriverWait(
-                        driver,
-                        TimeSpan.FromSeconds(30));
-
-                    // =====================================================
-                    // 1. Mở VNPT
-                    // =====================================================
-
-                    driver.Navigate().GoToUrl(
-                        "https://3500370861-tt78.vnpt-invoice.com.vn/");
-
-                    wait.Until(d =>
-                    {
-                        try
-                        {
-                            return ((IJavaScriptExecutor)d)
-                                .ExecuteScript("return document.readyState")
-                                .ToString() == "complete";
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-                    });
-
-                    Thread.Sleep(1000);
-
-                    // =====================================================
-                    // 2. Nhập MÃ NHẬN HÓA ĐƠN
-                    // =====================================================
-
-                    IWebElement fkey = wait.Until(d =>
-                    {
-                        try
-                        {
-                            IWebElement el =
-                                d.FindElement(By.Id("strFkey"));
-
-                            return el.Displayed && el.Enabled
-                                ? el
-                                : null;
-                        }
-                        catch
-                        {
-                            return null;
-                        }
-                    });
-
-                    fkey.Clear();
-                    fkey.SendKeys(mabm);
-
-                    // =====================================================
-                    // 3. Lấy CAPTCHA
-                    // =====================================================
-
-                    string captchaFile = Path.Combine(
-                        Path.GetTempPath(),
-                        "vnpt_captcha.png");
+                        driver, TimeSpan.FromSeconds(30));
 
                     try
                     {
+                        // =====================================================
+                        // 1. Mở VNPT
+                        // =====================================================
+                        driver.Navigate().GoToUrl(
+                            "https://3500370861-tt78.vnpt-invoice.com.vn/");
+
+                        wait.Until(d =>
+                        {
+                            try
+                            {
+                                return ((IJavaScriptExecutor)d)
+                                    .ExecuteScript("return document.readyState")
+                                    .ToString() == "complete";
+                            }
+                            catch { return false; }
+                        });
+
+                        Thread.Sleep(1000);
+
+                        // =====================================================
+                        // 2. Nhập MÃ NHẬN HÓA ĐƠN
+                        // =====================================================
+                        IWebElement fkey = wait.Until(d =>
+                        {
+                            try
+                            {
+                                IWebElement el = d.FindElement(By.Id("strFkey"));
+                                return el.Displayed && el.Enabled ? el : null;
+                            }
+                            catch { return null; }
+                        });
+
+                        fkey.Clear();
+                        fkey.SendKeys(mabm);
+
+                        // =====================================================
+                        // 3. Lấy CAPTCHA (tải ảnh về byte[])
+                        // =====================================================
                         string captchaUrl =
                             "https://3500370861-tt78.vnpt-invoice.com.vn/Captcha/Show";
 
+                        byte[] captchaBytes;
                         using (var client = new WebClient())
                         {
-                            var cookies =
-                                driver.Manage().Cookies.AllCookies;
-
+                            var cookies = driver.Manage().Cookies.AllCookies;
                             string cookieHeader = "";
 
                             foreach (var cookie in cookies)
@@ -19327,31 +19400,22 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 if (!string.IsNullOrEmpty(cookieHeader))
                                     cookieHeader += "; ";
 
-                                cookieHeader +=
-                                    cookie.Name + "=" + cookie.Value;
+                                cookieHeader += cookie.Name + "=" + cookie.Value;
                             }
 
-                            client.Headers[HttpRequestHeader.Cookie] =
-                                cookieHeader;
-
-                            byte[] data =
-                                client.DownloadData(captchaUrl);
-
-                            File.WriteAllBytes(
-                                captchaFile,
-                                data);
+                            client.Headers[HttpRequestHeader.Cookie] = cookieHeader;
+                            captchaBytes = client.DownloadData(captchaUrl);
                         }
 
-                        // =================================================
-                        // 4. OCR CAPTCHA
-                        // =================================================
+                        // Lưu tạm để debug (tuỳ chọn)
+                        string captchaFile = Path.Combine(
+                            Path.GetTempPath(), "vnpt_captcha.png");
+                        File.WriteAllBytes(captchaFile, captchaBytes);
 
-                        string tessDataPath = Path.Combine(
-                            AppDomain.CurrentDomain.BaseDirectory,
-                            "tessdata");
-
-                        string code =
-                            OcrHelper.ReadDigitsFromImage(captchaFile);
+                        // =================================================
+                        // 4. OCR CAPTCHA BẰNG PYTHON
+                        // =================================================
+                        string code = Kingsofthp.OcrCaptcha(captchaBytes);
 
                         if (string.IsNullOrWhiteSpace(code))
                         {
@@ -19360,29 +19424,24 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 "VNPT",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Warning);
-
                             return;
                         }
+
+                        code = code.Trim();
+
+                        Console.WriteLine($"VNPT OCR → '{code}'");
 
                         // =================================================
                         // 5. Nhập CAPTCHA
                         // =================================================
-
                         IWebElement captchaInput = wait.Until(d =>
                         {
                             try
                             {
-                                IWebElement el =
-                                    d.FindElement(By.Id("captch"));
-
-                                return el.Displayed && el.Enabled
-                                    ? el
-                                    : null;
+                                IWebElement el = d.FindElement(By.Id("captch"));
+                                return el.Displayed && el.Enabled ? el : null;
                             }
-                            catch
-                            {
-                                return null;
-                            }
+                            catch { return null; }
                         });
 
                         captchaInput.Clear();
@@ -19391,7 +19450,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         // =================================================
                         // 6. Tìm nút Tìm kiếm
                         // =================================================
-
                         IWebElement btnTimKiem = wait.Until(d =>
                         {
                             try
@@ -19399,27 +19457,19 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 IWebElement el = d.FindElement(
                                     By.CssSelector(
                                         "button[type='submit'][name='submit']"));
-
-                                return el.Displayed && el.Enabled
-                                    ? el
-                                    : null;
+                                return el.Displayed && el.Enabled ? el : null;
                             }
-                            catch
-                            {
-                                return null;
-                            }
+                            catch { return null; }
                         });
 
                         // =================================================
                         // 7. Click Tìm kiếm
                         // =================================================
-
                         btnTimKiem.Click();
 
                         // =================================================
                         // 8. Chờ trang SearchByFkey
                         // =================================================
-
                         wait.Until(d =>
                         {
                             try
@@ -19427,58 +19477,39 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 return d.Url.Contains(
                                     "/HomeNoLogin/SearchByFkey");
                             }
-                            catch
-                            {
-                                return false;
-                            }
+                            catch { return false; }
                         });
 
                         // =================================================
                         // 9. Tìm link Tải file PDF
                         // =================================================
-
                         IWebElement pdfLink = wait.Until(d =>
                         {
                             try
                             {
                                 IWebElement el = d.FindElement(
-                                    By.CssSelector(
-                                        "a[title='Tải file pdf']"));
-
-                                return el.Displayed && el.Enabled
-                                    ? el
-                                    : null;
+                                    By.CssSelector("a[title='Tải file pdf']"));
+                                return el.Displayed && el.Enabled ? el : null;
                             }
-                            catch
-                            {
-                                return null;
-                            }
+                            catch { return null; }
                         });
 
                         // =================================================
                         // 10. Click tải PDF
                         // =================================================
-
                         pdfLink.Click();
 
                         // =================================================
                         // 11. Chờ PDF tải xong
                         // =================================================
-
-                        string pdfFile = WaitForPdf(
-                            shdon,
-                            mst,
-                            downloadPath,
-                            20);
+                        string pdfFile = WaitForPdf(shdon, mst, downloadPath, 20);
 
                         if (pdfFile == null)
                         {
                             XtraMessageBox.Show(
-                                "Không thể tải PDF.",
-                                "VNPT",
+                                "Không thể tải PDF.", "VNPT",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Warning);
-
                             return;
                         }
 
@@ -19487,7 +19518,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         // =================================================
                         // 12. Đổi tên PDF
                         // =================================================
-
                         string fileMoi = Path.Combine(
                             downloadPath,
                             $"{mst}_{shdon}_{KHHDon}.pdf");
@@ -19500,38 +19530,31 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         // =================================================
                         // 13. Mở PDF
                         // =================================================
-
                         if (toggle)
                         {
-                            Process.Start(
-                                new ProcessStartInfo
-                                {
-                                    FileName = fileMoi,
-                                    UseShellExecute = true
-                                });
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = fileMoi,
+                                UseShellExecute = true
+                            });
                         }
 
-                        Console.WriteLine(
-                            $"Đã tải PDF VNPT: {fileMoi}");
+                        Console.WriteLine($"Đã tải PDF VNPT: {fileMoi}");
 
                         // =================================================
                         // 14. Xóa CAPTCHA tạm
                         // =================================================
-
                         try
                         {
                             if (File.Exists(captchaFile))
                                 File.Delete(captchaFile);
                         }
-                        catch
-                        {
-                        }
+                        catch { }
                     }
                     catch (Exception ex)
                     {
                         XtraMessageBox.Show(
-                            "Lỗi tải hóa đơn VNPT:\r\n\r\n" +
-                            ex.Message,
+                            "Lỗi tải hóa đơn VNPT:\r\n\r\n" + ex.Message,
                             "VNPT",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error);
@@ -20137,48 +20160,42 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
                 IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
 
-                // ============================================================
-                // BƯỚC 1: ĐIỀN MÃ BÍ MẬT (name="MaSoBiMat")
-                // ============================================================
-                // ============================================================
-                // BƯỚC 1: ĐIỀN MÃ BÍ MẬT BẰNG JAVASCRIPT TRỰC TIẾP (Bỏ qua lỗi NoSuchElement)
-                // ============================================================
-                try
+                // Hàm điền MaSoBiMat — gọi lại mỗi lần thử captcha
+                Action dienMaSoBiMat = () =>
                 {
-                    // Đợi 2 giây cho trang ổn định hình ảnh ban đầu
-                    System.Threading.Thread.Sleep(2000);
-
-                    // Dùng JS tìm và gán thẳng giá trị vào ô input MaSoBiMat
-                    bool filled = (bool)js.ExecuteScript(@"
-        var input = document.querySelector('input[name=""MaSoBiMat""]') || document.querySelector('input[placeholder=""Mã số bí mật""]');
-        if (input) {
-            input.value = arguments[0];
-            // Bắn đủ bộ sự kiện Angular để form nhận diện dữ liệu
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-            input.dispatchEvent(new Event('blur', { bubbles: true }));
-            return true;
-        }
-        return false;
-    ", mabimat);
-
-                    if (filled)
+                    try
                     {
-                        Console.WriteLine("✅ Đã điền Mã số bí mật thành công qua JS");
+                        bool filled = (bool)js.ExecuteScript(@"
+                    var input = document.querySelector('input[name=""MaSoBiMat""]') || document.querySelector('input[placeholder=""Mã số bí mật""]');
+                    if (input) {
+                        input.value = arguments[0];
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                        input.dispatchEvent(new Event('blur', { bubbles: true }));
+                        return true;
                     }
-                    else
+                    return false;
+                ", mabimat);
+
+                        if (filled)
+                            Console.WriteLine("✅ Đã điền Mã số bí mật");
+                        else
+                            Console.WriteLine("⚠ Không tìm thấy input MaSoBiMat");
+                    }
+                    catch (Exception ex)
                     {
-                        Console.WriteLine("⚠ Không tìm thấy thẻ input MaSoBiMat qua querySelector");
-                        throw new Exception("Không tìm thấy MaSoBiMat");
+                        Console.WriteLine("⚠ Lỗi điền MaSoBiMat: " + ex.Message);
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("⚠ Lỗi điền MaSoBiMat: " + ex.Message);
-                    throw;
-                }
+                };
+
                 // ============================================================
-                // BƯỚC 2: OCR CAPTCHA (alt="Captcha" và input name="curentcap")
+                // BƯỚC 1: ĐIỀN MÃ BÍ MẬT LẦN ĐẦU
+                // ============================================================
+                System.Threading.Thread.Sleep(2000);
+                dienMaSoBiMat();
+
+                // ============================================================
+                // BƯỚC 2: OCR CAPTCHA (có retry)
                 // ============================================================
                 string result = string.Empty;
                 int maxRetry = 3;
@@ -20189,7 +20206,15 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     {
                         Console.WriteLine($"🔍 Lần thử captcha {attempt}/{maxRetry}");
 
-                        // Tìm thẻ img chứa captcha dựa theo alt="Captcha"
+                        // ✅ QUAN TRỌNG: Điền lại MaSoBiMat MỖI LẦN THỬ
+                        // (để phòng trường hợp captcha reload làm mất giá trị)
+                        if (attempt > 1)
+                        {
+                            System.Threading.Thread.Sleep(300);
+                            dienMaSoBiMat();
+                        }
+
+                        // Tìm thẻ img chứa captcha
                         IWebElement captchaImg = wait.Until(d => d.FindElement(By.XPath("//img[@alt='Captcha']")));
 
                         string base64 = (string)js.ExecuteScript(@"
@@ -20207,7 +20232,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         string rawPath = Path.Combine(downloadPath, $"captcha_raw_{attempt}.png");
                         File.WriteAllBytes(rawPath, captchaBytes);
 
-                        result = Kingsofthp.OcrCaptchaByPython(captchaBytes);
+                        result = Kingsofthp.OcrCaptcha(captchaBytes);
                         Console.WriteLine($"   OCR → '{result}'");
 
                         if (string.IsNullOrEmpty(result) || result.Length < 3 || result.Length > 6)
@@ -20218,34 +20243,34 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             continue;
                         }
 
-                        // Điền vào ô input captcha có name="curentcap"
+                        // Điền captcha
                         IWebElement inputCaptcha = wait.Until(d => d.FindElement(By.Name("curentcap")));
                         inputCaptcha.Clear();
                         inputCaptcha.SendKeys(result);
 
                         js.ExecuteScript(@"
-    var input = arguments[0];
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-", inputCaptcha);
+                    var input = arguments[0];
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                ", inputCaptcha);
 
                         System.Threading.Thread.Sleep(500);
 
-                        // 👉 Ép form submit trực tiếp hoặc click chính xác vào nút submit của form
+                        // Submit form
                         js.ExecuteScript(@"
-    var form = document.querySelector('form.m-login__form');
-    if (form) {
-        // Tìm nút submit bên trong form
-        var submitBtn = form.querySelector('button[type=""submit""]');
-        if (submitBtn) {
-            submitBtn.click();
-        } else {
-            form.submit();
-        }
-    }
-");
+                    var form = document.querySelector('form.m-login__form');
+                    if (form) {
+                        var submitBtn = form.querySelector('button[type=""submit""]');
+                        if (submitBtn) {
+                            submitBtn.click();
+                        } else {
+                            form.submit();
+                        }
+                    }
+                ");
                         System.Threading.Thread.Sleep(1500);
 
+                        // Kiểm tra captcha sai
                         bool captchaWrong = false;
                         try
                         {
@@ -20267,6 +20292,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         {
                             Console.WriteLine("   ❌ Captcha sai, reload...");
                             Kingsofthp.ReloadCaptcha(driver, wait);
+                            // Không cần điền lại MaSoBiMat ở đây — vòng lặp sẽ tự điền ở đầu lần sau
                             continue;
                         }
 
@@ -20499,7 +20525,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                        //rawPath = "C:\\Users\\Admin\\Desktop\\captcha_raw_1.png";
                         File.WriteAllBytes(rawPath, captchaBytes);
 
-                        result = Kingsofthp.OcrCaptchaByPython(captchaBytes);
+                        result = Kingsofthp.OcrCaptcha(captchaBytes);
                         Console.WriteLine($"   OCR → '{result}'");
 
                         if (string.IsNullOrEmpty(result) || result.Length < 3 || result.Length > 5)
@@ -20904,7 +20930,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 string result = string.Empty;
                 if (!string.IsNullOrEmpty(base64Data))
                 {
-                    result = Kingsofthp.OcrCaptchaByPython(Convert.FromBase64String(base64Data.Split(',')[1]));
+                    result = Kingsofthp.OcrCaptcha(Convert.FromBase64String(base64Data.Split(',')[1]));
                 }
 
                 Console.WriteLine($"KẾT QUẢ CUỐI CÙNG (ddddocr): {result}");
@@ -23470,16 +23496,91 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
         }
 
-        private void gridControl2_DoubleClick(object sender, EventArgs e)
+        private async void gridControl2_DoubleClick(object sender, EventArgs e)
         {
-            DevExpress.XtraGrid.Views.Grid.GridView gridView = gridControl2.MainView as DevExpress.XtraGrid.Views.Grid.GridView;
-            var hitInfo = gridView.CalcHitInfo(gridView.GridControl.PointToClient(MousePosition));
+            this.Cursor = Cursors.WaitCursor;  // Con trỏ dạng đồng hồ cát (đang tải)
+            GridView gridView = gridControl2.MainView as GridView;
 
+            Point pt = gridView.GridControl.PointToClient(MousePosition);
+            GridHitInfo hitInfo = gridView.CalcHitInfo(pt);
 
             // Kiểm tra nếu nhấp vào một ô
             if (hitInfo.InRowCell)
             {
+                int rowHandle = hitInfo.RowHandle; 
                 int columnIndex = hitInfo.Column.VisibleIndex; // Chỉ số cột
+
+                if (columnIndex == 2)
+                {
+                    string NCC = gridView.GetRowCellValue(rowHandle, "NCC").ToString();
+                    string path = gridView.GetRowCellValue(rowHandle, "Path").ToString();
+                    string shdon = gridView.GetRowCellValue(rowHandle, "SHDon").ToString();
+                    string mstNB = tbRegister.Rows[0]["Username"].ToString();
+                    //KHHDon
+                    string KHHDon = gridView.GetRowCellValue(rowHandle, "KHHDon").ToString();
+                    string mabimat = GetSecretCode(path, NCC);
+
+                    string loai = chkDauvao.Checked ? "HDVao" : "HDRa";
+                    string folder = $@"D:\DA3\DA3\Hoadon\HD2026\{loai}\{dtTungay.DateTime.Month}";
+                    // Lấy danh sách file PDF
+                    string[] pdfFiles = Directory.GetFiles(folder, "*.pdf");
+
+                    Console.WriteLine($"Tìm thấy {pdfFiles.Length} file PDF:");
+                    foreach (string file in pdfFiles)
+                    {
+                        if (file.Contains($"{mstNB}_{shdon}"))
+                        {
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = file,
+                                UseShellExecute = true
+                            });
+                            return;
+                        }
+                    }
+
+                    if (NCC == "VNPT")
+                    {
+                        TaiHDVNPT(true, mstNB, shdon, KHHDon, mabimat);
+                    }
+                    if (NCC == "MISA")
+                    {
+                        GetHoaDonMisa(true, mabimat, mstNB, shdon);
+                    }
+                    if (NCC == "VIETTEL")
+                    {
+                        await TraCuuNCC(true, mstNB, mabimat, shdon);
+                    }
+                    if (NCC == "BKAV")
+                    {
+                        TaiBKAV(true, mstNB, shdon, KHHDon, mabimat);
+                    }
+                    if (NCC == "MINVOICE")
+                    {
+                        TaiMINVOICE(true, mstNB, shdon, KHHDon, mabimat);
+                    }
+                    if (NCC == "FAST")
+                    {
+                        TaiFAST(true, mstNB, shdon, KHHDon, mabimat);
+                    }
+                    if (NCC == "Win Tech")
+                    {
+                        TaiWinTech(true, mstNB, shdon, KHHDon, mabimat);
+                    }
+                    if (NCC == "Cyber")
+                    {
+                        TaiCyber(true, mstNB, shdon, KHHDon, mabimat);
+                    }
+                    if (NCC == "Softdream")
+                    {
+                        TaiSoftdream(true, mstNB, shdon, KHHDon, mabimat);
+                    }
+                    if (NCC == "Visnam")
+                    {
+                        TaiVisnam(true, mstNB, shdon, KHHDon, mabimat);
+                    }
+                }
+
                 if (columnIndex != 1)
                     return;
                 System.Windows.Forms.WebBrowser webBrowser1 = new System.Windows.Forms.WebBrowser
@@ -31475,19 +31576,19 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             switch (_type)
             {
                 case 1: // Có mã CQT (ttxly == 5)
-                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==5&type=purchase";
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel-sold?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==5&type=purchase";
                     filename = $"{mstcongty}_HDDienTuDaCapMa.xlsx";
                     action = "Xuất excel (hóa đơn mua vào)";
                     break;
 
                 case 2: // Không mã CQT (ttxly == 6)
-                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==6&type=purchase";
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel-sold?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==6&type=purchase";
                     filename = $"{mstcongty}_HDDienTuKhongMa.xlsx";
                     action = "Xuất excel (hóa đơn mua vào)";
                     break;
 
                 case 3: // Máy tính tiền (ttxly == 8)
-                    url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==8&type=purchase";
+                    url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel-sold?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==8&type=purchase";
                     filename = $"{mstcongty}_HDDienTuMayTinhTien.xlsx";
                     action = "Xuất excel (hóa đơn máy tính tiền mua vào)";
                     break;
@@ -31519,7 +31620,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
             using (var client = new HttpClient())
             {
-                client.Timeout = TimeSpan.FromSeconds(90);
+                client.Timeout = TimeSpan.FromSeconds(10);
 
                 // Header giống trình duyệt thật
                 client.DefaultRequestHeaders.Clear();
@@ -32364,7 +32465,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             // ═══════════════════════════════════════════════════════
             // ✅ ĐẨY PDF VÀO QUEUE NGAY — không cần chờ batch
             // ═══════════════════════════════════════════════════════
-            EnqueuePdfDownload(tb);
+           // EnqueuePdfDownload(tb);
             Debug.WriteLine($"📥 Đã Enqueue PDF: {tb.SHDon}");
 
             // ============ 4. GHI DB ============
@@ -44551,6 +44652,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             }
         }
 
+
+        // ═══════════════════════════════════════════════════════════════
+        // FALLBACK: quét theo cột, tìm cột có mật độ pixel tối cao nhất
+        // ═══════════════════════════════════════════════════════════════
+
         private async Task TraCuuNCC(bool toggle, string mst, string mabm, string shdon)
         {
             // Đọc trước các giá trị UI trên luồng chính
@@ -44578,17 +44684,78 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 string tempDownloadFolder = Path.Combine(Path.GetTempPath(), "VinvoiceTemp", Guid.NewGuid().ToString("N"));
                 try { Directory.CreateDirectory(tempDownloadFolder); } catch { }
 
+                // ═══════════════════════════════════════════════════════
+                // ⚙️ CHROME OPTIONS — CHẶN POPUP "wants to..."
+                // ═══════════════════════════════════════════════════════
                 var options = new ChromeOptions();
-                // options.AddArgument("--headless=new");
+
+                options.AddArgument("--disable-features=OptimizationHints,MediaRouter,PrivacySandboxSettings4," +
+                                    "PrivacySandboxAdsAPIs,InterestFeedContentSuggestions,Translate," +
+                                    "AcceptCHFrame,ChromeLabs,CalculateNativeWinOcclusion," +
+                                    "DialMediaRouteProvider,GlobalMediaControls," +
+                                    "WebAuthentication,WebAuthenticationCable," +
+                                    "WebBluetooth,WebBluetoothNewPermissionsBackend," +
+                                    "WebUsb,WebSerial,WebHID,WebNFC," +
+                                    "Serial,Bluetooth,HID,USB,NFC," +
+                                    "FileSystemAccessAPI,IdleDetection," +
+                                    "SyncDisabled,InfiniteSessionRestore");
+                options.AddArgument("--disable-notifications");
+                options.AddArgument("--disable-infobars");
+                options.AddArgument("--disable-popup-blocking");
+                options.AddArgument("--disable-save-password-bubble");
+                options.AddArgument("--disable-translate");
+                options.AddArgument("--no-first-run");
+                options.AddArgument("--no-default-browser-check");
+                options.AddArgument("--disable-default-apps");
+                options.AddArgument("--disable-component-update");
+                options.AddArgument("--disable-background-networking");
+                options.AddArgument("--disable-sync");
+                options.AddArgument("--metrics-recording-only");
+                options.AddArgument("--disable-backgrounding-occluded-windows");
+                options.AddArgument("--use-fake-ui-for-media-stream");
+                options.AddArgument("--use-fake-device-for-media-stream");
+                options.AddArgument("--deny-permission-prompts");
+
+                //options.AddArgument("--headless=new");
                 options.AddArgument("--disable-gpu");
                 options.AddArgument("--no-sandbox");
                 options.AddArgument("--disable-dev-shm-usage");
                 options.AddArgument("--disable-blink-features=AutomationControlled");
+                options.AddExcludedArgument("enable-automation");
+                options.AddAdditionalOption("useAutomationExtension", false);
 
                 options.AddUserProfilePreference("download.default_directory", tempDownloadFolder);
                 options.AddUserProfilePreference("download.prompt_for_download", false);
                 options.AddUserProfilePreference("download.directory_upgrade", true);
                 options.AddUserProfilePreference("safebrowsing.enabled", true);
+
+                options.AddUserProfilePreference("profile.default_content_setting_values.media_stream", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.media_stream_mic", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.media_stream_camera", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.geolocation", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.notifications", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.midi_sysex", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.push_messaging", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.clipboard", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.sensors", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.payment_handler", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.usb_guard", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.bluetooth_guard", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.hid_guard", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.serial_guard", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.idle_detection", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.file_system_write_guard", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.automatic_downloads", 1);
+                options.AddUserProfilePreference("profile.default_content_setting_values.popups", 1);
+                options.AddUserProfilePreference("profile.default_content_setting_values.protocol_handlers", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.native_file_system_write_guard", 2);
+                options.AddUserProfilePreference("profile.managed_default_content_settings.images", 1);
+
+                options.AddUserProfilePreference("credentials_enable_service", false);
+                options.AddUserProfilePreference("profile.password_manager_enabled", false);
+                options.AddUserProfilePreference("profile.password_manager_leak_detection", false);
+                options.AddUserProfilePreference("autofill.profile_enabled", false);
+                options.AddUserProfilePreference("autofill.credit_card_enabled", false);
 
                 IWebDriver driver = null;
                 try
@@ -44597,10 +44764,50 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(30);
 
                     // ═══════════════════════════════════════════════════════
+                    // 🛡️ CDP PROTOCOL
+                    // ═══════════════════════════════════════════════════════
+                    try
+                    {
+                        if (driver is ChromeDriver chromeDriver)
+                        {
+                            string[] perms = {
+                        "notifications", "geolocation", "media", "midi",
+                        "clipboard-read", "clipboard-write", "payment-handler",
+                        "idle-detection", "periodic-background-sync"
+                    };
+                            foreach (var p in perms)
+                            {
+                                try
+                                {
+                                    chromeDriver.ExecuteCdpCommand(
+                                        "Browser.setPermission",
+                                        new Dictionary<string, object>
+                                        {
+                                    { "permission", new Dictionary<string, object> { { "name", p } } },
+                                    { "setting", "denied" }
+                                        });
+                                }
+                                catch { }
+                            }
+
+                            chromeDriver.ExecuteCdpCommand("Page.enable", new Dictionary<string, object>());
+                            chromeDriver.ExecuteCdpCommand(
+                                "Page.setBypassCSP",
+                                new Dictionary<string, object> { { "enabled", true } });
+                        }
+                    }
+                    catch (Exception cdpEx)
+                    {
+                        Console.WriteLine($"⚠️ CDP setup warning: {cdpEx.Message}");
+                    }
+
+                    // ═══════════════════════════════════════════════════════
                     // 2. TRUY CẬP TRANG
                     // ═══════════════════════════════════════════════════════
                     driver.Navigate().GoToUrl("https://vinvoice.viettel.vn/utilities/invoice-search");
                     await Task.Delay(1500);
+
+                    await TryDismissPermissionPopups(driver);
 
                     WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
 
@@ -44644,10 +44851,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     }
 
                     // ═══════════════════════════════════════════════════════
-                    // 4. XỬ LÝ CAPTCHA — TỐI ĐA 3 LẦN
+                    // 4. XỬ LÝ CAPTCHA — TỐI ĐA 5 LẦN
                     // ═══════════════════════════════════════════════════════
                     bool captchaSuccess = false;
-                    int maxCaptchaRetries = 3;
+                    int maxCaptchaRetries = 5;
                     int captchaAttempt = 0;
 
                     while (captchaAttempt < maxCaptchaRetries && !captchaSuccess)
@@ -44657,10 +44864,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                         try
                         {
-                            // Đợi captcha load — kiểm tra loại captcha
+                            await TryDismissPermissionPopups(driver);
                             await Task.Delay(1000);
 
-                            // ═══ CHẨN ĐOÁN: Kiểm tra loại captcha ═══
                             bool hasSlider = driver.FindElements(By.CssSelector("div.slider-button")).Count > 0;
                             bool hasRecaptcha = driver.FindElements(By.CssSelector("iframe[src*='recaptcha'], div.g-recaptcha")).Count > 0;
                             bool hasHcaptcha = driver.FindElements(By.CssSelector("iframe[src*='hcaptcha'], div.h-captcha")).Count > 0;
@@ -44668,7 +44874,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                             Console.WriteLine($"🔍 Captcha: slider={hasSlider}, recaptcha={hasRecaptcha}, hcaptcha={hasHcaptcha}, turnstile={hasTurnstile}");
 
-                            // Không có captcha nào → tiếp tục
                             if (!hasSlider && !hasRecaptcha && !hasHcaptcha && !hasTurnstile)
                             {
                                 Console.WriteLine("⚠️ Không phát hiện captcha — tiếp tục luôn");
@@ -44676,11 +44881,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 break;
                             }
 
-                            // Captcha loại khác (không phải slider) → không tự xử lý được
                             if (hasRecaptcha || hasHcaptcha || hasTurnstile)
                             {
-                                Console.WriteLine("⚠️ Captcha đã đổi loại (reCAPTCHA/hCaptcha/Turnstile) — cần user nhập thủ công");
-                                // Không tự động được, nhưng vẫn thử tiếp để user có thời gian nhập
+                                Console.WriteLine("⚠️ Captcha đã đổi loại — cần user nhập thủ công");
                                 await Task.Delay(5000);
                                 captchaSuccess = true;
                                 break;
@@ -44689,68 +44892,56 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             // ═══ XỬ LÝ SLIDER CAPTCHA ═══
                             if (hasSlider)
                             {
-                                // Nếu là lần thử lại → refresh và nhập lại
+                                // ═══ RESET CAPTCHA TRƯỚC KHI XỬ LÝ ═══
                                 if (captchaAttempt > 1)
                                 {
-                                    Console.WriteLine("🔄 Refresh + nhập lại MST + mã...");
-                                    driver.Navigate().Refresh();
-                                    await Task.Delay(1500);
-
+                                    Console.WriteLine("🔄 Reset captcha + nhập lại MST...");
+                                    await ResetCaptchaAndForm(driver, mst, mabm);
                                     wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
-
-                                    try
-                                    {
-                                        var taxRetry = wait.Until(d =>
-                                        {
-                                            try
-                                            {
-                                                var el = d.FindElement(By.CssSelector("input[formcontrolname='supplierTaxCode']"));
-                                                return el.Displayed ? el : null;
-                                            }
-                                            catch { return null; }
-                                        });
-                                        taxRetry.Clear();
-                                        taxRetry.SendKeys(mst);
-
-                                        var codeRetry = wait.Until(d =>
-                                        {
-                                            try
-                                            {
-                                                var el = d.FindElement(By.CssSelector("input[formcontrolname='reservationCode']"));
-                                                return el.Displayed ? el : null;
-                                            }
-                                            catch { return null; }
-                                        });
-                                        codeRetry.Clear();
-                                        codeRetry.SendKeys(mabm);
-                                    }
-                                    catch { }
-
-                                    await Task.Delay(1000);
+                                }
+                                else
+                                {
+                                    // Lần đầu: đảm bảo puzzle ở vị trí 0
+                                    await EnsurePuzzleAtStart(driver);
                                 }
 
-                                // Tìm slider button
-                                var bgImage = driver.FindElements(By.CssSelector("img.bg-image"));
-                                if (bgImage.Count == 0)
+                                // ═══ LẤY ẢNH CAPTCHA ═══
+                                var bgImages = driver.FindElements(By.CssSelector("img.bg-image"));
+                                if (bgImages.Count == 0)
                                 {
-                                    Console.WriteLine("⚠️ Không tìm thấy img.bg-image — captcha có thể chưa load xong");
+                                    Console.WriteLine("⚠️ Không tìm thấy img.bg-image");
                                     await Task.Delay(1500);
                                     continue;
                                 }
 
-                                string bgSrc = bgImage[0].GetAttribute("src");
+                                var bgImage = bgImages[0];
+                                string bgSrc = bgImage.GetAttribute("src");
                                 if (string.IsNullOrEmpty(bgSrc))
                                 {
-                                    Console.WriteLine("⚠️ Không lấy được src của bg-image");
+                                    Console.WriteLine("⚠️ Không lấy được src");
                                     await Task.Delay(1000);
                                     continue;
                                 }
 
                                 string bgPath = SaveBase64ToFile(bgSrc, "bg");
-                                int holeX = FindHolePosition(bgPath);
-                                Console.WriteLine($"🎯 Ô đen ở vị trí: {holeX}px");
 
-                                if (holeX <= 0)
+                                // ═══ KÍCH THƯỚC ẢNH GỐC vs HIỂN THỊ ═══
+                                int naturalW, naturalH;
+                                using (var tmpBmp = new Bitmap(bgPath))
+                                {
+                                    naturalW = tmpBmp.Width;
+                                    naturalH = tmpBmp.Height;
+                                }
+                                int displayedW = bgImage.Size.Width;
+                                int displayedH = bgImage.Size.Height;
+                                double scaleX = (double)displayedW / naturalW;
+
+                                Console.WriteLine($"📐 Gốc {naturalW}x{naturalH} | Hiển thị {displayedW}x{displayedH} | scaleX={scaleX:F3}");
+
+                                int holeX_natural = FindHolePosition2(bgPath);
+                                Console.WriteLine($"🎯 Ô đen (gốc): x={holeX_natural}px");
+
+                                if (holeX_natural <= 0)
                                 {
                                     Console.WriteLine("⚠️ Không tìm được vị trí ô đen");
                                     try { File.Delete(bgPath); } catch { }
@@ -44758,54 +44949,101 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                     continue;
                                 }
 
-                                // Tìm slider button + bar
-                                var sliderButtons = driver.FindElements(By.CssSelector("div.slider-button"));
-                                var sliderBars = driver.FindElements(By.CssSelector("div.slider-bar"));
+                                int holeX_displayed = (int)Math.Round(holeX_natural * scaleX);
+                                Console.WriteLine($"🎯 Ô đen (hiển thị): x={holeX_displayed}px");
 
-                                if (sliderButtons.Count == 0 || sliderBars.Count == 0)
+                                try { File.Delete(bgPath); } catch { }
+
+                                // ═══ LẤY PUZZLE + SLIDER (element MỚI NHẤT) ═══
+                                var puzzlePieces = driver.FindElements(By.CssSelector("img.puzzle-piece"));
+                                var sliderButtons = driver.FindElements(By.CssSelector("div.slider-button"));
+
+                                if (puzzlePieces.Count == 0 || sliderButtons.Count == 0)
                                 {
-                                    Console.WriteLine("⚠️ Không tìm thấy slider-button hoặc slider-bar");
-                                    try { File.Delete(bgPath); } catch { }
+                                    Console.WriteLine("⚠️ Thiếu puzzle-piece / slider-button");
                                     await Task.Delay(1000);
                                     continue;
                                 }
 
-                                var sliderButton = sliderButtons[0];
-                                var sliderBar = sliderBars[0];
+                                var puzzlePiece = puzzlePieces[puzzlePieces.Count - 1];
+                                var sliderButton = sliderButtons[sliderButtons.Count - 1];
 
-                                int barStartX = sliderBar.Location.X;
-                                int buttonStartX = sliderButton.Location.X;
-                                int offset = buttonStartX - barStartX;
-                                int targetDistance = holeX - offset;
+                                ((IJavaScriptExecutor)driver).ExecuteScript(
+                                    "arguments[0].scrollIntoView({block: 'center'});", sliderButton);
+                                await Task.Delay(200);
 
-                                // Kéo slider
-                                Actions actions = new Actions(driver);
-                                actions.ClickAndHold(sliderButton).Perform();
+                                // ═══ KIỂM TRA PUZZLE ĐANG Ở ĐÂU ═══
+                                string puzzleLeftStr = puzzlePiece.GetAttribute("style") ?? "";
+                                Console.WriteLine($"🧩 Puzzle style: {puzzleLeftStr}");
 
-                                int steps = Math.Max(2, targetDistance / 30);
-                                int stepDistance = targetDistance / steps;
-                                int remaining = targetDistance % steps;
-
-                                for (int i = 0; i < steps; i++)
+                                if (!puzzleLeftStr.Contains("left: 0px") && !puzzleLeftStr.Contains("left:0px"))
                                 {
-                                    actions.MoveByOffset(stepDistance, 0).Perform();
-                                    await Task.Delay(10);
+                                    Console.WriteLine("⚠️ Puzzle không ở vị trí đầu — reset về 0");
+                                    ((IJavaScriptExecutor)driver).ExecuteScript(
+                                        "arguments[0].style.left = '0px';", puzzlePiece);
+                                    await Task.Delay(200);
                                 }
 
-                                if (remaining > 0)
+                                var puzzleSize = puzzlePiece.Size;
+                                int puzzleW = puzzleSize.Width;
+                                Console.WriteLine($"🧩 Puzzle-piece: {puzzleW}x{puzzleSize.Height}px");
+
+                                // ═══ TÍNH KHOẢNG CÁCH KÉO ═══
+                                int targetDistance = holeX_displayed - (puzzleW / 2);
+                                Console.WriteLine($"📏 targetDistance={targetDistance}px");
+
+                                if (targetDistance <= 5)
                                 {
-                                    actions.MoveByOffset(remaining, 0).Perform();
+                                    Console.WriteLine("⚠️ Khoảng cách quá nhỏ");
+                                    await Task.Delay(1000);
+                                    continue;
                                 }
 
-                                actions.Release().Perform();
+                                // ═══ KÉO SLIDER — NHANH + MƯỢT ═══
+                                await PerformSlide(driver, sliderButton, targetDistance);
+                                await Task.Delay(1200);
 
-                                // Đợi DOM cập nhật
-                                await Task.Delay(1000);
-
-                                // Check thành công đa tiêu chí
                                 captchaSuccess = CheckCaptchaSuccess(driver);
 
-                                try { File.Delete(bgPath); } catch { }
+                                // ═══ RETRY NHANH TRONG CÙNG CAPTCHA NẾU FAIL ═══
+                                if (!captchaSuccess)
+                                {
+                                    Console.WriteLine("⚠️ Fail lần 1 — thử kéo lại trong cùng captcha...");
+                                    await Task.Delay(800);
+
+                                    // Reset puzzle + slider về 0 bằng JS
+                                    await EnsurePuzzleAtStart(driver);
+                                    await Task.Delay(500);
+
+                                    // Lấy lại element mới
+                                    var pieces2 = driver.FindElements(By.CssSelector("img.puzzle-piece"));
+                                    var btns2 = driver.FindElements(By.CssSelector("div.slider-button"));
+                                    if (pieces2.Count > 0 && btns2.Count > 0)
+                                    {
+                                        var btn2 = btns2[btns2.Count - 1];
+
+                                        // Tính lại khoảng cách (vì puzzle có thể resize)
+                                        var pz2 = pieces2[pieces2.Count - 1];
+                                        int pzW2 = pz2.Size.Width;
+                                        int target2 = holeX_displayed - (pzW2 / 2);
+
+                                        await PerformSlide(driver, btn2, target2);
+                                        await Task.Delay(1200);
+
+                                        captchaSuccess = CheckCaptchaSuccess(driver);
+                                    }
+                                }
+
+                                // Debug screenshot
+                                try
+                                {
+                                    string debugDir = Path.Combine(Path.GetTempPath(), "VinvoiceDebug");
+                                    Directory.CreateDirectory(debugDir);
+                                    string shot = Path.Combine(debugDir, $"slide_{captchaAttempt}.png");
+                                    ((ITakesScreenshot)driver).GetScreenshot().SaveAsFile(shot);
+                                    Console.WriteLine($"📸 Debug: {shot}");
+                                }
+                                catch { }
                             }
                         }
                         catch (Exception ex)
@@ -44821,7 +45059,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                     if (!captchaSuccess)
                     {
-                        Console.WriteLine("❌ Thử captcha 3 lần không thành công.");
+                        Console.WriteLine("❌ Thử captcha nhiều lần không thành công.");
                         return;
                     }
 
@@ -44851,7 +45089,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         Console.WriteLine("✅ Đã click Tìm kiếm");
                         await Task.Delay(2000);
 
-                        // Đợi nút tải PDF xuất hiện = có kết quả
                         var pdfWaitCheck = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
                         try
                         {
@@ -44927,7 +45164,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                         Console.WriteLine("✅ Đã click tải PDF, chờ file...");
 
-                        // Chờ file PDF xuất hiện
                         string latestPdfFile = null;
                         var deadline = DateTime.Now.AddSeconds(20);
 
@@ -44959,7 +45195,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             return;
                         }
 
-                        // Đổi tên file
                         string safeMst = MakeSafeFileName(mst);
                         string safeShdon = MakeSafeFileName(shdon);
                         string newPath = Path.Combine(baseDir, $"{safeMst}_{safeShdon}.pdf");
@@ -45015,6 +45250,799 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             });
         }
 
+        // ═══════════════════════════════════════════════════════════════
+        // 🎬 HELPER: THỰC HIỆN KÉO SLIDER
+        // ═══════════════════════════════════════════════════════════════
+        private async Task PerformSlide(IWebDriver driver, IWebElement sliderButton, int targetDistance)
+        {
+            try
+            {
+                var js = (IJavaScriptExecutor)driver;
+
+                // Tìm container cha để dispatch event đúng
+                var puzzlePieces = driver.FindElements(By.CssSelector("img.puzzle-piece"));
+                var sliderBars = driver.FindElements(By.CssSelector("div.slider-bar"));
+
+                if (puzzlePieces.Count == 0 || sliderBars.Count == 0)
+                {
+                    Console.WriteLine("⚠️ Thiếu puzzle/slider-bar — dùng fallback Actions");
+                    await PerformSlideWithActions(driver, sliderButton, targetDistance);
+                    return;
+                }
+
+                var puzzlePiece = puzzlePieces[puzzlePieces.Count - 1];
+                var sliderBar = sliderBars[sliderBars.Count - 1];
+
+                // ═══ DÙNG JS DISPATCH — NHANH HƠN 5-10 LẦN ═══
+                // Mô phỏng chuỗi event: mousedown → mousemove (nhiều bước) → mouseup
+                string jsScript = @"
+            (function(btn, bar, puzzle, distance) {
+                try {
+                    // Lấy tọa độ trung tâm button
+                    var btnRect = btn.getBoundingClientRect();
+                    var barRect = bar.getBoundingClientRect();
+                    var startX = btnRect.left + btnRect.width / 2;
+                    var startY = btnRect.top + btnRect.height / 2;
+
+                    // Số bước di chuyển — càng nhiều càng mượt
+                    var steps = 25;
+                    var stepDist = distance / steps;
+
+                    // Helper tạo event
+                    function fireEvent(el, type, x, y, buttons) {
+                        var ev = new MouseEvent(type, {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window,
+                            clientX: x,
+                            clientY: y,
+                            button: 0,
+                            buttons: buttons
+                        });
+                        el.dispatchEvent(ev);
+                    }
+
+                    // 1. mousedown trên slider button
+                    fireEvent(btn, 'mousedown', startX, startY, 1);
+
+                    // 2. mousemove liên tiếp
+                    var currentX = startX;
+                    var currentY = startY;
+
+                    for (var i = 0; i < steps; i++) {
+                        currentX += stepDist;
+                        // Jitter nhỏ
+                        currentY = startY + (Math.random() * 2 - 1);
+
+                        // Dispatch trên document (vì Angular thường listen ở document/window)
+                        fireEvent(document, 'mousemove', currentX, currentY, 1);
+                        fireEvent(bar, 'mousemove', currentX, currentY, 1);
+                    }
+
+                    // 3. mouseup
+                    fireEvent(document, 'mouseup', currentX, currentY, 0);
+                    fireEvent(btn, 'mouseup', currentX, currentY, 0);
+
+                    return true;
+                } catch(e) {
+                    return 'ERROR: ' + e.message;
+                }
+            })(arguments[0], arguments[1], arguments[2], arguments[3]);
+        ";
+
+                var result = js.ExecuteScript(jsScript, sliderButton, sliderBar, puzzlePiece, targetDistance);
+                Console.WriteLine($"⚡ JS dispatch result: {result}");
+
+                // Vì JS chạy tức thì, đợi 1 nhịp cho Angular cập nhật DOM
+                await Task.Delay(300);
+
+                // Kiểm tra puzzle đã di chuyển chưa
+                try
+                {
+                    var pieces = driver.FindElements(By.CssSelector("img.puzzle-piece"));
+                    if (pieces.Count > 0)
+                    {
+                        string style = pieces[pieces.Count - 1].GetAttribute("style") ?? "";
+                        Console.WriteLine($"🧩 Puzzle sau kéo: {style}");
+
+                        // Nếu puzzle vẫn ở left: 0 → JS không có tác dụng → fallback Actions
+                        if (style.Contains("left: 0px") || style.Contains("left:0px"))
+                        {
+                            Console.WriteLine("⚠️ Puzzle không di chuyển — dùng fallback Actions");
+                            await PerformSlideWithActions(driver, sliderButton, targetDistance);
+                        }
+                    }
+                }
+                catch { }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ JS slide lỗi: {ex.Message} — fallback Actions");
+                await PerformSlideWithActions(driver, sliderButton, targetDistance);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // 🎬 FALLBACK: Kéo bằng Actions (chậm hơn nhưng chắc chắn)
+        // ═══════════════════════════════════════════════════════════════
+        private async Task PerformSlideWithActions(IWebDriver driver, IWebElement sliderButton, int targetDistance)
+        {
+            Actions actions = new Actions(driver);
+            var rnd = new Random();
+
+            actions.MoveToElement(sliderButton).Perform();
+            await Task.Delay(30);
+
+            actions.ClickAndHold(sliderButton).Perform();
+            await Task.Delay(30);
+
+            // Giảm số bước xuống 8-12 để nhanh hơn
+            int steps = 8 + rnd.Next(5);
+            double stepDist = (double)targetDistance / steps;
+
+            for (int i = 0; i < steps; i++)
+            {
+                actions.MoveByOffset((int)Math.Round(stepDist), rnd.Next(-1, 2)).Perform();
+                await Task.Delay(rnd.Next(3, 7));
+            }
+
+            double moved = stepDist * steps;
+            double residual = targetDistance - moved;
+            if (Math.Abs(residual) > 0.5)
+                actions.MoveByOffset((int)Math.Round(residual), 0).Perform();
+
+            await Task.Delay(30);
+            actions.Release().Perform();
+
+            Console.WriteLine($"✅ Fallback Actions: kéo {targetDistance}px với {steps} bước");
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // 🔄 HELPER: ĐẢM BẢO PUZZLE + SLIDER VỀ VỊ TRÍ 0
+        // ═══════════════════════════════════════════════════════════════
+        private async Task EnsurePuzzleAtStart(IWebDriver driver)
+        {
+            try
+            {
+                var js = (IJavaScriptExecutor)driver;
+
+                var pieces = driver.FindElements(By.CssSelector("img.puzzle-piece"));
+                foreach (var p in pieces)
+                {
+                    try
+                    {
+                        js.ExecuteScript("arguments[0].style.left = '0px';", p);
+                    }
+                    catch { }
+                }
+
+                var btns = driver.FindElements(By.CssSelector("div.slider-button"));
+                foreach (var b in btns)
+                {
+                    try
+                    {
+                        js.ExecuteScript("arguments[0].style.left = '0px';", b);
+                    }
+                    catch { }
+                }
+
+                var progresses = driver.FindElements(By.CssSelector("div.slider-progress"));
+                foreach (var pr in progresses)
+                {
+                    try
+                    {
+                        js.ExecuteScript("arguments[0].style.width = '0px';", pr);
+                    }
+                    catch { }
+                }
+
+                Console.WriteLine("✅ Đã reset puzzle + slider về vị trí 0");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ EnsurePuzzleAtStart: {ex.Message}");
+            }
+            await Task.Delay(300);
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // 🔄 HELPER: RESET CAPTCHA + NHẬP LẠI FORM
+        // ═══════════════════════════════════════════════════════════════
+        private async Task ResetCaptchaAndForm(IWebDriver driver, string mst, string mabm)
+        {
+            try
+            {
+                var js = (IJavaScriptExecutor)driver;
+
+                // ═══ BƯỚC 1: Thử click nút reload captcha (không cần refresh trang) ═══
+                var reloadBtns = driver.FindElements(By.CssSelector("span.reload"));
+                bool reloaded = false;
+
+                foreach (var rb in reloadBtns)
+                {
+                    try
+                    {
+                        if (rb.Displayed && rb.Enabled)
+                        {
+                            js.ExecuteScript("arguments[0].click();", rb);
+                            Console.WriteLine("✅ Đã click nút reload captcha");
+                            reloaded = true;
+                            break;
+                        }
+                    }
+                    catch { }
+                }
+
+                if (reloaded)
+                {
+                    // Đợi ảnh captcha mới load xong (src thay đổi)
+                    await Task.Delay(1500);
+
+                    // Đợi puzzle-piece xuất hiện lại
+                    try
+                    {
+                        var waitPuzzle = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+                        waitPuzzle.Until(d =>
+                        {
+                            var pcs = d.FindElements(By.CssSelector("img.puzzle-piece"));
+                            return pcs.Count > 0 ? pcs[0] : null;
+                        });
+                        Console.WriteLine("✅ Puzzle-piece đã render lại sau reload");
+                    }
+                    catch
+                    {
+                        Console.WriteLine("⚠️ Không thấy puzzle-piece sau reload");
+                    }
+
+                    await EnsurePuzzleAtStart(driver);
+                    await Task.Delay(300);
+                    return;
+                }
+
+                // ═══ BƯỚC 2: Không có nút reload → refresh cả trang ═══
+                Console.WriteLine("🔄 Không có nút reload — refresh trang...");
+                driver.Navigate().Refresh();
+
+                // Đợi trang load lại (ít nhất 1 element form xuất hiện)
+                await Task.Delay(2500);
+                await TryDismissPermissionPopups(driver);
+
+                // ═══ BƯỚC 3: Đợi form MST xuất hiện rồi nhập lại ═══
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
+
+                try
+                {
+                    var taxRetry = wait.Until(d =>
+                    {
+                        try
+                        {
+                            var el = d.FindElement(By.CssSelector("input[formcontrolname='supplierTaxCode']"));
+                            return (el != null && el.Displayed) ? el : null;
+                        }
+                        catch { return null; }
+                    });
+                    taxRetry.Clear();
+                    taxRetry.SendKeys(mst);
+
+                    var codeRetry = wait.Until(d =>
+                    {
+                        try
+                        {
+                            var el = d.FindElement(By.CssSelector("input[formcontrolname='reservationCode']"));
+                            return (el != null && el.Displayed) ? el : null;
+                        }
+                        catch { return null; }
+                    });
+                    codeRetry.Clear();
+                    codeRetry.SendKeys(mabm);
+
+                    Console.WriteLine("✅ Đã nhập lại MST + mã sau refresh");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Không nhập lại được form: {ex.Message}");
+                }
+
+                // ═══ BƯỚC 4: ĐỢI CAPTCHA RENDER XONG (đây là fix chính) ═══
+                Console.WriteLine("⏳ Đợi captcha render lại...");
+
+                try
+                {
+                    var waitCaptcha = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
+
+                    // Đợi đồng thời cả puzzle-piece VÀ slider-button xuất hiện
+                    waitCaptcha.Until(d =>
+                    {
+                        var pcs = d.FindElements(By.CssSelector("img.puzzle-piece"));
+                        var btns = d.FindElements(By.CssSelector("div.slider-button"));
+                        var bgs = d.FindElements(By.CssSelector("img.bg-image"));
+
+                        bool ok = pcs.Count > 0 && btns.Count > 0 && bgs.Count > 0;
+
+                        if (ok)
+                        {
+                            // Kiểm tra ảnh bg-image có src hợp lệ (không phải rỗng)
+                            try
+                            {
+                                string src = bgs[bgs.Count - 1].GetAttribute("src");
+                                if (string.IsNullOrEmpty(src) || src.Length < 100)
+                                    return null;
+                            }
+                            catch { return null; }
+                        }
+
+                        return ok ? new object() : null;
+                    });
+
+                    Console.WriteLine("✅ Captcha đã render xong");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Timeout đợi captcha: {ex.Message}");
+                }
+
+                // Đợi thêm 1 nhịp cho Angular ổn định DOM
+                await Task.Delay(500);
+                await EnsurePuzzleAtStart(driver);
+                await Task.Delay(300);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ ResetCaptchaAndForm: {ex.Message}");
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // 🔧 HELPER: ĐÓNG POPUP PERMISSION + OVERRIDE API
+        // ═══════════════════════════════════════════════════════════════
+        private async Task TryDismissPermissionPopups(IWebDriver driver)
+        {
+            try
+            {
+                var js = (IJavaScriptExecutor)driver;
+
+                js.ExecuteScript(@"
+            (function() {
+                try {
+                    window.alert = function() { return true; };
+                    window.confirm = function() { return true; };
+                    window.prompt = function() { return null; };
+                    window.print = function() { };
+                    window.open = function() { return null; };
+                } catch(e) {}
+            })();
+        ");
+
+                js.ExecuteScript(@"
+            (function() {
+                try {
+                    if (navigator.permissions && navigator.permissions.query) {
+                        navigator.permissions.query = function(desc) {
+                            return Promise.resolve({
+                                state: 'denied', onchange: null,
+                                addEventListener: function() {},
+                                removeEventListener: function() {}
+                            });
+                        };
+                    }
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        navigator.mediaDevices.getUserMedia = function() {
+                            return Promise.reject(new Error('Permission denied'));
+                        };
+                    }
+                    if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+                        navigator.mediaDevices.getDisplayMedia = function() {
+                            return Promise.reject(new Error('Permission denied'));
+                        };
+                    }
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition = function(s, e) {
+                            if (e) e({ code: 1, message: 'User denied Geolocation' });
+                        };
+                        navigator.geolocation.watchPosition = function() { return 0; };
+                    }
+                    if (navigator.bluetooth && navigator.bluetooth.requestDevice) {
+                        navigator.bluetooth.requestDevice = function() {
+                            return Promise.reject(new Error('Permission denied'));
+                        };
+                    }
+                    if (navigator.usb && navigator.usb.requestDevice) {
+                        navigator.usb.requestDevice = function() {
+                            return Promise.reject(new Error('Permission denied'));
+                        };
+                    }
+                    if (navigator.serial && navigator.serial.requestPort) {
+                        navigator.serial.requestPort = function() {
+                            return Promise.reject(new Error('Permission denied'));
+                        };
+                    }
+                    if (navigator.hid && navigator.hid.requestDevice) {
+                        navigator.hid.requestDevice = function() {
+                            return Promise.reject(new Error('Permission denied'));
+                        };
+                    }
+                    if (window.showOpenFilePicker) {
+                        window.showOpenFilePicker = function() {
+                            return Promise.reject(new Error('Permission denied'));
+                        };
+                    }
+                    if (window.showSaveFilePicker) {
+                        window.showSaveFilePicker = function() {
+                            return Promise.reject(new Error('Permission denied'));
+                        };
+                    }
+                    if (window.showDirectoryPicker) {
+                        window.showDirectoryPicker = function() {
+                            return Promise.reject(new Error('Permission denied'));
+                        };
+                    }
+                } catch(e) {}
+            })();
+        ");
+
+                try
+                {
+                    var blockBtns = driver.FindElements(By.XPath(
+                        "//button[contains(translate(., 'BLOCK', 'block'), 'block') " +
+                        "or contains(., 'Chặn') or contains(., 'Từ chối') " +
+                        "or contains(., 'Deny') or contains(., 'Cancel')]"));
+                    foreach (var btn in blockBtns)
+                    {
+                        try
+                        {
+                            if (btn.Displayed && btn.Enabled)
+                            {
+                                btn.Click();
+                                await Task.Delay(200);
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+
+                await Task.Delay(200);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ TryDismissPermissionPopups: {ex.Message}");
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // 🎯 TÌM TÂM Ô ĐEN (ADAPTIVE THRESHOLD + CONNECTED COMPONENT)
+        // ═══════════════════════════════════════════════════════════════
+        static int FindHolePosition2(string imagePath)
+        {
+            try
+            {
+                if (!File.Exists(imagePath)) return -1;
+
+                using (Bitmap bmp = new Bitmap(imagePath))
+                {
+                    int width = bmp.Width;
+                    int height = bmp.Height;
+
+                    var rect = new System.Drawing.Rectangle(0, 0, width, height);
+                    BitmapData bmpData = bmp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+
+                    int bytesPerPixel = 3;
+                    int stride = bmpData.Stride;
+                    IntPtr ptr = bmpData.Scan0;
+                    int bytes = Math.Abs(stride) * height;
+                    byte[] rgb = new byte[bytes];
+                    System.Runtime.InteropServices.Marshal.Copy(ptr, rgb, 0, bytes);
+                    bmp.UnlockBits(bmpData);
+
+                    // ═══ GRAYSCALE ═══
+                    byte[] grayMap = new byte[width * height];
+                    for (int y = 0; y < height; y++)
+                    {
+                        int rowOff = y * stride;
+                        for (int x = 0; x < width; x++)
+                        {
+                            int idx = rowOff + x * bytesPerPixel;
+                            byte b = rgb[idx];
+                            byte g = rgb[idx + 1];
+                            byte r = rgb[idx + 2];
+                            grayMap[y * width + x] = (byte)((r * 299 + g * 587 + b * 114) / 1000);
+                        }
+                    }
+
+                    // ═══ NGƯỠNG TỐI RẤT THẤP (ô đen solid) ═══
+                    // Ô đen captcha Viettel thường có gray < 30-40
+                    // Các vùng tối tự nhiên (núi, cây) thường > 50
+                    int[] thresholds = { 25, 40, 55 };
+
+                    var candidates = new List<(int cx, int cy, int w, int h, double density, int thr)>();
+
+                    foreach (int thr in thresholds)
+                    {
+                        var comps = FindComponents(grayMap, width, height, thr);
+                        foreach (var c in comps)
+                        {
+                            candidates.Add((c.cx, c.cy, c.w, c.h, c.density, thr));
+                        }
+                    }
+
+                    if (candidates.Count == 0)
+                    {
+                        Console.WriteLine("⚠️ Không có candidate nào");
+                        return -1;
+                    }
+
+                    // ═══ KÍCH THƯỚC Ô ĐEN KỲ VỌNG ═══
+                    // Captcha Viettel: ô đen ~ 1/7 chiều rộng ảnh
+                    int expectedSize = width / 7;
+                    Console.WriteLine($"📐 Ảnh {width}x{height}, expectedSize={expectedSize}px");
+
+                    // ═══ LỌC CHẶT ═══
+                    var valid = new List<(int cx, double score, string reason)>();
+
+                    foreach (var c in candidates)
+                    {
+                        int compW = c.w;
+                        int compH = c.h;
+
+                        // 1. PHẢI VUÔNG ĐỀU (chênh < 25%)
+                        double ratio = (double)compW / compH;
+                        if (ratio < 0.75 || ratio > 1.33)
+                            continue;
+
+                        // 2. KÍCH THƯỚC PHẢI KHỚP CHÍNH XÁC (0.7x → 1.3x expectedSize)
+                        if (compW < expectedSize * 0.7 || compW > expectedSize * 1.3)
+                            continue;
+                        if (compH < expectedSize * 0.7 || compH > expectedSize * 1.3)
+                            continue;
+
+                        // 3. DENSITY PHẢI RẤT CAO (>0.85 - ô đen đặc)
+                        if (c.density < 0.85)
+                            continue;
+
+                        // 4. KHÔNG CHẠM VIỀN (cách >10% mỗi cạnh)
+                        if (c.cx < width * 0.10 || c.cx > width * 0.90)
+                            continue;
+                        if (c.cy < height * 0.10 || c.cy > height * 0.90)
+                            continue;
+
+                        // 5. TÂM Y PHẢI GẦN GIỮA (ô đen luôn ở dải giữa dọc)
+                        double dyFromCenter = Math.Abs(c.cy - height / 2.0) / height;
+                        if (dyFromCenter > 0.30)
+                            continue;
+
+                        // ═══ TÍNH ĐIỂM ═══
+                        double sizeScore = 1.0 - Math.Abs(compW - expectedSize) / (double)expectedSize;
+                        double centerYScore = 1.0 - dyFromCenter;
+                        double densityScore = c.density;
+
+                        double score = sizeScore * 5.0 + centerYScore * 3.0 + densityScore * 2.0;
+
+                        valid.Add((c.cx, score, $"size={compW}x{compH} cy={c.cy} density={c.density:F2} thr={c.thr}"));
+                    }
+
+                    if (valid.Count == 0)
+                    {
+                        Console.WriteLine("⚠️ Không candidate nào qua lọc chặt — fallback");
+                        return FallbackColumnScan(grayMap, width, height, 40);
+                    }
+
+                    // ═══ SẮP XẾP + LOG ═══
+                    valid.Sort((a, b) => b.score.CompareTo(a.score));
+
+                    Console.WriteLine($"📊 Top {Math.Min(5, valid.Count)} candidates:");
+                    for (int i = 0; i < Math.Min(5, valid.Count); i++)
+                    {
+                        Console.WriteLine($"   #{i + 1}: x={valid[i].cx}, score={valid[i].score:F2}, {valid[i].reason}");
+                    }
+
+                    // ═══ CHỌN ═══
+                    // Nếu top 1 vượt trội → chọn luôn
+                    if (valid.Count >= 2 && valid[0].score > valid[1].score * 1.2)
+                    {
+                        Console.WriteLine($"🎯 Chọn top 1 (vượt trội): x={valid[0].cx}");
+                        return valid[0].cx;
+                    }
+
+                    // Nếu top 1+2 gần nhau (< 20px) → trung bình
+                    if (valid.Count >= 2 && Math.Abs(valid[0].cx - valid[1].cx) < 20)
+                    {
+                        int avgX = (valid[0].cx + valid[1].cx) / 2;
+                        Console.WriteLine($"🎯 Top 1+2 gần nhau → trung bình: x={avgX}");
+                        return avgX;
+                    }
+
+                    Console.WriteLine($"🎯 Chọn top 1: x={valid[0].cx}");
+                    return valid[0].cx;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi FindHolePosition2: {ex.Message}");
+                return -1;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // 🔍 TÌM CONNECTED COMPONENTS
+        // ═══════════════════════════════════════════════════════════════
+        static List<(int cx, int cy, int w, int h, double density)> FindComponents(
+            byte[] grayMap, int width, int height, int threshold)
+        {
+            var result = new List<(int cx, int cy, int w, int h, double density)>();
+            int totalPixels = width * height;
+            bool[] visited = new bool[totalPixels];
+
+            int[] dx = { -1, 1, 0, 0 };
+            int[] dy = { 0, 0, -1, 1 };
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int p = y * width + x;
+                    if (visited[p] || grayMap[p] > threshold) continue;
+
+                    int area = 0;
+                    int minX = int.MaxValue, maxX = int.MinValue;
+                    int minY = int.MaxValue, maxY = int.MinValue;
+
+                    var queue = new Queue<int>();
+                    queue.Enqueue(p);
+                    visited[p] = true;
+
+                    while (queue.Count > 0)
+                    {
+                        int cur = queue.Dequeue();
+                        int cy = cur / width;
+                        int cx = cur % width;
+
+                        area++;
+                        if (cx < minX) minX = cx;
+                        if (cx > maxX) maxX = cx;
+                        if (cy < minY) minY = cy;
+                        if (cy > maxY) maxY = cy;
+
+                        for (int d = 0; d < 4; d++)
+                        {
+                            int nx = cx + dx[d];
+                            int ny = cy + dy[d];
+                            if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+                            int np = ny * width + nx;
+                            if (visited[np] || grayMap[np] > threshold) continue;
+                            visited[np] = true;
+                            queue.Enqueue(np);
+                        }
+                    }
+
+                    if (area < 100) continue;
+                    if (area > totalPixels * 0.4) continue;
+
+                    int compW = maxX - minX + 1;
+                    int compH = maxY - minY + 1;
+                    int compArea = compW * compH;
+                    double density = (double)area / compArea;
+
+                    if (density < 0.5) continue;
+
+                    int cxComp = (minX + maxX) / 2;
+                    int cyComp = (minY + maxY) / 2;
+
+                    result.Add((cxComp, cyComp, compW, compH, density));
+                }
+            }
+
+            return result;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // 🔍 HELPER: TÌM CÁC CONNECTED COMPONENT VỚI 1 NGƯỠNG
+        // ═══════════════════════════════════════════════════════════════
+        static List<(int cx, int cy, int w, int h, double score)> FindComponents(
+            byte[] grayMap, int width, int height, int stride, int bytesPerPixel, int threshold)
+        {
+            var result = new List<(int cx, int cy, int w, int h, double score)>();
+            int totalPixels = width * height;
+            bool[] visited = new bool[totalPixels];
+
+            int[] dx = { -1, 1, 0, 0 };
+            int[] dy = { 0, 0, -1, 1 };
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int p = y * width + x;
+                    if (visited[p] || grayMap[p] > threshold) continue;
+
+                    int area = 0;
+                    int minX = int.MaxValue, maxX = int.MinValue;
+                    int minY = int.MaxValue, maxY = int.MinValue;
+
+                    var queue = new Queue<int>();
+                    queue.Enqueue(p);
+                    visited[p] = true;
+
+                    while (queue.Count > 0)
+                    {
+                        int cur = queue.Dequeue();
+                        int cy = cur / width;
+                        int cx = cur % width;
+
+                        area++;
+                        if (cx < minX) minX = cx;
+                        if (cx > maxX) maxX = cx;
+                        if (cy < minY) minY = cy;
+                        if (cy > maxY) maxY = cy;
+
+                        for (int d = 0; d < 4; d++)
+                        {
+                            int nx = cx + dx[d];
+                            int ny = cy + dy[d];
+                            if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+                            int np = ny * width + nx;
+                            if (visited[np] || grayMap[np] > threshold) continue;
+                            visited[np] = true;
+                            queue.Enqueue(np);
+                        }
+                    }
+
+                    // Lọc sơ bộ
+                    if (area < 100) continue;
+                    if (area > totalPixels * 0.4) continue;
+
+                    int compW = maxX - minX + 1;
+                    int compH = maxY - minY + 1;
+                    int compArea = compW * compH;
+                    double density = (double)area / compArea;
+
+                    if (density < 0.5) continue;
+
+                    int cxComp = (minX + maxX) / 2;
+                    int cyComp = (minY + maxY) / 2;
+
+                    result.Add((cxComp, cyComp, compW, compH, density));
+                }
+            }
+
+            return result;
+        }
+
+        static int FallbackColumnScan(byte[] grayMap, int width, int height, int threshold)
+        {
+            int marginX = (int)(width * 0.15);
+            int marginY = (int)(height * 0.15);
+
+            int[] colDensity = new int[width];
+            for (int y = marginY; y < height - marginY; y++)
+            {
+                int rowOff = y * width;
+                for (int x = marginX; x < width - marginX; x++)
+                {
+                    if (grayMap[rowOff + x] <= threshold)
+                        colDensity[x]++;
+                }
+            }
+
+            int bestCol = -1, bestVal = 0;
+            for (int x = marginX; x < width - marginX; x++)
+            {
+                if (colDensity[x] > bestVal)
+                {
+                    bestVal = colDensity[x];
+                    bestCol = x;
+                }
+            }
+
+            if (bestCol < 0 || bestVal < height * 0.05)
+            {
+                Console.WriteLine("⚠️ Fallback cũng thất bại");
+                return -1;
+            }
+
+            Console.WriteLine($"🎯 Fallback column: x={bestCol}, density={bestVal}");
+            return bestCol;
+        }
+
         /// <summary>
         /// Check captcha thành công — đa tiêu chí
         /// </summary>
@@ -45022,104 +46050,182 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         {
             try
             {
-                // Check 1: Button biến mất
-                var sliderBtns = driver.FindElements(By.CssSelector("div.slider-button"));
-                if (sliderBtns.Count == 0)
+                var js = (IJavaScriptExecutor)driver;
+
+                // ═══════════════════════════════════════════════════════
+                // 1. KIỂM TRA THÔNG BÁO LỖI (dấu hiệu SAI rõ nhất)
+                // ═══════════════════════════════════════════════════════
+                string[] errorSelectors = new[]
                 {
-                    Console.WriteLine("   ✅ Check 1: Button biến mất");
-                    return true;
-                }
+            "div.error-msg",
+            "div.ant-message-error",
+            "div.ant-notification-notice-error",
+            "div.toast-error",
+            "div.alert-danger",
+            "jhi-error-messages div.error-msg",
+            ".ant-form-item-explain-error"
+        };
 
-                if (!sliderBtns[0].Displayed)
+                string[] errorKeywords = new[]
                 {
-                    Console.WriteLine("   ✅ Check 1b: Button không hiển thị");
-                    return true;
-                }
+            "captcha không đúng",
+            "captcha sai",
+            "sai captcha",
+            "vui lòng xác thực lại",
+            "xác thực captcha",
+            "vui lòng kéo",
+            "kéo chính xác",
+            "captcha không chính xác",
+            "không đúng, vui lòng thử lại",
+            "sai, vui lòng thử lại"
+        };
 
-                // Check 2: Class success
-                string btnClass = sliderBtns[0].GetAttribute("class") ?? "";
-                string btnText = sliderBtns[0].Text?.Trim() ?? "";
-
-                if (btnClass.IndexOf("success", StringComparison.OrdinalIgnoreCase) >= 0
-                    || btnClass.IndexOf("verified", StringComparison.OrdinalIgnoreCase) >= 0
-                    || btnClass.IndexOf("complete", StringComparison.OrdinalIgnoreCase) >= 0
-                    || btnClass.IndexOf("is-success", StringComparison.OrdinalIgnoreCase) >= 0
-                    || btnText.Contains("thành công")
-                    || btnText.Contains("xác nhận")
-                    || btnText.Contains("✓"))
+                foreach (var sel in errorSelectors)
                 {
-                    Console.WriteLine($"   ✅ Check 2: class='{btnClass}', text='{btnText}'");
-                    return true;
-                }
-
-                // Check 3: Progress bar 100%
-                try
-                {
-                    var progresses = driver.FindElements(By.CssSelector(
-                        "div.slider-progress, div.slider-move, div.slider-track, div.slider-indicator"));
-
-                    foreach (var p in progresses)
+                    try
                     {
-                        try
+                        var errors = driver.FindElements(By.CssSelector(sel));
+                        foreach (var err in errors)
                         {
-                            if (!p.Displayed) continue;
-                            string style = p.GetAttribute("style") ?? "";
+                            if (!err.Displayed) continue;
+                            string txt = (err.Text ?? "").ToLower();
 
-                            if (style.IndexOf("100%", StringComparison.OrdinalIgnoreCase) >= 0
-                                || style.IndexOf("scaleX(1)", StringComparison.OrdinalIgnoreCase) >= 0
-                                || style.IndexOf("translateX(100%", StringComparison.OrdinalIgnoreCase) >= 0
-                                || style.IndexOf("translate3d(100%", StringComparison.OrdinalIgnoreCase) >= 0)
+                            // Bỏ qua thông báo "Vui lòng xác thực captcha" của form validation gốc
+                            // (chỉ là validate form, không phải captcha sai)
+                            if (txt.Contains("vui lòng xác thực captcha") && !txt.Contains("lại"))
+                                continue;
+
+                            foreach (var kw in errorKeywords)
                             {
-                                Console.WriteLine($"   ✅ Check 3: progress='{style}'");
-                                return true;
+                                if (txt.Contains(kw))
+                                {
+                                    Console.WriteLine($"❌ Phát hiện lỗi captcha: '{err.Text}'");
+                                    return false;
+                                }
                             }
                         }
-                        catch { }
+                    }
+                    catch { }
+                }
+
+                // ═══════════════════════════════════════════════════════
+                // 2. KIỂM TRA TOAST/MESSAGE TOÀN CỤC (Ant Design notification)
+                // ═══════════════════════════════════════════════════════
+                try
+                {
+                    var messages = driver.FindElements(By.CssSelector(
+                        ".ant-message-notice-content, .ant-notification-notice-message, .ant-notification-notice-description"));
+                    foreach (var msg in messages)
+                    {
+                        if (!msg.Displayed) continue;
+                        string txt = (msg.Text ?? "").ToLower();
+                        foreach (var kw in errorKeywords)
+                        {
+                            if (txt.Contains(kw))
+                            {
+                                Console.WriteLine($"❌ Toast lỗi: '{msg.Text}'");
+                                return false;
+                            }
+                        }
                     }
                 }
                 catch { }
 
-                // Check 4: Text success
+                // ═══════════════════════════════════════════════════════
+                // 3. KIỂM TRA SLIDER/PUZZLE CÓ RESET VỀ 0 KHÔNG
+                //    Nếu sau khi kéo xong mà puzzle/slider về 0 → SAI
+                // ═══════════════════════════════════════════════════════
                 try
                 {
-                    var texts = driver.FindElements(By.XPath(
-                        "//*[contains(text(),'Xác nhận thành công') or contains(text(),'xác thực thành công') or contains(text(),'Verified')]"));
+                    var pieces = driver.FindElements(By.CssSelector("img.puzzle-piece"));
+                    var btns = driver.FindElements(By.CssSelector("div.slider-button"));
 
-                    foreach (var el in texts)
+                    // Nếu captcha biến mất hoàn toàn → có thể đã ĐÚNG
+                    if (pieces.Count == 0 && btns.Count == 0)
                     {
-                        try
-                        {
-                            if (el.Displayed && !string.IsNullOrEmpty(el.Text))
-                            {
-                                Console.WriteLine($"   ✅ Check 4: text='{el.Text}'");
-                                return true;
-                            }
-                        }
-                        catch { }
-                    }
-                }
-                catch { }
-
-                // Check 5: Nút Tìm kiếm enabled
-                try
-                {
-                    var searchBtn = driver.FindElements(By.XPath(
-                        "//button[@type='submit' and (contains(., 'Tìm kiếm') or .//span[contains(text(), 'Tìm kiếm')])]"));
-
-                    if (searchBtn.Count > 0 && searchBtn[0].Enabled)
-                    {
-                        Console.WriteLine("   ✅ Check 5: Nút Tìm kiếm enabled");
+                        Console.WriteLine("✅ Captcha đã biến mất — coi như đúng");
                         return true;
                     }
+
+                    // Kiểm tra left của puzzle-piece
+                    if (pieces.Count > 0)
+                    {
+                        var style = pieces[pieces.Count - 1].GetAttribute("style") ?? "";
+                        // Nếu puzzle quay về left: 0 sau khi kéo → SAI
+                        if (style.Contains("left: 0px") || style.Contains("left:0px"))
+                        {
+                            // Có thể vẫn đang trong quá trình kéo → đợi thêm chút
+                            System.Threading.Thread.Sleep(500);
+                            style = pieces[pieces.Count - 1].GetAttribute("style") ?? "";
+                            if (style.Contains("left: 0px") || style.Contains("left:0px"))
+                            {
+                                Console.WriteLine("❌ Puzzle về 0 — captcha sai");
+                                return false;
+                            }
+                        }
+                    }
                 }
                 catch { }
 
-                Console.WriteLine("   ⏭ Chưa phát hiện thành công");
-                return false;
+                // ═══════════════════════════════════════════════════════
+                // 4. KIỂM TRA INPUT recaptcha CÓ VALUE KHÔNG (dấu hiệu ĐÚNG)
+                // ═══════════════════════════════════════════════════════
+                try
+                {
+                    var captchaInput = driver.FindElements(By.CssSelector("input[formcontrolname='recaptcha']"));
+                    if (captchaInput.Count > 0)
+                    {
+                        string val = captchaInput[0].GetAttribute("value") ?? "";
+                        string cls = captchaInput[0].GetAttribute("class") ?? "";
+
+                        if (!string.IsNullOrEmpty(val))
+                        {
+                            Console.WriteLine($"✅ recaptcha có value='{val}' — ĐÚNG");
+                            return true;
+                        }
+
+                        if (cls.Contains("ng-valid") && !cls.Contains("ng-invalid"))
+                        {
+                            Console.WriteLine("✅ recaptcha ng-valid — ĐÚNG");
+                            return true;
+                        }
+
+                        // Vẫn còn ng-invalid → có thể SAI, nhưng chưa chắc
+                        // (vì Angular đôi khi chưa cập nhật)
+                    }
+                }
+                catch { }
+
+                // ═══════════════════════════════════════════════════════
+                // 5. KIỂM TRA class slider-bar có "success" không
+                // ═══════════════════════════════════════════════════════
+                try
+                {
+                    var successBar = driver.FindElements(By.CssSelector(
+                        "div.slider-bar.success, div.captcha-container.success, .captcha-success"));
+                    if (successBar.Count > 0)
+                    {
+                        foreach (var el in successBar)
+                        {
+                            if (el.Displayed)
+                            {
+                                Console.WriteLine("✅ Có class success — ĐÚNG");
+                                return true;
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                // ═══════════════════════════════════════════════════════
+                // 6. FALLBACK: Không có lỗi + puzzle không về 0 → coi như ĐÚNG
+                // ═══════════════════════════════════════════════════════
+                Console.WriteLine("⚠️ Không xác định rõ — mặc định coi như ĐÚNG");
+                return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"   ❌ Lỗi CheckCaptchaSuccess: {ex.Message}");
+                Console.WriteLine($"❌ Lỗi CheckCaptchaSuccess: {ex.Message}");
                 return false;
             }
         }
@@ -45408,7 +46514,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         static int FindHolePosition(string imagePath)
         {
             try
-            {
+            { 
                 Image<Bgr, byte> img = new Image<Bgr, byte>(imagePath);
                 Image<Gray, byte> gray = img.Convert<Gray, byte>();
 

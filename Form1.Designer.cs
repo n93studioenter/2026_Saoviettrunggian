@@ -92,6 +92,7 @@
             this.gridView3 = new DevExpress.XtraGrid.Views.Grid.GridView();
             this.colIndex2 = new DevExpress.XtraGrid.Columns.GridColumn();
             this.gridColumn2 = new DevExpress.XtraGrid.Columns.GridColumn();
+            this.colNCCRas = new DevExpress.XtraGrid.Columns.GridColumn();
             this.gridColumn3 = new DevExpress.XtraGrid.Columns.GridColumn();
             this.colNCCra = new DevExpress.XtraGrid.Columns.GridColumn();
             this.gridColumn4 = new DevExpress.XtraGrid.Columns.GridColumn();
@@ -1059,6 +1060,7 @@
             this.gridView3.Columns.AddRange(new DevExpress.XtraGrid.Columns.GridColumn[] {
             this.colIndex2,
             this.gridColumn2,
+            this.colNCCRas,
             this.gridColumn3,
             this.colNCCra,
             this.gridColumn4,
@@ -1119,6 +1121,15 @@
             this.gridColumn2.VisibleIndex = 1;
             this.gridColumn2.Width = 76;
             // 
+            // colNCCRas
+            // 
+            this.colNCCRas.Caption = "NCC";
+            this.colNCCRas.FieldName = "NCC";
+            this.colNCCRas.Name = "colNCCRas";
+            this.colNCCRas.OptionsColumn.AllowEdit = false;
+            this.colNCCRas.Visible = true;
+            this.colNCCRas.VisibleIndex = 2;
+            // 
             // gridColumn3
             // 
             this.gridColumn3.Caption = "Ngày lập";
@@ -1127,7 +1138,7 @@
             this.gridColumn3.Name = "gridColumn3";
             this.gridColumn3.OptionsColumn.AllowEdit = false;
             this.gridColumn3.Visible = true;
-            this.gridColumn3.VisibleIndex = 2;
+            this.gridColumn3.VisibleIndex = 3;
             this.gridColumn3.Width = 60;
             // 
             // colNCCra
@@ -1143,7 +1154,7 @@
             this.gridColumn4.MinWidth = 23;
             this.gridColumn4.Name = "gridColumn4";
             this.gridColumn4.Visible = true;
-            this.gridColumn4.VisibleIndex = 3;
+            this.gridColumn4.VisibleIndex = 4;
             this.gridColumn4.Width = 268;
             // 
             // colMST2
@@ -1153,7 +1164,7 @@
             this.colMST2.MinWidth = 23;
             this.colMST2.Name = "colMST2";
             this.colMST2.Visible = true;
-            this.colMST2.VisibleIndex = 4;
+            this.colMST2.VisibleIndex = 5;
             this.colMST2.Width = 131;
             // 
             // gridColumn5
@@ -1163,7 +1174,7 @@
             this.gridColumn5.MinWidth = 23;
             this.gridColumn5.Name = "gridColumn5";
             this.gridColumn5.Visible = true;
-            this.gridColumn5.VisibleIndex = 10;
+            this.gridColumn5.VisibleIndex = 11;
             this.gridColumn5.Width = 222;
             // 
             // gridColumn6
@@ -1177,7 +1188,7 @@
             this.gridColumn6.MinWidth = 23;
             this.gridColumn6.Name = "gridColumn6";
             this.gridColumn6.Visible = true;
-            this.gridColumn6.VisibleIndex = 9;
+            this.gridColumn6.VisibleIndex = 10;
             this.gridColumn6.Width = 89;
             // 
             // gridColumn7
@@ -1190,7 +1201,7 @@
             this.gridColumn7.MinWidth = 23;
             this.gridColumn7.Name = "gridColumn7";
             this.gridColumn7.Visible = true;
-            this.gridColumn7.VisibleIndex = 8;
+            this.gridColumn7.VisibleIndex = 9;
             this.gridColumn7.Width = 66;
             // 
             // col2Vat
@@ -1200,7 +1211,7 @@
             this.col2Vat.MinWidth = 23;
             this.col2Vat.Name = "col2Vat";
             this.col2Vat.Visible = true;
-            this.col2Vat.VisibleIndex = 6;
+            this.col2Vat.VisibleIndex = 7;
             this.col2Vat.Width = 43;
             // 
             // col2Vat2
@@ -1210,7 +1221,7 @@
             this.col2Vat2.MinWidth = 23;
             this.col2Vat2.Name = "col2Vat2";
             this.col2Vat2.Visible = true;
-            this.col2Vat2.VisibleIndex = 7;
+            this.col2Vat2.VisibleIndex = 8;
             this.col2Vat2.Width = 42;
             // 
             // gridColumn8
@@ -1223,7 +1234,7 @@
             this.gridColumn8.Name = "gridColumn8";
             this.gridColumn8.OptionsColumn.AllowEdit = false;
             this.gridColumn8.Visible = true;
-            this.gridColumn8.VisibleIndex = 5;
+            this.gridColumn8.VisibleIndex = 6;
             this.gridColumn8.Width = 60;
             // 
             // gridColumn9
@@ -1235,7 +1246,7 @@
             this.gridColumn9.OptionsColumn.AllowEdit = false;
             this.gridColumn9.OptionsColumn.AllowSort = DevExpress.Utils.DefaultBoolean.False;
             this.gridColumn9.Visible = true;
-            this.gridColumn9.VisibleIndex = 12;
+            this.gridColumn9.VisibleIndex = 13;
             this.gridColumn9.Width = 72;
             // 
             // gridColumn1
@@ -1286,7 +1297,7 @@
             this.colNgaytaoRa.FieldName = "Ngaytao";
             this.colNgaytaoRa.Name = "colNgaytaoRa";
             this.colNgaytaoRa.Visible = true;
-            this.colNgaytaoRa.VisibleIndex = 11;
+            this.colNgaytaoRa.VisibleIndex = 12;
             this.colNgaytaoRa.Width = 50;
             // 
             // colKhmshdonra
@@ -1813,7 +1824,7 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 43.88753F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 323F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 119F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 77F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 80F));
             this.tableLayoutPanel1.Controls.Add(this.panelControl12, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl11, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl10, 0, 0);
@@ -1841,7 +1852,7 @@
             this.panelControl12.Controls.Add(this.radVbDauvao1);
             this.panelControl12.Controls.Add(this.btnClearNganhang);
             this.panelControl12.Controls.Add(this.btnLocdulieuNganhang);
-            this.panelControl12.Location = new System.Drawing.Point(756, 2);
+            this.panelControl12.Location = new System.Drawing.Point(753, 2);
             this.panelControl12.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl12.Name = "panelControl12";
             this.panelControl12.Size = new System.Drawing.Size(316, 138);
@@ -1990,10 +2001,10 @@
             this.panelControl11.Controls.Add(this.btnOpenFolder);
             this.panelControl11.Controls.Add(this.btnRefresh);
             this.panelControl11.Controls.Add(this.btnimport);
-            this.panelControl11.Location = new System.Drawing.Point(425, 2);
+            this.panelControl11.Location = new System.Drawing.Point(423, 2);
             this.panelControl11.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl11.Name = "panelControl11";
-            this.panelControl11.Size = new System.Drawing.Size(327, 138);
+            this.panelControl11.Size = new System.Drawing.Size(326, 138);
             this.panelControl11.TabIndex = 4;
             // 
             // simpleButton5
@@ -2041,7 +2052,7 @@
             this.panelControl8.Location = new System.Drawing.Point(4, 73);
             this.panelControl8.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl8.Name = "panelControl8";
-            this.panelControl8.Size = new System.Drawing.Size(319, 34);
+            this.panelControl8.Size = new System.Drawing.Size(318, 34);
             this.panelControl8.TabIndex = 35;
             // 
             // lblImporttdra
@@ -2193,7 +2204,7 @@
             this.panelControl10.Location = new System.Drawing.Point(2, 2);
             this.panelControl10.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl10.Name = "panelControl10";
-            this.panelControl10.Size = new System.Drawing.Size(419, 133);
+            this.panelControl10.Size = new System.Drawing.Size(417, 133);
             this.panelControl10.TabIndex = 3;
             // 
             // checkEdit2
@@ -2423,7 +2434,7 @@
             // 
             this.pictureEdit2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureEdit2.EditValue = ((object)(resources.GetObject("pictureEdit2.EditValue")));
-            this.pictureEdit2.Location = new System.Drawing.Point(1079, 2);
+            this.pictureEdit2.Location = new System.Drawing.Point(1076, 2);
             this.pictureEdit2.Margin = new System.Windows.Forms.Padding(2);
             this.pictureEdit2.Name = "pictureEdit2";
             this.pictureEdit2.Properties.ShowCameraMenuItem = DevExpress.XtraEditors.Controls.CameraMenuItemVisibility.Auto;
@@ -5015,5 +5026,6 @@
         private System.Windows.Forms.ToolTip toolTip1;
         private DevExpress.XtraGrid.Columns.GridColumn colKHHDon;
         private DevExpress.XtraEditors.SimpleButton btnClauseAi;
+        private DevExpress.XtraGrid.Columns.GridColumn colNCCRas;
     }
 }

@@ -76,6 +76,80 @@ namespace SaovietTax.DTO
             }
             return "";
         }
+        public static string OcrCaptcha(byte[] captchaBytes)
+        {
+            try
+            {
+                string baseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PythonOCR");
+                string requestFile = Path.Combine(baseDir, "request.txt");
+                string resultFile = Path.Combine(baseDir, "result.txt");
+                string readyFile = Path.Combine(baseDir, "ready.flag");
+                string exeFile = Path.Combine(baseDir, "ocr_service.exe");   // ← khớp tên exe
+
+                if (!Directory.Exists(baseDir))
+                    Directory.CreateDirectory(baseDir);
+
+                // ✅ 1. Kiểm tra service đang chạy
+                if (Process.GetProcessesByName("ocr_service").Length == 0)   // ← tên process
+                {
+                    if (!File.Exists(exeFile))
+                    {
+                        Console.WriteLine($"❌ Không tìm thấy: {exeFile}");
+                        return "";
+                    }
+
+                    if (File.Exists(readyFile)) File.Delete(readyFile);
+
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = exeFile,
+                        WorkingDirectory = baseDir,
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        UseShellExecute = false
+                    });
+
+                    // ✅ 2. Chờ ready.flag
+                    DateTime start = DateTime.Now;
+                    while (!File.Exists(readyFile) && (DateTime.Now - start).TotalSeconds < 60)
+                        System.Threading.Thread.Sleep(100);
+
+                    if (!File.Exists(readyFile))
+                    {
+                        Console.WriteLine("❌ OCR service không khởi động được sau 60s");
+                        return "";
+                    }
+                }
+
+                // ✅ 3. Xóa kết quả cũ + request cũ
+                if (File.Exists(resultFile)) File.Delete(resultFile);
+                if (File.Exists(requestFile)) File.Delete(requestFile);     // ← THÊM
+
+                // ✅ 4. Ghi request
+                string base64Data = "data:image/png;base64," + Convert.ToBase64String(captchaBytes);
+                File.WriteAllText(requestFile, base64Data);
+
+                // ✅ 5. Chờ kết quả (tối đa 5s)
+                DateTime waitStart = DateTime.Now;
+                while ((DateTime.Now - waitStart).TotalSeconds < 5)
+                {
+                    if (File.Exists(resultFile))
+                    {
+                        string result = File.ReadAllText(resultFile).Trim();
+                        if (!string.IsNullOrEmpty(result))
+                            return result;
+                    }
+                    System.Threading.Thread.Sleep(30);
+                }
+
+                Console.WriteLine("⚠️ Timeout chờ OCR");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ Lỗi OCR: " + ex.Message);
+            }
+            return "";
+        }
         public static void ReloadCaptcha(IWebDriver driver, WebDriverWait wait)
         {
             try

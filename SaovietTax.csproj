@@ -22,7 +22,7 @@
       <Version>2.0.0</Version>
     </PackageReference>
     <PackageReference Include="Emgu.CV">
-      <Version>4.13.0.5924</Version>
+      <Version>4.1.0.3420</Version>
     </PackageReference>
     <PackageReference Include="Emgu.CV.runtime.windows">
       <Version>4.13.0.5924</Version>
