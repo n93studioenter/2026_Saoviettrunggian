@@ -16,19 +16,16 @@ namespace SaovietTax.DTO
         {
             try
             {
-                // Thư mục PythonOCR nằm chung trong thư mục bin\Debug (hoặc bin\Release) của ứng dụng C#
                 string baseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PythonOCR");
                 string requestFile = Path.Combine(baseDir, "request.txt");
                 string resultFile = Path.Combine(baseDir, "result.txt");
-                string scriptFile = Path.Combine(baseDir, "ocr_service.py"); // 👈 Chuyển sang chạy file .py trực tiếp
+                string scriptFile = Path.Combine(baseDir, "ocr_service.py");
 
-                // Đảm bảo thư mục PythonOCR luôn tồn tại
                 if (!Directory.Exists(baseDir))
                 {
                     Directory.CreateDirectory(baseDir);
                 }
 
-                // 👉 TỰ ĐỘNG KHỞI ĐỘNG PYTHON NẾU CHƯA CHẠY HOẶC BỊ TẮT
                 var processes = Process.GetProcessesByName("python");
                 if (processes.Length == 0 && File.Exists(scriptFile))
                 {
@@ -37,25 +34,22 @@ namespace SaovietTax.DTO
                         FileName = "python",
                         Arguments = $"\"{scriptFile}\"",
                         WorkingDirectory = baseDir,
-                        CreateNoWindow = true,          // 👈 Ẩn hoàn toàn cửa sổ CMD
-                        WindowStyle = ProcessWindowStyle.Hidden, // 👈 Ẩn cửa sổ
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden,
                         UseShellExecute = false
                     };
                     Process.Start(startInfo);
-                    System.Threading.Thread.Sleep(2000); // 👈 Tăng thời gian chờ lên 2 giây để Python kịp load mô hình ddddocr
+                    System.Threading.Thread.Sleep(2000);
                 }
 
-                // Xóa file kết quả cũ nếu có để tránh đọc nhầm kết quả của lần trước
                 if (File.Exists(resultFile))
                 {
                     File.Delete(resultFile);
                 }
 
-                // Chuyển mảng byte ảnh thành định dạng Base64 và ghi vào file request.txt
                 string base64Data = "data:image/png;base64," + Convert.ToBase64String(captchaBytes);
                 File.WriteAllText(requestFile, base64Data);
 
-                // Vòng lặp chờ kết quả từ Python Service (Timeout tối đa 3 giây)
                 DateTime start = DateTime.Now;
                 while ((DateTime.Now - start).TotalSeconds < 3)
                 {
@@ -67,7 +61,7 @@ namespace SaovietTax.DTO
                             return result;
                         }
                     }
-                    System.Threading.Thread.Sleep(30); // Kiểm tra lại sau mỗi 30ms
+                    System.Threading.Thread.Sleep(30);
                 }
             }
             catch (Exception ex)
@@ -76,7 +70,37 @@ namespace SaovietTax.DTO
             }
             return "";
         }
+
+        /// <summary>
+        /// OCR CAPTCHA với retry nội bộ 3 lần (dùng ddddocr qua service Python)
+        /// </summary>
         public static string OcrCaptcha(byte[] captchaBytes)
+        {
+            // ═══ THỬ TỐI ĐA 3 LẦN (ddddocr có random nhẹ, đôi khi lần 2 mới đúng) ═══
+            for (int attempt = 1; attempt <= 3; attempt++)
+            {
+                string result = OcrCaptchaOnce(captchaBytes);
+
+                if (IsValidCaptcha(result))
+                {
+                    Console.WriteLine($"✅ OCR lần {attempt}: '{result}'");
+                    return result;
+                }
+
+                Console.WriteLine($"⚠️ OCR lần {attempt} không hợp lệ: '{result}'");
+                System.Threading.Thread.Sleep(100);
+            }
+
+            // Trả về kết quả cuối cùng dù không hợp lệ (để caller biết)
+            string lastResult = OcrCaptchaOnce(captchaBytes);
+            Console.WriteLine($"⚠️ OCR 3 lần đều fail — trả về lần cuối: '{lastResult}'");
+            return lastResult;
+        }
+
+        /// <summary>
+        /// Gọi service Python OCR 1 lần (không retry)
+        /// </summary>
+        private static string OcrCaptchaOnce(byte[] captchaBytes)
         {
             try
             {
@@ -84,13 +108,13 @@ namespace SaovietTax.DTO
                 string requestFile = Path.Combine(baseDir, "request.txt");
                 string resultFile = Path.Combine(baseDir, "result.txt");
                 string readyFile = Path.Combine(baseDir, "ready.flag");
-                string exeFile = Path.Combine(baseDir, "ocr_service.exe");   // ← khớp tên exe
+                string exeFile = Path.Combine(baseDir, "ocr_service.exe");
 
                 if (!Directory.Exists(baseDir))
                     Directory.CreateDirectory(baseDir);
 
                 // ✅ 1. Kiểm tra service đang chạy
-                if (Process.GetProcessesByName("ocr_service").Length == 0)   // ← tên process
+                if (Process.GetProcessesByName("ocr_service").Length == 0)
                 {
                     if (!File.Exists(exeFile))
                     {
@@ -123,7 +147,7 @@ namespace SaovietTax.DTO
 
                 // ✅ 3. Xóa kết quả cũ + request cũ
                 if (File.Exists(resultFile)) File.Delete(resultFile);
-                if (File.Exists(requestFile)) File.Delete(requestFile);     // ← THÊM
+                if (File.Exists(requestFile)) File.Delete(requestFile);
 
                 // ✅ 4. Ghi request
                 string base64Data = "data:image/png;base64," + Convert.ToBase64String(captchaBytes);
@@ -150,6 +174,30 @@ namespace SaovietTax.DTO
             }
             return "";
         }
+
+        /// <summary>
+        /// Kiểm tra kết quả OCR có hợp lệ không:
+        /// - Đúng 4 ký tự
+        /// - Chỉ chứa chữ cái + số
+        /// </summary>
+        private static bool IsValidCaptcha(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code)) return false;
+
+            code = code.Trim();
+
+            // Captcha VNPT luôn 4 ký tự
+            if (code.Length != 4) return false;
+
+            // Chỉ chứa chữ cái + số
+            foreach (char c in code)
+            {
+                if (!char.IsLetterOrDigit(c)) return false;
+            }
+
+            return true;
+        }
+
         public static void ReloadCaptcha(IWebDriver driver, WebDriverWait wait)
         {
             try
