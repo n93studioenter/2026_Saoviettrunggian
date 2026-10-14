@@ -18759,21 +18759,64 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
         private static string FindVnptCode(XDocument doc, XNamespace ns)
         {
-            // VNPT: ưu tiên MCCQT
+            // ═══ 1. VNPT: ưu tiên MCCQT ═══
             var mccqt = FindElementValue(doc, ns, "MCCQT");
             if (!string.IsNullOrWhiteSpace(mccqt))
                 return mccqt.Trim();
 
+            // ═══ 2. KeySearch (một số hệ thống dùng) ═══
             var keySearch = FindElementValue(doc, ns, "KeySearch");
             if (!string.IsNullOrWhiteSpace(keySearch))
                 return keySearch.Trim();
 
+            // ═══ 3. SecretCode (một số hệ thống dùng) ═══
             var secretCode = FindElementValue(doc, ns, "SecretCode");
             if (!string.IsNullOrWhiteSpace(secretCode))
                 return secretCode.Trim();
 
+            // ═══ 4. Fkey — nằm trong <TTKhac><TTin> với <TTruong>Fkey</TTruong> ═══
+            var fkey = FindTThKhacValue(doc, ns, "Fkey");
+            if (!string.IsNullOrWhiteSpace(fkey))
+                return fkey.Trim();
+
+            // ═══ 5. Mã bảo mật (fallback cũ) ═══
             var maBaoMat = FindElementByTagName(doc, "Mã bảo mật");
             return string.IsNullOrWhiteSpace(maBaoMat) ? null : maBaoMat.Trim();
+        }
+
+        /// <summary>
+        /// Tìm giá trị trong cấu trúc <TTKhac><TTin><TTruong>tên trường</TTruong><DLieu>giá trị</DLieu></TTin>...
+        /// </summary>
+        private static string FindTThKhacValue(XDocument doc, XNamespace ns, string fieldName)
+        {
+            try
+            {
+                // Tìm tất cả thẻ <TTin> ở mọi cấp
+                var ttins = doc.Descendants(ns + "TTin");
+                if (!ttins.Any())
+                    ttins = doc.Descendants("TTin");
+
+                foreach (var ttin in ttins)
+                {
+                    var truong = ttin.Element(ns + "TTruong")?.Value
+                              ?? ttin.Element("TTruong")?.Value;
+
+                    if (string.Equals(truong?.Trim(), fieldName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var dlieu = ttin.Element(ns + "DLieu")?.Value
+                                 ?? ttin.Element("DLieu")?.Value;
+
+                        if (!string.IsNullOrWhiteSpace(dlieu))
+                            return dlieu.Trim();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Lỗi FindTThKhacValue({fieldName}): {ex.Message}");
+            }
+
+            return null;
         }
 
         private static string FindMInvoiceCode(XDocument doc, XNamespace ns)
@@ -19906,13 +19949,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                     if (!searchSuccess)
                     {
-                        Console.WriteLine("❌ Thử captcha nhiều lần không thành công");
-                        XtraMessageBox.Show(
-                            "Không thể vượt captcha VNPT sau nhiều lần thử.\r\n" +
-                            "Vui lòng thử lại sau.",
-                            "VNPT",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
+                        //Console.WriteLine("❌ Thử captcha nhiều lần không thành công");
+                        //XtraMessageBox.Show(
+                        //    "Không thể vượt captcha VNPT sau nhiều lần thử.\r\n" +
+                        //    "Vui lòng thử lại sau.",
+                        //    "VNPT",
+                        //    MessageBoxButtons.OK,
+                        //    MessageBoxIcon.Warning);
                     }
                 }
                 catch (Exception ex)
@@ -19921,6 +19964,455 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     XtraMessageBox.Show(
                         "Lỗi tải hóa đơn VNPT:\r\n\r\n" + ex.Message,
                         "VNPT",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    await Task.Delay(1000);
+                    try { driver?.Quit(); } catch { }
+                    try { driver?.Dispose(); } catch { }
+                    Console.WriteLine("Đã đóng trình duyệt.");
+                }
+            });
+        }
+
+        //Petro
+        public async Task TaiHDVNPTPETROLIMEX(
+      bool toggle,
+      string mst,
+      string shdon,
+      string KHHDon,
+      string mabm)
+        {
+            string downloadPath = "";
+
+            if (chkDauvao.Checked)
+            {
+                downloadPath = Path.Combine(
+                    savedPath,
+                    $"HD{dtTungay.DateTime.Year}",
+                    "HDVao",
+                    dtTungay.DateTime.Month.ToString());
+            }
+            else if (chkDaura.Checked)
+            {
+                downloadPath = Path.Combine(
+                    savedPath,
+                    $"HD{dtTungay.DateTime.Year}",
+                    "HDRa",
+                    dtTungay.DateTime.Month.ToString());
+            }
+
+            if (string.IsNullOrEmpty(downloadPath))
+            {
+                XtraMessageBox.Show("Chưa chọn đầu vào hoặc đầu ra.");
+                return;
+            }
+
+            Directory.CreateDirectory(downloadPath);
+
+            await Task.Run(async () =>
+            {
+                ChromeOptions options = new ChromeOptions();
+
+                //options.AddArgument("--headless=new");
+                options.AddArgument("--disable-gpu");
+                options.AddArgument("--no-sandbox");
+                options.AddArgument("--disable-dev-shm-usage");
+                options.AddArgument("--window-size=1920,1080");
+                options.AddArgument("--disable-extensions");
+                options.AddArgument("--disable-popup-blocking");
+                options.AddArgument("--disable-web-security");
+                options.AddArgument("--allow-running-insecure-content");
+                options.AddArgument("--disable-blink-features=AutomationControlled");
+                options.AddExcludedArgument("enable-automation");
+                options.AddAdditionalOption("useAutomationExtension", false);
+                options.AddArgument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+
+                options.AddArgument("--disable-features=OptimizationHints,MediaRouter,PrivacySandboxSettings4," +
+                                    "PrivacySandboxAdsAPIs,InterestFeedContentSuggestions,Translate," +
+                                    "AcceptCHFrame,ChromeLabs,CalculateNativeWinOcclusion," +
+                                    "WebAuthentication,WebBluetooth,WebUsb,WebSerial,WebHID,WebNFC," +
+                                    "FileSystemAccessAPI,IdleDetection,SyncDisabled");
+                options.AddArgument("--disable-notifications");
+                options.AddArgument("--disable-infobars");
+                options.AddArgument("--disable-save-password-bubble");
+                options.AddArgument("--disable-translate");
+                options.AddArgument("--no-first-run");
+                options.AddArgument("--no-default-browser-check");
+                options.AddArgument("--disable-default-apps");
+                options.AddArgument("--use-fake-ui-for-media-stream");
+                options.AddArgument("--use-fake-device-for-media-stream");
+                options.AddArgument("--deny-permission-prompts");
+
+                options.AddUserProfilePreference("download.default_directory", downloadPath);
+                options.AddUserProfilePreference("download.prompt_for_download", false);
+                options.AddUserProfilePreference("download.directory_upgrade", true);
+                options.AddUserProfilePreference("safebrowsing.enabled", true);
+                options.AddUserProfilePreference("safebrowsing.disable_download_protection", true);
+                options.AddUserProfilePreference("profile.default_content_setting_values.automatic_downloads", 1);
+                options.AddUserProfilePreference("profile.default_content_setting_values.popups", 1);
+
+                options.AddUserProfilePreference("profile.default_content_setting_values.media_stream", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.geolocation", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.notifications", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.clipboard", 2);
+                options.AddUserProfilePreference("credentials_enable_service", false);
+                options.AddUserProfilePreference("profile.password_manager_enabled", false);
+                options.AddUserProfilePreference("profile.password_manager_leak_detection", false);
+
+                IWebDriver driver = null;
+                try
+                {
+                    string driverDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                    var service = ChromeDriverService.CreateDefaultService(driverDirectory);
+                    service.HideCommandPromptWindow = true;
+
+                    driver = new ChromeDriver(service, options);
+                    driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(30);
+
+                    // ═══ CDP: DOWNLOAD BEHAVIOR + BYPASS CSP ═══
+                    try
+                    {
+                        if (driver is ChromeDriver chromeDriver)
+                        {
+                            chromeDriver.ExecuteCdpCommand(
+                                "Page.setDownloadBehavior",
+                                new Dictionary<string, object>
+                                {
+                            { "behavior", "allow" },
+                            { "downloadPath", downloadPath }
+                                });
+
+                            chromeDriver.ExecuteCdpCommand("Page.enable", new Dictionary<string, object>());
+                            chromeDriver.ExecuteCdpCommand(
+                                "Page.setBypassCSP",
+                                new Dictionary<string, object> { { "enabled", true } });
+
+                            Console.WriteLine("✅ CDP download behavior đã bật");
+                        }
+                    }
+                    catch (Exception cdpEx)
+                    {
+                        Console.WriteLine($"⚠️ CDP setup: {cdpEx.Message}");
+                    }
+
+                    WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
+
+                    // ═══ URL CỔNG PETROLIMEX ═══
+                    string baseUrl = "https://hoadon.petrolimex.com.vn/";
+
+                    bool searchSuccess = false;
+                    int maxCaptchaRetries = 5;
+
+                    for (int attempt = 1; attempt <= maxCaptchaRetries && !searchSuccess; attempt++)
+                    {
+                        Console.WriteLine($"🔵 Petrolimex Captcha lần {attempt}/{maxCaptchaRetries}");
+
+                        try
+                        {
+                            // ═══ 1. MỞ TRANG ═══
+                            driver.Navigate().GoToUrl(baseUrl);
+
+                            wait.Until(d =>
+                            {
+                                try
+                                {
+                                    return ((IJavaScriptExecutor)d)
+                                        .ExecuteScript("return document.readyState")
+                                        .ToString() == "complete";
+                                }
+                                catch { return false; }
+                            });
+
+                            await Task.Delay(1000);
+
+                            // ═══ 2. NHẬP MÃ TRA CỨU (FKEY) ═══
+                            IWebElement fkey = wait.Until(d =>
+                            {
+                                try
+                                {
+                                    IWebElement el = d.FindElement(By.Id("strFkey"));
+                                    return (el != null && el.Displayed && el.Enabled) ? el : null;
+                                }
+                                catch { return null; }
+                            });
+
+                            fkey.Clear();
+                            fkey.SendKeys(mabm);
+                            await Task.Delay(300);
+
+                            // ═══ 3. LẤY CAPTCHA BẰNG SCREENSHOT ELEMENT ═══
+                            byte[] captchaBytes = null;
+
+                            // Selector captcha của Petrolimex: img.captcha_img
+                            IWebElement captchaImgEl = null;
+                            string[] selectors = {
+                        "img.captcha_img",
+                        "img[src*='Captcha/Show']",
+                        "img#captcha_img",
+                        "img#captcha",
+                        "img[src*='captcha']",
+                        "div#captcha img",
+                        "img[alt='captcha']"
+                    };
+
+                            foreach (var sel in selectors)
+                            {
+                                try
+                                {
+                                    var els = driver.FindElements(By.CssSelector(sel));
+                                    foreach (var el in els)
+                                    {
+                                        if (el != null && el.Displayed && el.Size.Width > 30)
+                                        {
+                                            captchaImgEl = el;
+                                            Console.WriteLine($"✅ Tìm captcha bằng selector: {sel} ({el.Size.Width}x{el.Size.Height})");
+                                            break;
+                                        }
+                                    }
+                                    if (captchaImgEl != null) break;
+                                }
+                                catch { }
+                            }
+
+                            if (captchaImgEl == null)
+                            {
+                                Console.WriteLine("⚠️ Không tìm thấy element captcha — thử lại");
+                                await Task.Delay(1000);
+                                continue;
+                            }
+
+                            captchaBytes = ScreenshotElement(driver, captchaImgEl);
+
+                            if (captchaBytes != null && captchaBytes.Length > 100)
+                            {
+                                string debugPath = Path.Combine(Path.GetTempPath(), $"petro_captcha_{attempt}.png");
+                                try { File.WriteAllBytes(debugPath, captchaBytes); } catch { }
+                                Console.WriteLine($"📷 Captcha debug: {debugPath} ({captchaBytes.Length} bytes)");
+                            }
+
+                            if (captchaBytes == null || captchaBytes.Length < 100)
+                            {
+                                Console.WriteLine("⚠️ Không chụp được captcha — thử lại");
+                                await Task.Delay(1000);
+                                continue;
+                            }
+
+                            // ═══ 4. OCR CAPTCHA ═══
+                            string code = Kingsofthp.OcrCaptcha(captchaBytes);
+
+                            if (string.IsNullOrWhiteSpace(code) || code.Trim().Length != 4)
+                            {
+                                Console.WriteLine($"⚠️ OCR fail (code='{code}') — thử lại");
+                                await Task.Delay(500);
+                                continue;
+                            }
+
+                            code = code.Trim();
+                            Console.WriteLine($"🤖 Petrolimex OCR → '{code}'");
+
+                            // ═══ 5. NHẬP CAPTCHA ═══
+                            IWebElement captchaInput = wait.Until(d =>
+                            {
+                                try
+                                {
+                                    IWebElement el = d.FindElement(By.Id("captch"));
+                                    return (el != null && el.Displayed && el.Enabled) ? el : null;
+                                }
+                                catch { return null; }
+                            });
+
+                            captchaInput.Clear();
+                            captchaInput.SendKeys(code);
+                            await Task.Delay(300);
+
+                            // ═══ 6. CLICK TÌM KIẾM ═══
+                            // Petrolimex dùng input[type=submit][name=submit] (không phải button)
+                            IWebElement btnTimKiem = wait.Until(d =>
+                            {
+                                try
+                                {
+                                    IWebElement el = d.FindElement(
+                                        By.CssSelector("input[type='submit'][name='submit']"));
+                                    return (el != null && el.Displayed && el.Enabled) ? el : null;
+                                }
+                                catch { return null; }
+                            });
+
+                            ((IJavaScriptExecutor)driver).ExecuteScript(
+                                "arguments[0].scrollIntoView({block: 'center'});", btnTimKiem);
+                            await Task.Delay(200);
+                            ((IJavaScriptExecutor)driver).ExecuteScript(
+                                "arguments[0].click();", btnTimKiem);
+
+                            Console.WriteLine("✅ Đã click Tìm kiếm");
+
+                            // ═══ 7. KIỂM TRA KẾT QUẢ (TABLE XUẤT HIỆN) ═══
+                            bool tableFound = false;
+                            bool captchaError = false;
+                            var urlDeadline = DateTime.Now.AddSeconds(15);
+
+                            while (DateTime.Now < urlDeadline)
+                            {
+                                try
+                                {
+                                    // Kiểm tra table kết quả có xuất hiện không
+                                    var tables = driver.FindElements(By.CssSelector("table.table tbody tr"));
+                                    if (tables.Count > 0)
+                                    {
+                                        // Kiểm tra có link "Tải" PDF không
+                                        var pdfLinks = driver.FindElements(By.CssSelector("a[onclick*='ajxCall4PortalPDF']"));
+                                        if (pdfLinks.Count > 0)
+                                        {
+                                            tableFound = true;
+                                            break;
+                                        }
+                                    }
+
+                                    // Kiểm tra lỗi captcha
+                                    var errorMsgs = driver.FindElements(By.CssSelector(
+                                        ".error, .alert, .text-danger, .validation-summary-errors, #CaptchaError"));
+                                    foreach (var err in errorMsgs)
+                                    {
+                                        if (!err.Displayed) continue;
+                                        string txt = (err.Text ?? "").ToLower();
+                                        if (txt.Contains("captcha") || txt.Contains("mã xác nhận") ||
+                                            txt.Contains("không đúng") || txt.Contains("sai") ||
+                                            txt.Contains("không chính xác"))
+                                        {
+                                            captchaError = true;
+                                            Console.WriteLine($"❌ Server báo lỗi captcha: '{err.Text}'");
+                                            break;
+                                        }
+                                    }
+
+                                    if (captchaError) break;
+                                }
+                                catch { }
+
+                                await Task.Delay(300);
+                            }
+
+                            if (captchaError)
+                            {
+                                Console.WriteLine($"⚠️ Captcha '{code}' sai (server báo) — refresh và thử lại");
+                                await Task.Delay(500);
+                                continue;
+                            }
+
+                            if (!tableFound)
+                            {
+                                Console.WriteLine($"⚠️ Không thấy table kết quả sau 15s — captcha '{code}' có thể sai, thử lại...");
+                                await Task.Delay(1000);
+                                continue;
+                            }
+
+                            Console.WriteLine("✅ Captcha đúng — table kết quả đã xuất hiện");
+                            searchSuccess = true;
+
+                            // ═══ 8. TÌM LINK TẢI PDF (onclick ajxCall4PortalPDF) ═══
+                            IWebElement pdfLink = wait.Until(d =>
+                            {
+                                try
+                                {
+                                    // Link Tải PDF có onclick chứa ajxCall4PortalPDF
+                                    IWebElement el = d.FindElement(
+                                        By.CssSelector("a[onclick*='ajxCall4PortalPDF']"));
+                                    return (el != null && el.Displayed) ? el : null;
+                                }
+                                catch { return null; }
+                            });
+
+                            // ═══ 9. CLICK TẢI PDF ═══
+                            ((IJavaScriptExecutor)driver).ExecuteScript(
+                                "arguments[0].scrollIntoView({block: 'center'});", pdfLink);
+                            await Task.Delay(200);
+                            ((IJavaScriptExecutor)driver).ExecuteScript(
+                                "arguments[0].click();", pdfLink);
+
+                            Console.WriteLine("✅ Đã click link Tải PDF, chờ file...");
+
+                            // ═══ 10. CHỜ FILE PDF ═══
+                            string pdfFile = WaitForPdf(shdon, mst, downloadPath, 25);
+
+                            // Nếu lần 1 fail → click lại
+                            if (pdfFile == null)
+                            {
+                                Console.WriteLine("⚠️ Lần 1 không có file — thử click lại...");
+                                await Task.Delay(1000);
+
+                                try
+                                {
+                                    ((IJavaScriptExecutor)driver).ExecuteScript(
+                                        "document.querySelector(\"a[onclick*='ajxCall4PortalPDF']\")?.click();");
+                                }
+                                catch { }
+
+                                pdfFile = WaitForPdf(shdon, mst, downloadPath, 25);
+                            }
+
+                            if (pdfFile == null)
+                            {
+                                Console.WriteLine("❌ Không tải được PDF sau 2 lần thử");
+                                XtraMessageBox.Show(
+                                    "Không thể tải PDF Petrolimex.", "Petrolimex",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Warning);
+                                return;
+                            }
+
+                            await Task.Delay(500);
+
+                            // ═══ 11. ĐỔI TÊN ═══
+                            string fileMoi = Path.Combine(
+                                downloadPath,
+                                $"{mst}_{shdon}_{KHHDon}.pdf");
+
+                            if (File.Exists(fileMoi))
+                                File.Delete(fileMoi);
+
+                            File.Move(pdfFile, fileMoi);
+
+                            // ═══ 12. MỞ FILE ═══
+                            if (toggle)
+                            {
+                                try
+                                {
+                                    Process.Start(new ProcessStartInfo
+                                    {
+                                        FileName = fileMoi,
+                                        UseShellExecute = true
+                                    });
+                                }
+                                catch { }
+                            }
+
+                            Console.WriteLine($"✅ Đã tải PDF Petrolimex: {fileMoi}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"❌ Lỗi captcha lần {attempt}: {ex.Message}");
+                        }
+
+                        if (!searchSuccess)
+                        {
+                            await Task.Delay(1000);
+                        }
+                    }
+
+                    if (!searchSuccess)
+                    {
+                        //Console.WriteLine("❌ Thử captcha nhiều lần không thành công");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Lỗi tổng: {ex.Message}");
+                    XtraMessageBox.Show(
+                        "Lỗi tải hóa đơn Petrolimex:\r\n\r\n" + ex.Message,
+                        "Petrolimex",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                 }
@@ -21612,10 +22104,76 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
 
                 // ═══════════════════════════════════════════════════════
-                // BƯỚC 4: CHỜ PDF TẢI XONG
+                // BƯỚC 4: CHỜ POPUP HÓA ĐƠN HIỆN LÊN
                 // ═══════════════════════════════════════════════════════
 
-                string pdfFile = WaitForZip(shdon, downloadPath, 15);
+                IWebElement popup = wait.Until(d =>
+                {
+                    try
+                    {
+                        var el = d.FindElement(By.CssSelector("div.modal.fade.in.show #modal-dialog"));
+                        return el.Displayed ? el : null;
+                    }
+                    catch (NoSuchElementException)
+                    {
+                        return null;
+                    }
+                });
+
+                Console.WriteLine("✅ Popup hóa đơn đã hiện lên!");
+
+                // Chờ thêm để nội dung hóa đơn render xong
+                System.Threading.Thread.Sleep(1500);
+
+                // ═══════════════════════════════════════════════════════
+                // BƯỚC 5: SCROLL XUỐNG NÚT "Tải PDF" VÀ BẤM
+                // ═══════════════════════════════════════════════════════
+
+                IWebElement btnTaiPDF = wait.Until(d =>
+                {
+                    try
+                    {
+                        var buttons = d.FindElements(By.CssSelector("#footer-btn button"));
+                        foreach (var btn in buttons)
+                        {
+                            if (btn.Text.Trim().Contains("Tải PDF"))
+                            {
+                                return btn.Displayed && btn.Enabled ? btn : null;
+                            }
+                        }
+                        return null;
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                });
+
+                // Scroll xuống nút Tải PDF
+                ((IJavaScriptExecutor)driver).ExecuteScript(
+                    "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
+                    btnTaiPDF
+                );
+
+                System.Threading.Thread.Sleep(800); // chờ scroll xong
+
+                // Bấm nút Tải PDF
+                try
+                {
+                    btnTaiPDF.Click();
+                }
+                catch (ElementClickInterceptedException)
+                {
+                    // Fallback: dùng JS click nếu bị overlay che
+                    ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].click();", btnTaiPDF);
+                }
+                Console.WriteLine("✅ Đã bấm nút Tải PDF!");
+
+                // ═══════════════════════════════════════════════════════
+                // BƯỚC 6: CHỜ PDF TẢI XONG
+                // ═══════════════════════════════════════════════════════
+
+                string pdfFile = WaitForPdf(shdon, mst, downloadPath, 20);
                 if (pdfFile == null)
                 {
                     XtraMessageBox.Show("Không thể tải file PDF");
@@ -21624,7 +22182,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 Thread.Sleep(500);
 
                 // ═══════════════════════════════════════════════════════
-                // BƯỚC 5: ĐỔI TÊN FILE
+                // BƯỚC 7: ĐỔI TÊN FILE
                 // ═══════════════════════════════════════════════════════
 
                 if (pdfFile != null && File.Exists(pdfFile))
@@ -22242,7 +22800,14 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                     if (NCC == "VNPT")
                     {
-                        TaiHDVNPT(true,mstNB, shdon, KHHDon, mabimat);
+                        if(mstNB.StartsWith("0300555450"))
+                        {
+                            TaiHDVNPTPETROLIMEX(true, mstNB, shdon, KHHDon, mabimat);
+                        }
+                        else
+                        {
+                            TaiHDVNPT(true, mstNB, shdon, KHHDon, mabimat);
+                        }
                     }
                     if (NCC == "MISA")
                     {
