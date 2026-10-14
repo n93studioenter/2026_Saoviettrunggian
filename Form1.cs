@@ -21774,7 +21774,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                 var txtPrivateCode = driver.FindElement(By.Name("private_code"));
                 txtPrivateCode.Clear();
-                txtPrivateCode.SendKeys(shdon);
+                txtPrivateCode.SendKeys(mabimat);
 
                 var txtCmnpKey = driver.FindElement(By.Name("cmpn_key"));
                 txtCmnpKey.Clear();
@@ -21783,7 +21783,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 var btnSubmit = driver.FindElement(By.CssSelector("button.btn.blue[type='submit']"));
                 btnSubmit.Click();
 
-                Console.WriteLine($"✅ Đã submit form tra cứu: MST={mst}, SoHD={shdon}");
+                Console.WriteLine($"✅ Đã submit form tra cứu: MST={mst}, SoHD={mabimat}");
 
                 // ═══════════════════════════════════════════════════════
                 // BƯỚC 2: CHỜ TRANG KẾT QUẢ /bill/inv
@@ -33143,7 +33143,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             // ═══════════════════════════════════════════════════════
             // ✅ ĐẨY PDF VÀO QUEUE NGAY — không cần chờ batch
             // ═══════════════════════════════════════════════════════
-           // EnqueuePdfDownload(tb);
+            EnqueuePdfDownload(tb);
             Debug.WriteLine($"📥 Đã Enqueue PDF: {tb.SHDon}");
 
             // ============ 4. GHI DB ============
@@ -33356,7 +33356,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             }
 
             Debug.WriteLine($"📥 Bắt đầu tải PDF: {inv.NCC} | HĐ {inv.SHDon}");
-
+            if (chkDaura.Checked)
+            {
+                inv.Mst = tbRegister.Rows[0]["Username"].ToString(); 
+            }
             try
             {
                 switch (inv.NCC)
@@ -35803,39 +35806,38 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         /// Xử lý 1 hóa đơn đầu ra: chọn file, tải nếu cần, parse, thêm buffer
         /// </summary>
         private async Task ProcessSingleInvoiceRa(InvoiceJob job, string pathYear, string pathType,
-            string dir, List<TbImport> pendingWrites, object lockObj)
+      string dir, List<TbImport> pendingWrites, object lockObj)
         {
-            // ===== Đường dẫn file (đầu ra có naming khác) =====
+            Debug.WriteLine($"🔵 ProcessSingleInvoiceRa START: HĐ {job.SoHD}");
+
+            // ============ 1. XÁC ĐỊNH FILE ============
             string fileZip = $"{job.NgayLap:yyyyMMdd}_{job.Mst}_{job.SoHD}_{job.KyHieu}.zip";
-            string fileXml = $"{job.NgayLap:yyyyMMdd}{job.Mst}_{job.SoHD}_{job.KyHieu}.xml";
-            string fileHtml = $"{job.NgayLap:yyyyMMdd}{job.Mst}_{job.SoHD}_{job.KyHieu}.html";
+            string fileXml = $"{job.NgayLap:yyyyMMdd}_{job.Mst}_{job.SoHD}_{job.KyHieu}.xml";
+            string fileKnm = $"{job.Mst}_{job.SoHD}_{job.KyHieu}_KNM.xml";
 
             string pathZip = Path.Combine(dir, fileZip);
             string pathXml = Path.Combine(dir, fileXml);
-            string pathHtml = Path.Combine(dir, fileHtml);
+            string pathKnm = Path.Combine(dir, fileKnm);
 
             string xmlToRead = null;
 
-            // ===== Chọn file để đọc =====
-            if (File.Exists(pathXml))
+            // ============ 2. TẢI XML NGAY ============
+            if (File.Exists(pathKnm))
+            {
+                xmlToRead = pathKnm;
+            }
+            else if (File.Exists(pathXml))
             {
                 xmlToRead = pathXml;
             }
-            else if (File.Exists(pathHtml))
-            {
-                // .html thì phải có .xml cùng tên mới đọc được
-                string xmlFromHtml = Path.ChangeExtension(pathHtml, ".xml");
-                if (File.Exists(xmlFromHtml))
-                    xmlToRead = xmlFromHtml;
-            }
             else
             {
-                // ===== Tải file XML =====
                 string url = job.InvoiceType == 1
                     ? $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-xml?nbmst={job.Mst}&khhdon={job.KyHieu}&shdon={job.SoHD}&khmshdon={job.Khmshdon}"
                     : $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-xml?nbmst={job.Mst}&khhdon={job.KyHieu}&shdon={job.SoHD}&khmshdon={job.Khmshdon}";
 
                 bool downloaded = false;
+                string errMsg = null;
 
                 try
                 {
@@ -35847,6 +35849,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         completionCallback: (success, message, prog) =>
                         {
                             downloaded = success;
+                            errMsg = message;
                         });
                 }
                 catch (Exception exDl)
@@ -35855,17 +35858,46 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
 
                 if (downloaded && File.Exists(pathXml))
+                {
                     xmlToRead = pathXml;
+                }
+                else if (!string.IsNullOrEmpty(errMsg)
+                    && errMsg.IndexOf("Không tồn tại hồ sơ gốc", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    try
+                    {
+                        GetKNMXML(job.Mst, job.KyHieu, job.SoHD, tokken, job.NgayLap, dir, fileZip);
+                        if (File.Exists(pathKnm))
+                            xmlToRead = pathKnm;
+                    }
+                    catch (Exception exKnm)
+                    {
+                        LogToFile("ProcessSingleInvoiceRa/knm", exKnm, job.SoHD);
+                    }
+                }
             }
 
-            // ===== Parse XML =====
+            // ============ 3. PARSE XML ============
             if (string.IsNullOrEmpty(xmlToRead) || !File.Exists(xmlToRead))
+            {
+                Debug.WriteLine($"⏭ RETURN #1: Không có XML - HĐ {job.SoHD}");
                 return;
+            }
 
             var tb = await DocfileXmlOne(xmlToRead, 2);
-            if (tb == null) return;
+            if (tb == null)
+            {
+                Debug.WriteLine($"⏭ RETURN #2: tb null - HĐ {job.SoHD}");
+                return;
+            }
 
-            // ===== Thêm vào buffer =====
+            Debug.WriteLine($"✅ Parse OK: HĐ {tb.SHDon}, NCC={tb.NCC}");
+
+            // ✅ Đẩy PDF vào queue ngay
+            EnqueuePdfDownload(tb);
+            Debug.WriteLine($"📥 Đã Enqueue PDF: {tb.SHDon}");
+
+            // ============ 4. GHI DB ============
             List<TbImport> batchToSave = null;
 
             lock (lockObj)
@@ -45468,7 +45500,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 options.AddArgument("--use-fake-device-for-media-stream");
                 options.AddArgument("--deny-permission-prompts");
 
-                //options.AddArgument("--headless=new");
+               options.AddArgument("--headless=new");
                 options.AddArgument("--disable-gpu");
                 options.AddArgument("--no-sandbox");
                 options.AddArgument("--disable-dev-shm-usage");
