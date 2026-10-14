@@ -45469,10 +45469,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 try { Directory.CreateDirectory(tempDownloadFolder); } catch { }
 
                 // ═══════════════════════════════════════════════════════
-                // ⚙️ CHROME OPTIONS — CHẶN POPUP "wants to..."
+                // ⚙️ CHROME OPTIONS
                 // ═══════════════════════════════════════════════════════
                 var options = new ChromeOptions();
-               // options.AddArgument("--headless=new");
                 options.AddArgument("--disable-features=OptimizationHints,MediaRouter,PrivacySandboxSettings4," +
                                     "PrivacySandboxAdsAPIs,InterestFeedContentSuggestions,Translate," +
                                     "AcceptCHFrame,ChromeLabs,CalculateNativeWinOcclusion," +
@@ -45499,8 +45498,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 options.AddArgument("--use-fake-ui-for-media-stream");
                 options.AddArgument("--use-fake-device-for-media-stream");
                 options.AddArgument("--deny-permission-prompts");
-
-               options.AddArgument("--headless=new");
                 options.AddArgument("--disable-gpu");
                 options.AddArgument("--no-sandbox");
                 options.AddArgument("--disable-dev-shm-usage");
@@ -45547,9 +45544,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     driver = new ChromeDriver(options);
                     driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(30);
 
-                    // ═══════════════════════════════════════════════════════
-                    // 🛡️ CDP PROTOCOL
-                    // ═══════════════════════════════════════════════════════
+                    // CDP permission setup
                     try
                     {
                         if (driver is ChromeDriver chromeDriver)
@@ -45651,16 +45646,32 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             await TryDismissPermissionPopups(driver);
                             await Task.Delay(300);
 
-                            bool hasSlider = driver.FindElements(By.CssSelector("div.slider-button")).Count > 0;
-                            bool hasRecaptcha = driver.FindElements(By.CssSelector("iframe[src*='recaptcha'], div.g-recaptcha")).Count > 0;
-                            bool hasHcaptcha = driver.FindElements(By.CssSelector("iframe[src*='hcaptcha'], div.h-captcha")).Count > 0;
-                            bool hasTurnstile = driver.FindElements(By.CssSelector("iframe[src*='cloudflare'], div.cf-turnstile")).Count > 0;
+                            // ═══ Detect loại captcha — kiểm tra 2 lần để tránh false negative ═══
+                            bool DetectSlider() => driver.FindElements(By.CssSelector("div.slider-button")).Count > 0;
+                            bool DetectRecaptcha() => driver.FindElements(By.CssSelector("iframe[src*='recaptcha'], div.g-recaptcha")).Count > 0;
+                            bool DetectHcaptcha() => driver.FindElements(By.CssSelector("iframe[src*='hcaptcha'], div.h-captcha")).Count > 0;
+                            bool DetectTurnstile() => driver.FindElements(By.CssSelector("iframe[src*='cloudflare'], div.cf-turnstile")).Count > 0;
+
+                            bool hasSlider = DetectSlider();
+                            bool hasRecaptcha = DetectRecaptcha();
+                            bool hasHcaptcha = DetectHcaptcha();
+                            bool hasTurnstile = DetectTurnstile();
+
+                            // Kiểm tra lại lần 2 nếu không thấy captcha nào
+                            if (!hasSlider && !hasRecaptcha && !hasHcaptcha && !hasTurnstile)
+                            {
+                                await Task.Delay(800);
+                                hasSlider = DetectSlider();
+                                hasRecaptcha = DetectRecaptcha();
+                                hasHcaptcha = DetectHcaptcha();
+                                hasTurnstile = DetectTurnstile();
+                            }
 
                             Console.WriteLine($"🔍 Captcha: slider={hasSlider}, recaptcha={hasRecaptcha}, hcaptcha={hasHcaptcha}, turnstile={hasTurnstile}");
 
                             if (!hasSlider && !hasRecaptcha && !hasHcaptcha && !hasTurnstile)
                             {
-                                Console.WriteLine("⚠️ Không phát hiện captcha — tiếp tục luôn");
+                                Console.WriteLine("✅ Không có captcha — tiếp tục");
                                 captchaSuccess = true;
                                 break;
                             }
@@ -45676,16 +45687,16 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             // ═══ XỬ LÝ SLIDER CAPTCHA ═══
                             if (hasSlider)
                             {
-                                // ═══ RESET CAPTCHA TRƯỚC KHI XỬ LÝ ═══
+                                // Reset captcha trước khi xử lý (lần 2 trở đi)
                                 if (captchaAttempt > 1)
                                 {
-                                    Console.WriteLine("🔄 Reset captcha + nhập lại MST...");
+                                    Console.WriteLine("🔄 Reset captcha + nhập lại form...");
                                     await ResetCaptchaAndForm(driver, mst, mabm);
+                                    await Task.Delay(500);
                                     wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
                                 }
                                 else
                                 {
-                                    // Lần đầu: đảm bảo puzzle ở vị trí 0
                                     await EnsurePuzzleAtStart(driver);
                                 }
 
@@ -45694,7 +45705,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 if (bgImages.Count == 0)
                                 {
                                     Console.WriteLine("⚠️ Không tìm thấy img.bg-image");
-                                    await Task.Delay(300);
+                                    await Task.Delay(500);
                                     continue;
                                 }
 
@@ -45718,10 +45729,22 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 }
                                 int displayedW = bgImage.Size.Width;
                                 int displayedH = bgImage.Size.Height;
+
+                                // ✅ FIX: dùng devicePixelRatio để tính scale chính xác
+                                double dpr = 1.0;
+                                try
+                                {
+                                    var js = (IJavaScriptExecutor)driver;
+                                    var dprObj = js.ExecuteScript("return window.devicePixelRatio || 1;");
+                                    dpr = Convert.ToDouble(dprObj);
+                                }
+                                catch { }
+
                                 double scaleX = (double)displayedW / naturalW;
 
-                                Console.WriteLine($"📐 Gốc {naturalW}x{naturalH} | Hiển thị {displayedW}x{displayedH} | scaleX={scaleX:F3}");
+                                Console.WriteLine($"📐 Gốc {naturalW}x{naturalH} | Hiển thị {displayedW}x{displayedH} | DPR={dpr:F2} | scaleX={scaleX:F3}");
 
+                                // ═══ TÌM Ô ĐEN ═══
                                 int holeX_natural = FindHolePosition2(bgPath);
                                 Console.WriteLine($"🎯 Ô đen (gốc): x={holeX_natural}px");
 
@@ -45729,7 +45752,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 {
                                     Console.WriteLine("⚠️ Không tìm được vị trí ô đen");
                                     try { File.Delete(bgPath); } catch { }
-                                    await Task.Delay(300);
+                                    await Task.Delay(500);
                                     continue;
                                 }
 
@@ -45738,14 +45761,14 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                                 try { File.Delete(bgPath); } catch { }
 
-                                // ═══ LẤY PUZZLE + SLIDER (element MỚI NHẤT) ═══
+                                // ═══ LẤY PUZZLE + SLIDER ═══
                                 var puzzlePieces = driver.FindElements(By.CssSelector("img.puzzle-piece"));
                                 var sliderButtons = driver.FindElements(By.CssSelector("div.slider-button"));
 
                                 if (puzzlePieces.Count == 0 || sliderButtons.Count == 0)
                                 {
                                     Console.WriteLine("⚠️ Thiếu puzzle-piece / slider-button");
-                                    await Task.Delay(300);
+                                    await Task.Delay(500);
                                     continue;
                                 }
 
@@ -45754,18 +45777,23 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                                 ((IJavaScriptExecutor)driver).ExecuteScript(
                                     "arguments[0].scrollIntoView({block: 'center'});", sliderButton);
-                                await Task.Delay(200);
+                                await Task.Delay(300);
 
-                                // ═══ KIỂM TRA PUZZLE ĐANG Ở ĐÂU ═══
+                                // ═══ KIỂM TRA PUZZLE Ở VỊ TRÍ ĐẦU ═══
                                 string puzzleLeftStr = puzzlePiece.GetAttribute("style") ?? "";
                                 Console.WriteLine($"🧩 Puzzle style: {puzzleLeftStr}");
 
                                 if (!puzzleLeftStr.Contains("left: 0px") && !puzzleLeftStr.Contains("left:0px"))
                                 {
-                                    Console.WriteLine("⚠️ Puzzle không ở vị trí đầu — reset về 0");
-                                    ((IJavaScriptExecutor)driver).ExecuteScript(
-                                        "arguments[0].style.left = '0px';", puzzlePiece);
+                                    Console.WriteLine("⚠️ Puzzle không ở vị trí đầu — reset");
+                                    await EnsurePuzzleAtStart(driver);
                                     await Task.Delay(200);
+                                    // Lấy lại element mới sau reset
+                                    puzzlePieces = driver.FindElements(By.CssSelector("img.puzzle-piece"));
+                                    sliderButtons = driver.FindElements(By.CssSelector("div.slider-button"));
+                                    if (puzzlePieces.Count == 0 || sliderButtons.Count == 0) continue;
+                                    puzzlePiece = puzzlePieces[puzzlePieces.Count - 1];
+                                    sliderButton = sliderButtons[sliderButtons.Count - 1];
                                 }
 
                                 var puzzleSize = puzzlePiece.Size;
@@ -45783,36 +45811,32 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                     continue;
                                 }
 
-                                // ═══ KÉO SLIDER — NHANH + MƯỢT ═══
-                                await PerformSlide(driver, sliderButton, targetDistance);
-                                await Task.Delay(1200);
+                                // ═══ KÉO SLIDER — DÙNG CDP (trusted event) ═══
+                                await PerformSlideCdp(driver, sliderButton, targetDistance);
+                                await Task.Delay(1500);
 
                                 captchaSuccess = CheckCaptchaSuccess(driver);
 
-                                // ═══ RETRY NHANH TRONG CÙNG CAPTCHA NẾU FAIL ═══
+                                // ═══ RETRY NHANH TRONG CÙNG CAPTCHA ═══
                                 if (!captchaSuccess)
                                 {
-                                    Console.WriteLine("⚠️ Fail lần 1 — thử kéo lại trong cùng captcha...");
+                                    Console.WriteLine("⚠️ Fail lần 1 — thử kéo lại (cùng captcha)...");
                                     await Task.Delay(300);
 
-                                    // Reset puzzle + slider về 0 bằng JS
                                     await EnsurePuzzleAtStart(driver);
-                                    await Task.Delay(300);
+                                    await Task.Delay(400);
 
-                                    // Lấy lại element mới
                                     var pieces2 = driver.FindElements(By.CssSelector("img.puzzle-piece"));
                                     var btns2 = driver.FindElements(By.CssSelector("div.slider-button"));
                                     if (pieces2.Count > 0 && btns2.Count > 0)
                                     {
                                         var btn2 = btns2[btns2.Count - 1];
-
-                                        // Tính lại khoảng cách (vì puzzle có thể resize)
                                         var pz2 = pieces2[pieces2.Count - 1];
                                         int pzW2 = pz2.Size.Width;
                                         int target2 = holeX_displayed - (pzW2 / 2);
 
-                                        await PerformSlide(driver, btn2, target2);
-                                        await Task.Delay(1200);
+                                        await PerformSlideCdp(driver, btn2, target2);
+                                        await Task.Delay(1500);
 
                                         captchaSuccess = CheckCaptchaSuccess(driver);
                                     }
@@ -45837,7 +45861,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                         if (!captchaSuccess)
                         {
-                            await Task.Delay(300);
+                            await Task.Delay(500);
                         }
                     }
 
@@ -45871,7 +45895,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].click();", searchBtn);
 
                         Console.WriteLine("✅ Đã click Tìm kiếm");
-                        await Task.Delay(300);
+                        await Task.Delay(500);
 
                         var pdfWaitCheck = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
                         try
@@ -46033,7 +46057,101 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
             });
         }
+        /// <summary>
+        /// Kéo slider captcha bằng Chrome DevTools Protocol.
+        /// CDP dispatch event là trusted → Angular/RxJS nhận bình thường.
+        /// </summary>
+        private async Task PerformSlideCdp(IWebDriver driver, IWebElement sliderButton, int targetDistance)
+        {
+            try
+            {
+                if (!(driver is ChromeDriver chromeDriver))
+                {
+                    Console.WriteLine("⚠️ Không phải ChromeDriver — fallback Actions");
+                    await PerformSlideWithActions(driver, sliderButton, targetDistance);
+                    return;
+                }
 
+                var js = (IJavaScriptExecutor)driver;
+
+                // ═══ LẤY TỌA ĐỘ TÂM SLIDER TRONG VIEWPORT ═══
+                var rect = (Dictionary<string, object>)js.ExecuteScript(@"
+            var r = arguments[0].getBoundingClientRect();
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+        ", sliderButton);
+
+                int startX = Convert.ToInt32(rect["x"]);
+                int startY = Convert.ToInt32(rect["y"]);
+
+                Console.WriteLine($"🎯 CDP slide: start=({startX},{startY}) distance={targetDistance}");
+
+                // ═══ MOUSE DOWN ═══
+                chromeDriver.ExecuteCdpCommand("Input.dispatchMouseEvent", new Dictionary<string, object>
+        {
+            { "type", "mousePressed" },
+            { "x", startX },
+            { "y", startY },
+            { "button", "left" },
+            { "buttons", 1 },
+            { "clickCount", 1 }
+        });
+
+                await Task.Delay(30);
+
+                // ═══ DI CHUYỂN NHIỀU BƯỚC ═══
+                var rnd = new Random();
+                int steps = 18 + rnd.Next(8);
+                double stepDist = (double)targetDistance / steps;
+
+                for (int i = 1; i <= steps; i++)
+                {
+                    int cx = startX + (int)Math.Round(stepDist * i);
+                    int cy = startY + rnd.Next(-1, 2);
+
+                    chromeDriver.ExecuteCdpCommand("Input.dispatchMouseEvent", new Dictionary<string, object>
+            {
+                { "type", "mouseMoved" },
+                { "x", cx },
+                { "y", cy },
+                { "button", "left" },
+                { "buttons", 1 }
+            });
+
+                    await Task.Delay(rnd.Next(8, 20));
+                }
+
+                // ═══ ĐẢM BẢO ĐẾN ĐÚNG VỊ TRÍ ═══
+                int finalX = startX + targetDistance;
+                chromeDriver.ExecuteCdpCommand("Input.dispatchMouseEvent", new Dictionary<string, object>
+        {
+            { "type", "mouseMoved" },
+            { "x", finalX },
+            { "y", startY },
+            { "button", "left" },
+            { "buttons", 1 }
+        });
+
+                await Task.Delay(50);
+
+                // ═══ MOUSE UP ═══
+                chromeDriver.ExecuteCdpCommand("Input.dispatchMouseEvent", new Dictionary<string, object>
+        {
+            { "type", "mouseReleased" },
+            { "x", finalX },
+            { "y", startY },
+            { "button", "left" },
+            { "buttons", 0 },
+            { "clickCount", 1 }
+        });
+
+                Console.WriteLine($"✅ CDP slide hoàn tất — kéo {targetDistance}px trong {steps} bước");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ CDP slide lỗi: {ex.Message} — fallback Actions");
+                await PerformSlideWithActions(driver, sliderButton, targetDistance);
+            }
+        }
         // ═══════════════════════════════════════════════════════════════
         // 🎬 HELPER: THỰC HIỆN KÉO SLIDER
         // ═══════════════════════════════════════════════════════════════
@@ -46493,9 +46611,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // 🎯 TÌM TÂM Ô ĐEN (ADAPTIVE THRESHOLD + CONNECTED COMPONENT)
-        // ═══════════════════════════════════════════════════════════════
+        /// <summary>
+        /// Tìm tâm ô đen trong ảnh captcha Viettel.
+        /// Pipeline: grayscale → adaptive threshold → morphology → connected components → scoring.
+        /// </summary>
         static int FindHolePosition2(string imagePath)
         {
             try
@@ -46507,131 +46626,147 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     int width = bmp.Width;
                     int height = bmp.Height;
 
-                    var rect = new System.Drawing.Rectangle(0, 0, width, height);
+                    // ═══════════════════════════════════════════════════════
+                    // BƯỚC 1: Lấy grayscale + histogram
+                    // ═══════════════════════════════════════════════════════
+                    var rect = new Rectangle(0, 0, width, height);
                     BitmapData bmpData = bmp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
-
                     int bytesPerPixel = 3;
                     int stride = bmpData.Stride;
                     IntPtr ptr = bmpData.Scan0;
                     int bytes = Math.Abs(stride) * height;
                     byte[] rgb = new byte[bytes];
-                    System.Runtime.InteropServices.Marshal.Copy(ptr, rgb, 0, bytes);
+                    Marshal.Copy(ptr, rgb, 0, bytes);
                     bmp.UnlockBits(bmpData);
 
-                    // ═══ GRAYSCALE ═══
                     byte[] grayMap = new byte[width * height];
+                    int[] hist = new int[256];
+
                     for (int y = 0; y < height; y++)
                     {
                         int rowOff = y * stride;
                         for (int x = 0; x < width; x++)
                         {
                             int idx = rowOff + x * bytesPerPixel;
-                            byte b = rgb[idx];
-                            byte g = rgb[idx + 1];
-                            byte r = rgb[idx + 2];
-                            grayMap[y * width + x] = (byte)((r * 299 + g * 587 + b * 114) / 1000);
+                            byte b = rgb[idx], g = rgb[idx + 1], r = rgb[idx + 2];
+                            byte gray = (byte)((r * 299 + g * 587 + b * 114) / 1000);
+                            grayMap[y * width + x] = gray;
+                            hist[gray]++;
                         }
                     }
 
-                    // ═══ NGƯỠNG TỐI RẤT THẤP (ô đen solid) ═══
-                    // Ô đen captcha Viettel thường có gray < 30-40
-                    // Các vùng tối tự nhiên (núi, cây) thường > 50
-                    int[] thresholds = { 25, 40, 55 };
+                    // ═══════════════════════════════════════════════════════
+                    // BƯỚC 2: Adaptive threshold — 3% darkest pixels
+                    // ═══════════════════════════════════════════════════════
+                    int totalPixels = width * height;
+                    int targetDarkPixels = (int)(totalPixels * 0.03);
 
-                    var candidates = new List<(int cx, int cy, int w, int h, double density, int thr)>();
-
-                    foreach (int thr in thresholds)
+                    int cumulative = 0;
+                    int adaptiveThr = 25;
+                    for (int i = 0; i < 256; i++)
                     {
-                        var comps = FindComponents(grayMap, width, height, thr);
-                        foreach (var c in comps)
+                        cumulative += hist[i];
+                        if (cumulative >= targetDarkPixels)
                         {
-                            candidates.Add((c.cx, c.cy, c.w, c.h, c.density, thr));
+                            adaptiveThr = i;
+                            break;
                         }
                     }
+                    adaptiveThr = Math.Max(15, Math.Min(adaptiveThr, 60));
+                    Console.WriteLine($"📊 adaptiveThr={adaptiveThr} (3% darkest)");
 
-                    if (candidates.Count == 0)
+                    // ═══════════════════════════════════════════════════════
+                    // BƯỚC 3: Morphology erode + dilate
+                    // ═══════════════════════════════════════════════════════
+                    byte[] binary = new byte[width * height];
+                    for (int i = 0; i < grayMap.Length; i++)
+                        binary[i] = grayMap[i] < adaptiveThr ? (byte)1 : (byte)0;
+
+                    byte[] eroded = MorphErode(binary, width, height);
+                    byte[] morphed = MorphDilate(eroded, width, height);
+
+                    // ═══════════════════════════════════════════════════════
+                    // BƯỚC 4: Connected components
+                    // ═══════════════════════════════════════════════════════
+                    var comps = FindComponentsAdaptive(morphed, width, height);
+                    Console.WriteLine($"🔢 {comps.Count} components");
+
+                    if (comps.Count == 0)
                     {
-                        Console.WriteLine("⚠️ Không có candidate nào");
-                        return -1;
+                        Console.WriteLine("⚠️ Không có component — fallback");
+                        return FallbackColumnScan(grayMap, width, height, adaptiveThr);
                     }
 
-                    // ═══ KÍCH THƯỚC Ô ĐEN KỲ VỌNG ═══
-                    // Captcha Viettel: ô đen ~ 1/7 chiều rộng ảnh
-                    int expectedSize = width / 7;
-                    Console.WriteLine($"📐 Ảnh {width}x{height}, expectedSize={expectedSize}px");
+                    // ═══════════════════════════════════════════════════════
+                    // BƯỚC 5: Scoring
+                    // ═══════════════════════════════════════════════════════
+                    int expectedSize = (int)(width * 0.13);
+                    Console.WriteLine($"📐 Ảnh {width}x{height}, expectedSize~{expectedSize}px");
 
-                    // ═══ LỌC CHẶT ═══
-                    var valid = new List<(int cx, double score, string reason)>();
+                    var valid = new List<(int cx, int cy, double score, string reason)>();
 
-                    foreach (var c in candidates)
+                    foreach (var c in comps)
                     {
-                        int compW = c.w;
-                        int compH = c.h;
+                        // Lọc cứng
+                        double ratio = (double)c.w / c.h;
+                        if (ratio < 0.80 || ratio > 1.25) continue;
 
-                        // 1. PHẢI VUÔNG ĐỀU (chênh < 25%)
-                        double ratio = (double)compW / compH;
-                        if (ratio < 0.75 || ratio > 1.33)
-                            continue;
+                        if (c.w < expectedSize * 0.6 || c.w > expectedSize * 1.5) continue;
+                        if (c.h < expectedSize * 0.6 || c.h > expectedSize * 1.5) continue;
 
-                        // 2. KÍCH THƯỚC PHẢI KHỚP CHÍNH XÁC (0.7x → 1.3x expectedSize)
-                        if (compW < expectedSize * 0.7 || compW > expectedSize * 1.3)
-                            continue;
-                        if (compH < expectedSize * 0.7 || compH > expectedSize * 1.3)
-                            continue;
+                        if (c.density < 0.90) continue;
 
-                        // 3. DENSITY PHẢI RẤT CAO (>0.85 - ô đen đặc)
-                        if (c.density < 0.85)
-                            continue;
+                        if (c.cx < width * 0.05 || c.cx > width * 0.95) continue;
+                        if (c.cy < height * 0.05 || c.cy > height * 0.95) continue;
 
-                        // 4. KHÔNG CHẠM VIỀN (cách >10% mỗi cạnh)
-                        if (c.cx < width * 0.10 || c.cx > width * 0.90)
-                            continue;
-                        if (c.cy < height * 0.10 || c.cy > height * 0.90)
-                            continue;
-
-                        // 5. TÂM Y PHẢI GẦN GIỮA (ô đen luôn ở dải giữa dọc)
                         double dyFromCenter = Math.Abs(c.cy - height / 2.0) / height;
-                        if (dyFromCenter > 0.30)
-                            continue;
+                        if (dyFromCenter > 0.35) continue;
 
-                        // ═══ TÍNH ĐIỂM ═══
-                        double sizeScore = 1.0 - Math.Abs(compW - expectedSize) / (double)expectedSize;
+                        // Verify độ tối thực
+                        double avgGray = GetComponentAvgGray(grayMap, width, c);
+                        if (avgGray > 40) continue;
+
+                        // Score
+                        double sizeScore = 1.0 - Math.Abs(c.w - expectedSize) / (double)expectedSize;
                         double centerYScore = 1.0 - dyFromCenter;
                         double densityScore = c.density;
+                        double darknessScore = 1.0 - avgGray / 60.0;
+                        double posXScore = 1.0 - Math.Abs(c.cx - width * 0.5) / (width * 0.5);
 
-                        double score = sizeScore * 5.0 + centerYScore * 3.0 + densityScore * 2.0;
+                        double score =
+                            sizeScore * 3.0 +
+                            centerYScore * 2.0 +
+                            densityScore * 2.5 +
+                            darknessScore * 2.0 +
+                            posXScore * 1.0;
 
-                        valid.Add((c.cx, score, $"size={compW}x{compH} cy={c.cy} density={c.density:F2} thr={c.thr}"));
+                        valid.Add((c.cx, c.cy, score,
+                            $"size={c.w}x{c.h} cy={c.cy} dens={c.density:F3} gray={avgGray:F1}"));
                     }
 
                     if (valid.Count == 0)
                     {
-                        Console.WriteLine("⚠️ Không candidate nào qua lọc chặt — fallback");
-                        return FallbackColumnScan(grayMap, width, height, 40);
+                        Console.WriteLine("⚠️ Không candidate nào qua lọc — fallback");
+                        return FallbackColumnScan(grayMap, width, height, adaptiveThr);
                     }
 
-                    // ═══ SẮP XẾP + LOG ═══
                     valid.Sort((a, b) => b.score.CompareTo(a.score));
 
-                    Console.WriteLine($"📊 Top {Math.Min(5, valid.Count)} candidates:");
+                    Console.WriteLine($"📊 Top {Math.Min(5, valid.Count)}:");
                     for (int i = 0; i < Math.Min(5, valid.Count); i++)
-                    {
-                        Console.WriteLine($"   #{i + 1}: x={valid[i].cx}, score={valid[i].score:F2}, {valid[i].reason}");
-                    }
+                        Console.WriteLine($"   #{i + 1}: x={valid[i].cx} score={valid[i].score:F2} {valid[i].reason}");
 
-                    // ═══ CHỌN ═══
-                    // Nếu top 1 vượt trội → chọn luôn
-                    if (valid.Count >= 2 && valid[0].score > valid[1].score * 1.2)
+                    // Chọn
+                    if (valid.Count >= 2 && valid[0].score > valid[1].score * 1.25)
                     {
-                        Console.WriteLine($"🎯 Chọn top 1 (vượt trội): x={valid[0].cx}");
+                        Console.WriteLine($"🎯 Top 1 vượt trội: x={valid[0].cx}");
                         return valid[0].cx;
                     }
 
-                    // Nếu top 1+2 gần nhau (< 20px) → trung bình
-                    if (valid.Count >= 2 && Math.Abs(valid[0].cx - valid[1].cx) < 20)
+                    if (valid.Count >= 2 && Math.Abs(valid[0].cx - valid[1].cx) < 25)
                     {
                         int avgX = (valid[0].cx + valid[1].cx) / 2;
-                        Console.WriteLine($"🎯 Top 1+2 gần nhau → trung bình: x={avgX}");
+                        Console.WriteLine($"🎯 Top 1+2 gần: avg x={avgX}");
                         return avgX;
                     }
 
@@ -46641,156 +46776,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Lỗi FindHolePosition2: {ex.Message}");
+                Console.WriteLine($"❌ FindHolePosition2: {ex.Message}");
                 return -1;
             }
         }
-
-        // ═══════════════════════════════════════════════════════════════
-        // 🔍 TÌM CONNECTED COMPONENTS
-        // ═══════════════════════════════════════════════════════════════
-        static List<(int cx, int cy, int w, int h, double density)> FindComponents(
-            byte[] grayMap, int width, int height, int threshold)
-        {
-            var result = new List<(int cx, int cy, int w, int h, double density)>();
-            int totalPixels = width * height;
-            bool[] visited = new bool[totalPixels];
-
-            int[] dx = { -1, 1, 0, 0 };
-            int[] dy = { 0, 0, -1, 1 };
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    int p = y * width + x;
-                    if (visited[p] || grayMap[p] > threshold) continue;
-
-                    int area = 0;
-                    int minX = int.MaxValue, maxX = int.MinValue;
-                    int minY = int.MaxValue, maxY = int.MinValue;
-
-                    var queue = new Queue<int>();
-                    queue.Enqueue(p);
-                    visited[p] = true;
-
-                    while (queue.Count > 0)
-                    {
-                        int cur = queue.Dequeue();
-                        int cy = cur / width;
-                        int cx = cur % width;
-
-                        area++;
-                        if (cx < minX) minX = cx;
-                        if (cx > maxX) maxX = cx;
-                        if (cy < minY) minY = cy;
-                        if (cy > maxY) maxY = cy;
-
-                        for (int d = 0; d < 4; d++)
-                        {
-                            int nx = cx + dx[d];
-                            int ny = cy + dy[d];
-                            if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
-                            int np = ny * width + nx;
-                            if (visited[np] || grayMap[np] > threshold) continue;
-                            visited[np] = true;
-                            queue.Enqueue(np);
-                        }
-                    }
-
-                    if (area < 100) continue;
-                    if (area > totalPixels * 0.4) continue;
-
-                    int compW = maxX - minX + 1;
-                    int compH = maxY - minY + 1;
-                    int compArea = compW * compH;
-                    double density = (double)area / compArea;
-
-                    if (density < 0.5) continue;
-
-                    int cxComp = (minX + maxX) / 2;
-                    int cyComp = (minY + maxY) / 2;
-
-                    result.Add((cxComp, cyComp, compW, compH, density));
-                }
-            }
-
-            return result;
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // 🔍 HELPER: TÌM CÁC CONNECTED COMPONENT VỚI 1 NGƯỠNG
-        // ═══════════════════════════════════════════════════════════════
-        static List<(int cx, int cy, int w, int h, double score)> FindComponents(
-            byte[] grayMap, int width, int height, int stride, int bytesPerPixel, int threshold)
-        {
-            var result = new List<(int cx, int cy, int w, int h, double score)>();
-            int totalPixels = width * height;
-            bool[] visited = new bool[totalPixels];
-
-            int[] dx = { -1, 1, 0, 0 };
-            int[] dy = { 0, 0, -1, 1 };
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    int p = y * width + x;
-                    if (visited[p] || grayMap[p] > threshold) continue;
-
-                    int area = 0;
-                    int minX = int.MaxValue, maxX = int.MinValue;
-                    int minY = int.MaxValue, maxY = int.MinValue;
-
-                    var queue = new Queue<int>();
-                    queue.Enqueue(p);
-                    visited[p] = true;
-
-                    while (queue.Count > 0)
-                    {
-                        int cur = queue.Dequeue();
-                        int cy = cur / width;
-                        int cx = cur % width;
-
-                        area++;
-                        if (cx < minX) minX = cx;
-                        if (cx > maxX) maxX = cx;
-                        if (cy < minY) minY = cy;
-                        if (cy > maxY) maxY = cy;
-
-                        for (int d = 0; d < 4; d++)
-                        {
-                            int nx = cx + dx[d];
-                            int ny = cy + dy[d];
-                            if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
-                            int np = ny * width + nx;
-                            if (visited[np] || grayMap[np] > threshold) continue;
-                            visited[np] = true;
-                            queue.Enqueue(np);
-                        }
-                    }
-
-                    // Lọc sơ bộ
-                    if (area < 100) continue;
-                    if (area > totalPixels * 0.4) continue;
-
-                    int compW = maxX - minX + 1;
-                    int compH = maxY - minY + 1;
-                    int compArea = compW * compH;
-                    double density = (double)area / compArea;
-
-                    if (density < 0.5) continue;
-
-                    int cxComp = (minX + maxX) / 2;
-                    int cyComp = (minY + maxY) / 2;
-
-                    result.Add((cxComp, cyComp, compW, compH, density));
-                }
-            }
-
-            return result;
-        }
-
         static int FallbackColumnScan(byte[] grayMap, int width, int height, int threshold)
         {
             int marginX = (int)(width * 0.15);
@@ -46826,19 +46815,153 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             Console.WriteLine($"🎯 Fallback column: x={bestCol}, density={bestVal}");
             return bestCol;
         }
+        // ═══════════════════════════════════════════════════════════════
+        // Component struct
+        // ═══════════════════════════════════════════════════════════════
+        public struct Component
+        {
+            public int minX, maxX, minY, maxY;
+            public int cx, cy, w, h;
+            public int area;
+            public double density;
+        }
 
-        /// <summary>
-        /// Check captcha thành công — đa tiêu chí
-        /// </summary>
+        // ═══════════════════════════════════════════════════════════════
+        // Morphology
+        // ═══════════════════════════════════════════════════════════════
+        static byte[] MorphErode(byte[] src, int w, int h)
+        {
+            byte[] dst = new byte[w * h];
+            for (int y = 1; y < h - 1; y++)
+                for (int x = 1; x < w - 1; x++)
+                {
+                    bool allOn = true;
+                    for (int dy = -1; dy <= 1 && allOn; dy++)
+                        for (int dx = -1; dx <= 1; dx++)
+                            if (src[(y + dy) * w + (x + dx)] == 0) { allOn = false; break; }
+                    dst[y * w + x] = allOn ? (byte)1 : (byte)0;
+                }
+            return dst;
+        }
+
+        static byte[] MorphDilate(byte[] src, int w, int h)
+        {
+            byte[] dst = new byte[w * h];
+            for (int y = 1; y < h - 1; y++)
+                for (int x = 1; x < w - 1; x++)
+                {
+                    bool anyOn = false;
+                    for (int dy = -1; dy <= 1 && !anyOn; dy++)
+                        for (int dx = -1; dx <= 1; dx++)
+                            if (src[(y + dy) * w + (x + dx)] != 0) { anyOn = true; break; }
+                    dst[y * w + x] = anyOn ? (byte)1 : (byte)0;
+                }
+            return dst;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // Connected components (8-hướng, dùng Stack)
+        // ═══════════════════════════════════════════════════════════════
+        static List<Component> FindComponentsAdaptive(byte[] binaryMap, int width, int height)
+        {
+            var result = new List<Component>();
+            int totalPixels = width * height;
+            bool[] visited = new bool[totalPixels];
+
+            int[] dx = { -1, 1, 0, 0, -1, -1, 1, 1 };
+            int[] dy = { 0, 0, -1, 1, -1, 1, -1, 1 };
+
+            var stack = new Stack<int>(1024);
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int p = y * width + x;
+                    if (visited[p] || binaryMap[p] == 0) continue;
+
+                    int area = 0;
+                    int minX = int.MaxValue, maxX = int.MinValue;
+                    int minY = int.MaxValue, maxY = int.MinValue;
+
+                    stack.Clear();
+                    stack.Push(p);
+                    visited[p] = true;
+
+                    while (stack.Count > 0)
+                    {
+                        int cur = stack.Pop();
+                        int cy = cur / width;
+                        int cx = cur - cy * width;
+
+                        area++;
+                        if (cx < minX) minX = cx;
+                        if (cx > maxX) maxX = cx;
+                        if (cy < minY) minY = cy;
+                        if (cy > maxY) maxY = cy;
+
+                        for (int d = 0; d < 8; d++)
+                        {
+                            int nx = cx + dx[d];
+                            int ny = cy + dy[d];
+                            if ((uint)nx >= (uint)width || (uint)ny >= (uint)height) continue;
+                            int np = ny * width + nx;
+                            if (visited[np] || binaryMap[np] == 0) continue;
+                            visited[np] = true;
+                            stack.Push(np);
+                        }
+                    }
+
+                    if (area < 30) continue;
+                    if (area > totalPixels * 0.4) continue;
+
+                    int compW = maxX - minX + 1;
+                    int compH = maxY - minY + 1;
+                    int boundingArea = compW * compH;
+                    if (boundingArea == 0) continue;
+
+                    double density = (double)area / boundingArea;
+                    if (density < 0.70) continue;
+
+                    double aspect = (double)compW / compH;
+                    if (aspect < 0.55 || aspect > 1.80) continue;
+
+                    result.Add(new Component
+                    {
+                        minX = minX,
+                        maxX = maxX,
+                        minY = minY,
+                        maxY = maxY,
+                        cx = (minX + maxX) / 2,
+                        cy = (minY + maxY) / 2,
+                        w = compW,
+                        h = compH,
+                        area = area,
+                        density = density
+                    });
+                }
+            }
+
+            result.Sort((a, b) => b.area.CompareTo(a.area));
+            return result;
+        }
+
+        static double GetComponentAvgGray(byte[] gray, int w, Component c)
+        {
+            long sum = 0; int count = 0;
+            for (int y = c.minY; y <= c.maxY; y++)
+                for (int x = c.minX; x <= c.maxX; x++)
+                {
+                    sum += gray[y * w + x];
+                    count++;
+                }
+            return count > 0 ? (double)sum / count : 255;
+        }
         private bool CheckCaptchaSuccess(IWebDriver driver)
         {
             try
             {
-                var js = (IJavaScriptExecutor)driver;
-
-                // ═══════════════════════════════════════════════════════
-                // 1. KIỂM TRA THÔNG BÁO LỖI (dấu hiệu SAI rõ nhất)
-                // ═══════════════════════════════════════════════════════
+                // ═══ 1. Kiểm tra thông báo lỗi ═══
                 string[] errorSelectors = new[]
                 {
             "div.error-msg",
@@ -46856,12 +46979,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             "captcha sai",
             "sai captcha",
             "vui lòng xác thực lại",
-            "xác thực captcha",
-            "vui lòng kéo",
             "kéo chính xác",
             "captcha không chính xác",
             "không đúng, vui lòng thử lại",
-            "sai, vui lòng thử lại"
+            "sai, vui lòng thử lại",
+            "vui lòng thử lại"
         };
 
                 foreach (var sel in errorSelectors)
@@ -46874,9 +46996,22 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             if (!err.Displayed) continue;
                             string txt = (err.Text ?? "").ToLower();
 
-                            // Bỏ qua thông báo "Vui lòng xác thực captcha" của form validation gốc
-                            // (chỉ là validate form, không phải captcha sai)
-                            if (txt.Contains("vui lòng xác thực captcha") && !txt.Contains("lại"))
+                            // ✅ Chỉ bỏ qua khi message là validate form gốc (chưa submit)
+                            // Kiểm tra input recaptcha có value không
+                            bool hasRecaptchaValue = false;
+                            try
+                            {
+                                var hidden = driver.FindElements(By.CssSelector("input[formcontrolname='recaptcha']"));
+                                if (hidden.Count > 0)
+                                {
+                                    string v = hidden[0].GetAttribute("value") ?? "";
+                                    hasRecaptchaValue = !string.IsNullOrEmpty(v);
+                                }
+                            }
+                            catch { }
+
+                            // Nếu chưa có value → đây là validate form, bỏ qua
+                            if (!hasRecaptchaValue && txt.Contains("vui lòng xác thực captcha"))
                                 continue;
 
                             foreach (var kw in errorKeywords)
@@ -46892,9 +47027,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     catch { }
                 }
 
-                // ═══════════════════════════════════════════════════════
-                // 2. KIỂM TRA TOAST/MESSAGE TOÀN CỤC (Ant Design notification)
-                // ═══════════════════════════════════════════════════════
+                // ═══ 2. Toast toàn cục ═══
                 try
                 {
                     var messages = driver.FindElements(By.CssSelector(
@@ -46915,35 +47048,28 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
                 catch { }
 
-                // ═══════════════════════════════════════════════════════
-                // 3. KIỂM TRA SLIDER/PUZZLE CÓ RESET VỀ 0 KHÔNG
-                //    Nếu sau khi kéo xong mà puzzle/slider về 0 → SAI
-                // ═══════════════════════════════════════════════════════
+                // ═══ 3. Puzzle/slider reset về 0 → SAI ═══
                 try
                 {
                     var pieces = driver.FindElements(By.CssSelector("img.puzzle-piece"));
                     var btns = driver.FindElements(By.CssSelector("div.slider-button"));
 
-                    // Nếu captcha biến mất hoàn toàn → có thể đã ĐÚNG
                     if (pieces.Count == 0 && btns.Count == 0)
                     {
-                        Console.WriteLine("✅ Captcha đã biến mất — coi như đúng");
+                        Console.WriteLine("✅ Captcha biến mất — ĐÚNG");
                         return true;
                     }
 
-                    // Kiểm tra left của puzzle-piece
                     if (pieces.Count > 0)
                     {
                         var style = pieces[pieces.Count - 1].GetAttribute("style") ?? "";
-                        // Nếu puzzle quay về left: 0 sau khi kéo → SAI
                         if (style.Contains("left: 0px") || style.Contains("left:0px"))
                         {
-                            // Có thể vẫn đang trong quá trình kéo → đợi thêm chút
                             System.Threading.Thread.Sleep(500);
                             style = pieces[pieces.Count - 1].GetAttribute("style") ?? "";
                             if (style.Contains("left: 0px") || style.Contains("left:0px"))
                             {
-                                Console.WriteLine("❌ Puzzle về 0 — captcha sai");
+                                Console.WriteLine("❌ Puzzle về 0 — SAI");
                                 return false;
                             }
                         }
@@ -46951,9 +47077,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
                 catch { }
 
-                // ═══════════════════════════════════════════════════════
-                // 4. KIỂM TRA INPUT recaptcha CÓ VALUE KHÔNG (dấu hiệu ĐÚNG)
-                // ═══════════════════════════════════════════════════════
+                // ═══ 4. recaptcha input có value → ĐÚNG ═══
                 try
                 {
                     var captchaInput = driver.FindElements(By.CssSelector("input[formcontrolname='recaptcha']"));
@@ -46964,7 +47088,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                         if (!string.IsNullOrEmpty(val))
                         {
-                            Console.WriteLine($"✅ recaptcha có value='{val}' — ĐÚNG");
+                            Console.WriteLine($"✅ recaptcha value='{val}' — ĐÚNG");
                             return true;
                         }
 
@@ -46973,16 +47097,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             Console.WriteLine("✅ recaptcha ng-valid — ĐÚNG");
                             return true;
                         }
-
-                        // Vẫn còn ng-invalid → có thể SAI, nhưng chưa chắc
-                        // (vì Angular đôi khi chưa cập nhật)
                     }
                 }
                 catch { }
 
-                // ═══════════════════════════════════════════════════════
-                // 5. KIỂM TRA class slider-bar có "success" không
-                // ═══════════════════════════════════════════════════════
+                // ═══ 5. class success ═══
                 try
                 {
                     var successBar = driver.FindElements(By.CssSelector(
@@ -47001,11 +47120,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
                 catch { }
 
-                // ═══════════════════════════════════════════════════════
-                // 6. FALLBACK: Không có lỗi + puzzle không về 0 → coi như ĐÚNG
-                // ═══════════════════════════════════════════════════════
-                Console.WriteLine("⚠️ Không xác định rõ — mặc định coi như ĐÚNG");
-                return true;
+                // ═══ 6. FALLBACK: Mặc định SAI để retry ═══
+                Console.WriteLine("⚠️ Không xác định rõ — mặc định SAI để retry");
+                return false;
             }
             catch (Exception ex)
             {
@@ -47013,7 +47130,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 return false;
             }
         }
-        // ===== HÀM HỖ TRỢ: Loại bỏ ký tự không hợp lệ trong tên file =====
 
         static string SaveBase64ToFile(string dataUrl, string name)
         {
