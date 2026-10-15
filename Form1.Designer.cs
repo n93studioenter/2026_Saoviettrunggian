@@ -1824,7 +1824,7 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 43.88753F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 323F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 119F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 80F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 81F));
             this.tableLayoutPanel1.Controls.Add(this.panelControl12, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl11, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl10, 0, 0);
@@ -1852,7 +1852,7 @@
             this.panelControl12.Controls.Add(this.radVbDauvao1);
             this.panelControl12.Controls.Add(this.btnClearNganhang);
             this.panelControl12.Controls.Add(this.btnLocdulieuNganhang);
-            this.panelControl12.Location = new System.Drawing.Point(753, 2);
+            this.panelControl12.Location = new System.Drawing.Point(752, 2);
             this.panelControl12.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl12.Name = "panelControl12";
             this.panelControl12.Size = new System.Drawing.Size(316, 138);
@@ -2004,7 +2004,7 @@
             this.panelControl11.Location = new System.Drawing.Point(423, 2);
             this.panelControl11.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl11.Name = "panelControl11";
-            this.panelControl11.Size = new System.Drawing.Size(326, 138);
+            this.panelControl11.Size = new System.Drawing.Size(325, 138);
             this.panelControl11.TabIndex = 4;
             // 
             // simpleButton5
@@ -2052,7 +2052,7 @@
             this.panelControl8.Location = new System.Drawing.Point(4, 73);
             this.panelControl8.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl8.Name = "panelControl8";
-            this.panelControl8.Size = new System.Drawing.Size(318, 34);
+            this.panelControl8.Size = new System.Drawing.Size(317, 34);
             this.panelControl8.TabIndex = 35;
             // 
             // lblImporttdra
@@ -2362,6 +2362,7 @@
             this.txtpass.TabIndex = 19;
             this.txtpass.Text = "Minhhhoang1234@";
             this.txtpass.TextChanged += new System.EventHandler(this.txtpass_TextChanged_1);
+            this.txtpass.Leave += new System.EventHandler(this.txtpass_Leave);
             // 
             // simpleButton3
             // 
@@ -2434,7 +2435,7 @@
             // 
             this.pictureEdit2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureEdit2.EditValue = ((object)(resources.GetObject("pictureEdit2.EditValue")));
-            this.pictureEdit2.Location = new System.Drawing.Point(1076, 2);
+            this.pictureEdit2.Location = new System.Drawing.Point(1075, 2);
             this.pictureEdit2.Margin = new System.Windows.Forms.Padding(2);
             this.pictureEdit2.Name = "pictureEdit2";
             this.pictureEdit2.Properties.ShowCameraMenuItem = DevExpress.XtraEditors.Controls.CameraMenuItemVisibility.Auto;

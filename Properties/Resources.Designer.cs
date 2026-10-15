@@ -673,6 +673,16 @@ namespace SaovietTax.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap Smartsign {
+            get {
+                object obj = ResourceManager.GetObject("Smartsign", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap Softdreamico {
             get {
                 object obj = ResourceManager.GetObject("Softdreamico", resourceCulture);
@@ -717,6 +727,16 @@ namespace SaovietTax.Properties {
             get {
                 object obj = ResourceManager.GetObject("viewmergeddata", resourceCulture);
                 return ((DevExpress.Utils.Svg.SvgImage)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap VinInvoice {
+            get {
+                object obj = ResourceManager.GetObject("VinInvoice", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
