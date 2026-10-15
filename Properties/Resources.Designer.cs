@@ -423,6 +423,16 @@ namespace SaovietTax.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap logo_mysoftware {
+            get {
+                object obj = ResourceManager.GetObject("logo-mysoftware", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap lookup_reference_16x16 {
             get {
                 object obj = ResourceManager.GetObject("lookup&reference_16x16", resourceCulture);
@@ -467,6 +477,16 @@ namespace SaovietTax.Properties {
             get {
                 object obj = ResourceManager.GetObject("movedown", resourceCulture);
                 return ((DevExpress.Utils.Svg.SvgImage)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap MyInvoice {
+            get {
+                object obj = ResourceManager.GetObject("MyInvoice", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         

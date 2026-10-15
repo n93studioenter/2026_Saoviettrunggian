@@ -15059,6 +15059,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             {
                 return "Smartsign";
             }
+            if (code == "0108971656")
+            {
+                return "MyInvoice";
+            }
             return "";
         }
         public DataTable ExecuteQuery3(string query, string connectionst, params OleDbParameter[] parameters)
@@ -18674,6 +18678,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                 switch (provider)
                 {
+                    case "myinvoice":
+                        maTraCuu = FindVinInvoiceCode(doc, ns);
+                        break;
                     case "smartsign":
                         maTraCuu = FindSmartSignCode(doc, ns);
                         break;
@@ -22849,6 +22856,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             }); 
                             return;
                         }
+                    }
+                    if (NCC == "MyInvoice")
+                    {
+                         TaiHDMYINVOICE(true, mstNB, shdon, "", mabimat);
                     }
                     if (NCC == "Smartsign")
                     {
@@ -27329,6 +27340,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             nccImageList.Images.Add("Visnam", Properties.Resources.Visnam);
             nccImageList.Images.Add("VinInvoice", Properties.Resources.VinInvoice);
             nccImageList.Images.Add("Smartsign", Properties.Resources.Smartsign);
+            nccImageList.Images.Add("MyInvoice", Properties.Resources.MyInvoice);
         }
         private void gridView2_CustomDrawCell(object sender, DevExpress.XtraGrid.Views.Base.RowCellCustomDrawEventArgs e)
         {
@@ -33821,7 +33833,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             // ═══════════════════════════════════════════════════════
             // ✅ ĐẨY PDF VÀO QUEUE NGAY — không cần chờ batch
             // ═══════════════════════════════════════════════════════
-           // EnqueuePdfDownload(tb);
+            EnqueuePdfDownload(tb);
             Debug.WriteLine($"📥 Đã Enqueue PDF: {tb.SHDon}");
 
             // ============ 4. GHI DB ============
@@ -34042,6 +34054,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             {
                 switch (inv.NCC)
                 {
+                    case "MyInvoice":
+                        await TaiHDMYINVOICE(true, inv.Mst, inv.SHDon, "", mabimat);
+                        break;
                     case "Smartsign":
                         await TaiHDSmartSign(true, inv.Mst, inv.SHDon, "", mabimat);
                         break;
@@ -36587,7 +36602,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             Debug.WriteLine($"✅ Parse OK: HĐ {tb.SHDon}, NCC={tb.NCC}");
 
             // ✅ Đẩy PDF vào queue ngay
-           // EnqueuePdfDownload(tb);
+            EnqueuePdfDownload(tb);
             Debug.WriteLine($"📥 Đã Enqueue PDF: {tb.SHDon}");
 
             // ============ 4. GHI DB ============
@@ -36964,6 +36979,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     img = nccImageList.Images["VinInvoice"];
                 else if (ncc == "SMARTSIGN")
                     img = nccImageList.Images["Smartsign"];
+                else if (ncc == "MYINVOICE")
+                    img = nccImageList.Images["MyInvoice"];
                 // Không có icon thì để DevExpress tự vẽ bình thường
                 if (img == null)
                     return;
@@ -46133,7 +46150,86 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             }
         }
 
+        public async Task TaiHDMYINVOICE(
+  bool toggle,
+  string mst,
+  string shdon,
+  string KHHD,
+  string mccqt)
+        {
 
+            string downloadPath = "";
+
+            if (chkDauvao.Checked)
+                downloadPath = Path.Combine(savedPath, $"HD{DateTime.Now.Year}", "HDVao", DateTime.Now.Month.ToString());
+            else if (chkDaura.Checked)
+                downloadPath = Path.Combine(savedPath, $"HD{DateTime.Now.Year}", "HDRa", DateTime.Now.Month.ToString());
+
+            if (string.IsNullOrEmpty(downloadPath))
+            {
+                XtraMessageBox.Show("Chưa chọn đầu vào hoặc đầu ra.");
+                return;
+            }
+
+            Directory.CreateDirectory(downloadPath);
+
+            string url = $"https://tracuu.myinvoice.vn/erp/rest/s1/iam-entry/invoices/{mccqt}/pdf";
+            string fileMoi = Path.Combine(downloadPath, $"{mst}_{shdon}_{KHHD}.pdf");
+
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    client.Timeout = TimeSpan.FromSeconds(30);
+
+                    // Một số API yêu cầu User-Agent
+                    client.DefaultRequestHeaders.Add("User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+
+                    // Tải PDF
+                    byte[] pdfBytes = await client.GetByteArrayAsync(url);
+
+                    if (pdfBytes == null || pdfBytes.Length < 100)
+                    {
+                        XtraMessageBox.Show("Không tải được PDF từ VN-Invoice.", "VN-Invoice",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    // Lưu file
+                    if (File.Exists(fileMoi))
+                        File.Delete(fileMoi);
+
+                    File.WriteAllBytes(fileMoi, pdfBytes);
+
+                    Console.WriteLine($"✅ Đã tải PDF VN-Invoice: {fileMoi} ({pdfBytes.Length} bytes)");
+
+                    // Mở file
+                    if (toggle)
+                    {
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = fileMoi,
+                                UseShellExecute = true
+                            });
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi tải VN-Invoice: {ex.Message}");
+                XtraMessageBox.Show(
+                    "Lỗi tải hóa đơn VN-Invoice:\r\n\r\n" + ex.Message,
+                    "VN-Invoice",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
         // ═══════════════════════════════════════════════════════════════
         // FALLBACK: quét theo cột, tìm cột có mật độ pixel tối cao nhất
         // ═══════════════════════════════════════════════════════════════
