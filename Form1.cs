@@ -93,6 +93,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OpenCvSharp;
 using OpenCvSharp.CPlusPlus;
+using OpenCvSharp.Text;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Interactions;
@@ -7653,19 +7654,44 @@ Chỉ trả lời: CÓ hoặc KHÔNG
                 try
                 {
                     string dbPath = Path.Combine("\\\\192.168.1.90\\Ke toan 2025 New\\1 Copi vao dung 1\\Hoadon", "Tooldb.accdb");
-                    //string dbPath = Path.Combine("D:\\", "Tooldb.accdb");
 
-                    connectionString2 = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};";
-                    string queryGetdetail = @"SELECT * FROM tbCompany";
-                    DataTable getCompany = ExecuteQuery2(queryGetdetail);
+                    // Thêm Connect Timeout vào chuỗi kết nối
+                    connectionString2 = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Connect Timeout=3;";
 
-                    //Kiểm tra dbptath co khong
-                    bool checkdata= getCompany.AsEnumerable().Any(m => m["Dbpath"].ToString() == tbRegister.Rows[0].Field<string>("Dbpath"));
-                    chkThietlaptong.Checked = checkdata;
+                    // Sử dụng Task.Run kết hợp Task.WhenAny để giới hạn thời gian chờ tối đa (ví dụ: 3 giây)
+                    var loadTask = Task.Run(() =>
+                    {
+                        string queryGetdetail = @"SELECT * FROM tbCompany";
+                        return ExecuteQuery2(queryGetdetail);
+                    });
+
+                    // Chờ task hoàn thành trong tối đa 3000ms (3 giây)
+                    if (await Task.WhenAny(loadTask, Task.Delay(3000)) == loadTask)
+                    {
+                        // Nếu load kịp trong 3 giây
+                        DataTable getCompany = await loadTask;
+
+                        if (getCompany != null && getCompany.Rows.Count > 0 && tbRegister.Rows.Count > 0)
+                        {
+                            bool checkdata = getCompany.AsEnumerable().Any(m => m["Dbpath"].ToString() == tbRegister.Rows[0].Field<string>("Dbpath"));
+                            chkThietlaptong.Checked = checkdata;
+                        }
+                        else
+                        {
+                            chkThietlaptong.Checked = false;
+                        }
+                    }
+                    else
+                    {
+                        // Quá 3 giây mà chưa kết nối được (mạng nghẽn / server tắt) -> Bỏ qua luôn không chờ nữa
+                        chkThietlaptong.Checked = false;
+                        // Có thể ghi log nhẹ ở đây nếu cần: Debug.WriteLine("⚠️ Kết nối database mạng bị chậm/timeout.");
+                    }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
-
+                    // Bắt toàn bộ lỗi mất mạng, sai đường dẫn... mà không làm treo app
+                    chkThietlaptong.Checked = false;
                 }
                 // chkThietlaptong.Checked = isresitry == "1" ? true : false;
 
@@ -13433,9 +13459,45 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 return null;
 
             // Skip nếu đã có trong DB
-            if (checktbImport != null
-                && checktbImport.AsEnumerable().Any(m => m.Field<string>("Path") == pathXml))
+          
+            // 1. Tìm dòng khớp với pathXml trong bảng checktbImport
+            DataRow foundRow = checktbImport?.AsEnumerable()
+                .FirstOrDefault(m => m.Field<string>("Path") == pathXml);
+
+            // 2. Kiểm tra xem dòng đó có tồn tại hay không
+            if (foundRow != null)
+            {
+                //TbImport tbImports = null;
+                //try
+                //{
+                //    int lctype = chkDauvao.Checked ? 1 : 2;
+                //    tbImports=new TbImport
+                //    {
+                //        Path = foundRow.Field<string>("Path"),
+                //        Mst = foundRow.Field<string>("Mst"),
+                //        SHDon = foundRow.Field<string>("SHDon"),
+                //        NLap = foundRow.Field<DateTime>("NLap"),
+                //        Type = lctype.ToString(),
+                //        NCC = foundRow.Field<string>("NCC"),
+                //        KHHDon = foundRow.Field<string>("KHHDon"),
+                //        Khmshdon = foundRow.Field<string>("Khmshdon"),
+                //        hdon = foundRow.Field<string>("hdon"),
+                //        Noidung = foundRow.Field<string>("Noidung"),
+                //        TPhi = foundRow.Field<string>("TPhi"),
+
+
+                //    };
+                //    if (modeClick == 1)
+                //        EnqueuePdfDownload(tbImports);
+                //}
+                //catch (Exception ex)
+                //{
+                 
+                //}
+               
+                // Nếu đã có tồn tại trong bảng, bạn có thể xử lý ở đây (ví dụ lấy thêm dữ liệu từ foundRow)
                 return null;
+            }
 
             if (tongfile == 0) tongfile = totalInvoices;
 
@@ -13474,7 +13536,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 var key = NormalizeTbImportKey(tbImport.Mst, tbImport.SHDon, tbImport.NLap, localType);
                 lookupTbImport.Add(key);
             }
-
+           
             return tbImport;
         }
         // ===== LOCK CHO DANH SÁCH HÓA ĐƠN DÙNG CHUNG =====
@@ -14333,6 +14395,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         try
                         {
                             var tb = await DocfileXmlOne(fileLocal, 1);
+                           
                             if (tb == null) return;
 
                             lock (lockObj)
@@ -15001,6 +15064,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         {
             if (isdesign)
                 return;
+          modeClick = 1;
           await  Xulychonthang();
         }
         public string GetNCCName(string code)
@@ -19402,6 +19466,430 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         {
 
         }
+        public async Task TaiFASTNew(bool toggle, string mst, string shdon, string KHHDon, string mabimat)
+        {
+            string downloadPath = "";
+
+            if (chkDauvao.Checked)
+            {
+                downloadPath = Path.Combine(
+                    savedPath,
+                    $"HD{dtTungay.DateTime.Year}",
+                    "HDVao",
+                    dtTungay.DateTime.Month.ToString());
+            }
+            else if (chkDaura.Checked)
+            {
+                downloadPath = Path.Combine(
+                    savedPath,
+                    $"HD{dtTungay.DateTime.Year}",
+                    "HDRa",
+                    dtTungay.DateTime.Month.ToString());
+            }
+
+            if (string.IsNullOrEmpty(downloadPath))
+            {
+                XtraMessageBox.Show("Chưa chọn đầu vào hoặc đầu ra.");
+                return;
+            }
+
+            Directory.CreateDirectory(downloadPath);
+
+            await Task.Run(async () =>
+            {
+                ChromeOptions options = new ChromeOptions();
+
+                options.AddArgument("--disable-gpu");
+                options.AddArgument("--no-sandbox");
+                options.AddArgument("--disable-dev-shm-usage");
+                options.AddArgument("--window-size=1920,1080");
+                options.AddArgument("--disable-extensions");
+                options.AddArgument("--disable-popup-blocking");
+                options.AddArgument("--disable-web-security");
+                options.AddArgument("--allow-running-insecure-content");
+                options.AddArgument("--disable-blink-features=AutomationControlled");
+                options.AddExcludedArgument("enable-automation");
+                options.AddAdditionalOption("useAutomationExtension", false);
+                options.AddArgument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+
+                options.AddArgument("--disable-notifications");
+                options.AddArgument("--disable-infobars");
+                options.AddArgument("--no-first-run");
+                options.AddArgument("--no-default-browser-check");
+
+                options.AddUserProfilePreference("plugins.always_open_pdf_externally", true);
+                options.AddUserProfilePreference("download.default_directory", downloadPath);
+                options.AddUserProfilePreference("download.prompt_for_download", false);
+                options.AddUserProfilePreference("download.directory_upgrade", true);
+                options.AddUserProfilePreference("safebrowsing.enabled", true);
+                options.AddUserProfilePreference("profile.default_content_setting_values.automatic_downloads", 1);
+                options.AddUserProfilePreference("profile.default_content_setting_values.popups", 2);
+
+                string ublockPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Extensions", "uBlock");
+                if (Directory.Exists(ublockPath))
+                    options.AddArgument("--load-extension=" + ublockPath);
+
+                IWebDriver driver = null;
+                try
+                {
+                    string driverDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                    var service = ChromeDriverService.CreateDefaultService(driverDirectory);
+                    service.HideCommandPromptWindow = true;
+
+                    driver = new ChromeDriver(service, options);
+                    driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(30);
+
+                    try
+                    {
+                        if (driver is ChromeDriver chromeDriver)
+                        {
+                            chromeDriver.ExecuteCdpCommand(
+                                "Page.setDownloadBehavior",
+                                new Dictionary<string, object>
+                                {
+                            { "behavior", "allow" },
+                            { "downloadPath", downloadPath }
+                                });
+                        }
+                    }
+                    catch { }
+
+                    WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
+
+                    string url = "https://einvoice.fast.com.vn/";
+
+                    bool searchSuccess = false;
+                    int maxCaptchaRetries = 10;
+
+                    for (int attempt = 1; attempt <= maxCaptchaRetries && !searchSuccess; attempt++)
+                    {
+                        Console.WriteLine($"🔵 FAST Captcha lần {attempt}/{maxCaptchaRetries}");
+
+                        try
+                        {
+                            // ═══ 1. LOAD LẠI TRANG ═══
+                            driver.Navigate().GoToUrl(url);
+
+                            wait.Until(d =>
+                            {
+                                try
+                                {
+                                    return ((IJavaScriptExecutor)d)
+                                        .ExecuteScript("return document.readyState")
+                                        .ToString() == "complete";
+                                }
+                                catch { return false; }
+                            });
+
+                            await Task.Delay(1500);
+
+                            // ═══ 2. NHẬP MÃ BÍ MẬT ═══
+                            IWebElement txtInput = wait.Until(d =>
+                            {
+                                try
+                                {
+                                    var el = d.FindElement(By.Id("QueryExtender_txtText"));
+                                    return (el != null && el.Displayed && el.Enabled) ? el : null;
+                                }
+                                catch { return null; }
+                            });
+
+                            txtInput.Clear();
+                            txtInput.SendKeys(mabimat);
+
+                            ((IJavaScriptExecutor)driver).ExecuteScript(@"
+                        var el = arguments[0];
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                    ", txtInput);
+
+                            await Task.Delay(300);
+
+                            // ═══ 3. LẤY CAPTCHA ═══
+                            IWebElement captchaImgEl = wait.Until(d =>
+                            {
+                                try
+                                {
+                                    var el = d.FindElement(By.Id("QueryExtender_Image"));
+                                    return (el != null && el.Displayed) ? el : null;
+                                }
+                                catch { return null; }
+                            });
+
+                            if (captchaImgEl == null)
+                            {
+                                Console.WriteLine("⚠️ Không tìm thấy captcha — thử lại");
+                                await Task.Delay(1000);
+                                continue;
+                            }
+
+                            string oldCaptchaSrc = "";
+                            try { oldCaptchaSrc = captchaImgEl.GetAttribute("src"); } catch { }
+
+                            byte[] captchaBytes = ScreenshotElement(driver, captchaImgEl);
+
+                            if (captchaBytes == null || captchaBytes.Length < 100)
+                            {
+                                Console.WriteLine("⚠️ Không chụp được captcha — thử lại");
+                                await Task.Delay(1000);
+                                continue;
+                            }
+
+                            // ═══ 4. OCR ═══
+                            string code = Kingsofthp.OcrCaptcha(captchaBytes);
+
+                            if (string.IsNullOrWhiteSpace(code))
+                            {
+                                Console.WriteLine("⚠️ OCR rỗng — thử lại");
+                                await Task.Delay(500);
+                                continue;
+                            }
+
+                            code = code.Trim();
+                            Console.WriteLine($"🤖 FAST OCR → '{code}'");
+
+                            // ═══ 5. NHẬP CAPTCHA ═══
+                            IWebElement captchaInput = wait.Until(d =>
+                            {
+                                try
+                                {
+                                    var el = d.FindElement(By.Id("QueryExtender_txtCode"));
+                                    return (el != null && el.Displayed && el.Enabled) ? el : null;
+                                }
+                                catch { return null; }
+                            });
+
+                            captchaInput.Clear();
+                            captchaInput.SendKeys(code);
+                            await Task.Delay(300);
+
+                            // ═══ 6. BẤM NÚT "Nhận" ═══
+                            IWebElement btnNhan = wait.Until(d =>
+                            {
+                                try
+                                {
+                                    var el = d.FindElement(By.Id("QueryExtender_Ok"));
+                                    return (el != null && el.Displayed && el.Enabled) ? el : null;
+                                }
+                                catch { return null; }
+                            });
+
+                            ((IJavaScriptExecutor)driver).ExecuteScript(
+                                "arguments[0].scrollIntoView({block: 'center'});", btnNhan);
+                            await Task.Delay(200);
+                            ((IJavaScriptExecutor)driver).ExecuteScript(
+                                "arguments[0].click();", btnNhan);
+
+                            Console.WriteLine("✅ Đã bấm nút Nhận, đang chờ iframe PDF...");
+
+                            // ═══════════════════════════════════════════════════════
+                            // ═══ 7. CHỜ IFRAME PDF LOAD XONG (KHÔNG CLICK GÌ) ═══
+                            // ═══════════════════════════════════════════════════════
+                            bool isFailed = false;
+                            bool isSuccess = false;
+                            var checkDeadline = DateTime.Now.AddSeconds(15);
+
+                            while (DateTime.Now < checkDeadline)
+                            {
+                                try
+                                {
+                                    // ─── Kiểm tra iframe PDF ───
+                                    var iframes = driver.FindElements(By.Id("fileIFrame"));
+                                    if (iframes.Count > 0 && iframes[0].Displayed)
+                                    {
+                                        string iframeSrc = "";
+                                        try { iframeSrc = iframes[0].GetAttribute("src") ?? ""; } catch { }
+
+                                        // Trường hợp 1: iframe src trỏ đến .pdf
+                                        if (!string.IsNullOrEmpty(iframeSrc) &&
+                                            iframeSrc.ToLower().Contains(".pdf"))
+                                        {
+                                            isSuccess = true;
+                                            Console.WriteLine($"✅ Iframe PDF đã load: {iframeSrc}");
+                                            break;
+                                        }
+
+                                        // Trường hợp 2: iframe chứa embed/object PDF
+                                        try
+                                        {
+                                            driver.SwitchTo().Frame(iframes[0]);
+                                            var embeds = driver.FindElements(By.CssSelector("embed, object"));
+                                            if (embeds.Count > 0)
+                                            {
+                                                isSuccess = true;
+                                                Console.WriteLine("✅ Iframe chứa PDF embed");
+                                                driver.SwitchTo().DefaultContent();
+                                                break;
+                                            }
+                                            driver.SwitchTo().DefaultContent();
+                                        }
+                                        catch
+                                        {
+                                            try { driver.SwitchTo().DefaultContent(); } catch { }
+                                        }
+                                    }
+
+                                    // ─── Kiểm tra captcha có đổi không ───
+                                    var currentImg = driver.FindElements(By.Id("QueryExtender_Image"));
+                                    if (currentImg.Count > 0)
+                                    {
+                                        string newSrc = "";
+                                        try { newSrc = currentImg[0].GetAttribute("src"); } catch { }
+
+                                        if (!string.IsNullOrEmpty(oldCaptchaSrc) &&
+                                            !string.IsNullOrEmpty(newSrc) &&
+                                            newSrc != oldCaptchaSrc)
+                                        {
+                                            isFailed = true;
+                                            Console.WriteLine("❌ Captcha đổi → OCR sai");
+                                            break;
+                                        }
+                                    }
+
+                                    // ─── Kiểm tra text báo lỗi ───
+                                    var errorDivs = driver.FindElements(
+                                        By.CssSelector("#QueryExtender_Attention, .error, .text-danger"));
+                                    foreach (var err in errorDivs)
+                                    {
+                                        if (err.Displayed && !string.IsNullOrEmpty(err.Text))
+                                        {
+                                            isFailed = true;
+                                            Console.WriteLine($"❌ FAST báo lỗi: {err.Text}");
+                                            break;
+                                        }
+                                    }
+                                    if (isFailed) break;
+                                }
+                                catch { }
+
+                                await Task.Delay(500);
+                            }
+
+                            // ═══ 8. XỬ LÝ KẾT QUẢ ═══
+                            if (isFailed)
+                            {
+                                Console.WriteLine($"⚠️ Captcha '{code}' sai, chờ postback rồi thử lại...");
+                                await Task.Delay(2000);  // chờ postback xong
+                                continue;
+                            }
+
+                            if (!isSuccess)
+                            {
+                                Console.WriteLine($"⚠️ Không thấy iframe PDF sau 15s, thử lại...");
+                                await Task.Delay(1000);
+                                continue;
+                            }
+
+                            // ═══ 9. CHỜ PDF TỰ TẢI (KHÔNG CLICK GÌ) ═══
+                            Console.WriteLine("✅ Captcha đúng — chờ PDF tự tải...");
+                            string pdfFile = WaitForPdf(shdon, mst, downloadPath, 20);
+
+                            // Nếu không tự tải → thử click link trong iframe
+                            if (pdfFile == null)
+                            {
+                                Console.WriteLine("⚠️ Không tự tải — thử click link trong iframe...");
+
+                                try
+                                {
+                                    driver.SwitchTo().Frame("fileIFrame");
+
+                                    // Tìm link/nút tải PDF trong iframe
+                                    var downloadLinks = driver.FindElements(
+                                        By.CssSelector("a[href*='.pdf'], a[download], button[onclick*='download']"));
+
+                                    if (downloadLinks.Count > 0)
+                                    {
+                                        ((IJavaScriptExecutor)driver).ExecuteScript(
+                                            "arguments[0].click();", downloadLinks[0]);
+                                        Console.WriteLine("✅ Đã click link tải PDF trong iframe");
+                                    }
+
+                                    driver.SwitchTo().DefaultContent();
+                                }
+                                catch
+                                {
+                                    try { driver.SwitchTo().DefaultContent(); } catch { }
+                                }
+
+                                pdfFile = WaitForPdf(shdon, mst, downloadPath, 20);
+                            }
+
+                            if (pdfFile == null)
+                            {
+                                Console.WriteLine("❌ Không tải được PDF, thử lại...");
+                                await Task.Delay(1000);
+                                continue;
+                            }
+
+                            // ═══ 10. ĐỔI TÊN FILE ═══
+                            string fileMoi = Path.Combine(
+                                downloadPath,
+                                $"{mst}_{shdon}_{KHHDon}.pdf"
+                            );
+
+                            if (File.Exists(fileMoi))
+                                File.Delete(fileMoi);
+
+                            File.Move(pdfFile, fileMoi);
+                            Console.WriteLine("✅ Đã đổi tên PDF FAST: " + fileMoi);
+
+                            // ═══ 11. MỞ FILE ═══
+                            if (toggle)
+                            {
+                                try
+                                {
+                                    Process.Start(new ProcessStartInfo
+                                    {
+                                        FileName = fileMoi,
+                                        UseShellExecute = true
+                                    });
+                                }
+                                catch { }
+                            }
+
+                            searchSuccess = true;
+                            Console.WriteLine("✅ Hoàn tất tải hóa đơn FAST.");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"❌ Lỗi FAST lần {attempt}: {ex.Message}");
+                        }
+
+                        if (!searchSuccess)
+                        {
+                            await Task.Delay(1000);
+                        }
+                    }
+
+                    if (!searchSuccess)
+                    {
+                        Console.WriteLine($"❌ Thử captcha FAST {maxCaptchaRetries} lần không thành công.");
+                        XtraMessageBox.Show(
+                            "Không thể tải hóa đơn FAST sau nhiều lần thử.\r\n" +
+                            "Vui lòng thử lại sau.",
+                            "FAST",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Lỗi tổng TaiFAST: {ex.Message}");
+                    XtraMessageBox.Show(
+                        "Lỗi tải hóa đơn Fast:\r\n\r\n" + ex.Message,
+                        "FAST",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    await Task.Delay(1000);
+                    try { driver?.Quit(); } catch { }
+                    try { driver?.Dispose(); } catch { }
+                    Console.WriteLine("Đã đóng trình duyệt Fast.");
+                }
+            });
+        }
         public async Task TaiFAST(bool toggle, string mst, string shdon, string KHHDon, string mabimat)
         {
             string url = "https://invoice.fast.com.vn/tra-cuu-hoa-don-dien-tu/";
@@ -19416,7 +19904,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             await Task.Run(async () =>
             {
                 ChromeOptions options = new ChromeOptions();
-                 options.AddArgument("--headless=new");
+                 //options.AddArgument("--headless=new");
                 options.AddArgument("--disable-gpu");
                 options.AddArgument("--window-size=1920,1080");
                 options.AddArgument("--disable-notifications");
@@ -19503,7 +19991,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     string pdfFile = WaitForPdf(shdon, mst, downloadPath, 10);
                     if (pdfFile == null)
                     {
-                        XtraMessageBox.Show("Không thể tải");
+                        //XtraMessageBox.Show("Không thể tải");
                         driver.Quit();
                     }
                     if (pdfFile != null && File.Exists(pdfFile))
@@ -19958,10 +20446,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             if (pdfFile == null)
                             {
                                 Console.WriteLine("❌ Không tải được PDF sau 2 lần thử");
-                                XtraMessageBox.Show(
-                                    "Không thể tải PDF.", "VNPT",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Warning);
+                                //XtraMessageBox.Show(
+                                //    "Không thể tải PDF.", "VNPT",
+                                //    MessageBoxButtons.OK,
+                                //    MessageBoxIcon.Warning);
                                 return;
                             }
 
@@ -20413,10 +20901,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             if (pdfFile == null)
                             {
                                 Console.WriteLine("❌ Không tải được PDF sau 2 lần thử");
-                                XtraMessageBox.Show(
-                                    "Không thể tải PDF Petrolimex.", "Petrolimex",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Warning);
+                                //XtraMessageBox.Show(
+                                //    "Không thể tải PDF Petrolimex.", "Petrolimex",
+                                //    MessageBoxButtons.OK,
+                                //    MessageBoxIcon.Warning);
                                 return;
                             }
 
@@ -21044,10 +21532,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     // ============================================================
                     // 8. Chờ file PDF tải xong
                     // ============================================================
-                    string pdfFile = WaitForPdf(shdon, mst, downloadPath, 10);
+                    string pdfFile = WaitForPdfMininvoice(mst, downloadPath, 10);
                     if (pdfFile == null)
                     {
-                        XtraMessageBox.Show("Không thể tải");
+                        //XtraMessageBox.Show("Không thể tải");
                         driver.Quit();
                     }
                     Thread.Sleep(500);
@@ -21113,6 +21601,88 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                 }
             });
+        }
+        private string WaitForPdfMininvoice(string mst, string folder, int timeoutSeconds)
+        {
+            DateTime start = DateTime.Now;
+
+            while ((DateTime.Now - start).TotalSeconds < timeoutSeconds)
+            {
+                try
+                {
+                    if (!Directory.Exists(folder))
+                    {
+                        Thread.Sleep(500);
+                        continue;
+                    }
+
+                    // Kiểm tra file đang tải dở dạng .crdownload
+                    string[] downloading = Directory.GetFiles(folder, "*.crdownload");
+                    if (downloading.Length > 0)
+                    {
+                        Thread.Sleep(500);
+                        continue;
+                    }
+
+                    // Lấy tất cả file PDF trong thư mục
+                    string[] pdfFiles = Directory.GetFiles(folder, "*.pdf");
+
+                    // Minvoice đặt tên theo MST_Mabimat (Ví dụ: 3502548116_BA5262FBC5C83ED4.pdf)
+                    // Do đó ta lọc các file có chứa MST
+                    var matched = pdfFiles
+                        .Where(f =>
+                        {
+                            string fileName = Path.GetFileName(f);
+                            return !string.IsNullOrEmpty(mst) &&
+                                   fileName.IndexOf(mst, StringComparison.OrdinalIgnoreCase) >= 0;
+                        })
+                        .ToArray();
+
+                    if (matched.Length > 0)
+                    {
+                        // Chọn file mới nhất vừa được tải xuống
+                        string newestFile = null;
+                        DateTime newestTime = DateTime.MinValue;
+
+                        foreach (string file in matched)
+                        {
+                            DateTime time = File.GetLastWriteTime(file);
+                            if (time > newestTime)
+                            {
+                                newestTime = time;
+                                newestFile = file;
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(newestFile) && File.Exists(newestFile))
+                        {
+                            // Kiểm tra dung lượng file đã ổn định chưa (tránh đọc file đang tải dở)
+                            long size1 = new FileInfo(newestFile).Length;
+                            Thread.Sleep(300);
+                            long size2 = new FileInfo(newestFile).Length;
+
+                            if (size1 == size2 && size1 > 0)
+                                return newestFile;
+                        }
+
+                        Thread.Sleep(500);
+                        continue;
+                    }
+                }
+                catch (IOException)
+                {
+                    Thread.Sleep(500);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Thread.Sleep(500);
+                }
+
+                Thread.Sleep(500);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"⏱ Hết {timeoutSeconds}s không tìm thấy file PDF của Minvoice chứa MST: {mst}");
+            return null;
         }
         static Bitmap Base64ToBitmap(string base64String)
         {
@@ -21528,7 +22098,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 string pdfFile = WaitForPdf(shdon, mst, downloadPath, 15);
                 if (pdfFile == null)
                 {
-                    XtraMessageBox.Show("Không thể tải file PDF");
+                    //XtraMessageBox.Show("Không thể tải file PDF");
                     return;
                 }
                 Thread.Sleep(500);
@@ -21864,7 +22434,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 string pdfFile = WaitForPdf(shdon,mst, downloadPath, 15);
                 if (pdfFile == null)
                 {
-                    XtraMessageBox.Show("Không thể tải file PDF");
+                   // XtraMessageBox.Show("Không thể tải file PDF");
                     return;
                 }
                 Thread.Sleep(500);
@@ -22235,7 +22805,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 string pdfFile = WaitForPdf(shdon, mst, downloadPath, 20);
                 if (pdfFile == null)
                 {
-                    XtraMessageBox.Show("Không thể tải file PDF");
+                   // XtraMessageBox.Show("Không thể tải file PDF");
                     return;
                 }
                 Thread.Sleep(500);
@@ -22475,7 +23045,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 string pdfFile = WaitForZip(shdon, downloadPath, 15);
                 if (pdfFile == null)
                 {
-                    XtraMessageBox.Show("Không thể tải file PDF");
+                    //XtraMessageBox.Show("Không thể tải file PDF");
                     return;
                 }
                 Thread.Sleep(500);
@@ -22550,7 +23120,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.Default;
             }
         }
-        private string WaitForPdf(string shdon,string mst, string folder, int timeoutSeconds)
+        private string WaitForPdf(string shdon, string mst, string folder, int timeoutSeconds)
         {
             DateTime start = DateTime.Now;
 
@@ -22558,7 +23128,14 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             {
                 try
                 {
-                    // Còn file đang tải dở → chờ tiếp
+                    // Kiểm tra xem thư mục có tồn tại không
+                    if (!Directory.Exists(folder))
+                    {
+                        Thread.Sleep(500);
+                        continue;
+                    }
+
+                    // Còn file đang tải dở dạng .crdownload của Chrome → chờ tiếp
                     string[] downloading = Directory.GetFiles(folder, "*.crdownload");
                     if (downloading.Length > 0)
                     {
@@ -22566,22 +23143,31 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         continue;
                     }
 
-                    // Lấy tất cả file PDF
+                    // Lấy tất cả file PDF trong thư mục
                     string[] pdfFiles = Directory.GetFiles(folder, "*.pdf");
 
-                    // Lọc chỉ những file có tên chứa shdon
+                    // 🎯 LỌC CHUẨN XÁC: Bắt buộc tên file phải chứa Số hóa đơn (shdon)
+                    // để tránh trường hợp các hóa đơn cùng chung MST bốc nhầm file của nhau.
                     var matched = pdfFiles
-      .Where(f =>
-      {
-          string fileName = Path.GetFileName(f);
+                        .Where(f =>
+                        {
+                            string fileName = Path.GetFileName(f);
 
-          return fileName.IndexOf(shdon, StringComparison.OrdinalIgnoreCase) >= 0
-              || fileName.IndexOf(mst, StringComparison.OrdinalIgnoreCase) >= 0;
-      })
-      .ToArray();
+                            bool matchShdon = !string.IsNullOrEmpty(shdon) &&
+                                              fileName.IndexOf(shdon, StringComparison.OrdinalIgnoreCase) >= 0;
+
+                            // Nếu cẩn thận hơn, bạn có thể yêu cầu khớp cả shdon VÀ mst (hoặc chỉ cần shdon là đủ)
+                            bool matchMst = string.IsNullOrEmpty(mst) ||
+                                            fileName.IndexOf(mst, StringComparison.OrdinalIgnoreCase) >= 0;
+
+                            // Ưu tiên cao nhất là phải đúng Số hóa đơn
+                            return matchShdon;
+                        })
+                        .ToArray();
+
                     if (matched.Length > 0)
                     {
-                        // Chọn file mới nhất trong số các file khớp
+                        // Chọn file mới nhất trong số các file khớp đúng số hóa đơn
                         string newestFile = null;
                         DateTime newestTime = DateTime.MinValue;
 
@@ -22595,22 +23181,25 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             }
                         }
 
-                        // Đảm bảo file đã ghi xong (size ổn định)
-                        long size1 = new FileInfo(newestFile).Length;
-                        Thread.Sleep(300);
-                        long size2 = new FileInfo(newestFile).Length;
+                        if (!string.IsNullOrEmpty(newestFile) && File.Exists(newestFile))
+                        {
+                            // Đảm bảo file đã ghi xong hoàn toàn (size ổn định qua 2 lần check cách nhau 300ms)
+                            long size1 = new FileInfo(newestFile).Length;
+                            Thread.Sleep(300);
+                            long size2 = new FileInfo(newestFile).Length;
 
-                        if (size1 == size2 && size1 > 0)
-                            return newestFile;
+                            if (size1 == size2 && size1 > 0)
+                                return newestFile;
+                        }
 
-                        // File đang ghi tiếp → chờ
+                        // File đang được ghi tiếp dữ liệu → chờ thêm
                         Thread.Sleep(500);
                         continue;
                     }
                 }
                 catch (IOException)
                 {
-                    // File đang bị lock hoặc lỗi IO tạm thời → chờ rồi thử lại
+                    // File đang bị lock tạm thời bởi hệ thống/trình duyệt → chờ rồi thử lại
                     Thread.Sleep(500);
                 }
                 catch (UnauthorizedAccessException)
@@ -22621,8 +23210,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 Thread.Sleep(500);
             }
 
-            // Hết timeout mà không tìm được file
-            Console.WriteLine($"⏱ Hết {timeoutSeconds}s không tìm thấy PDF chứa '{shdon}' trong: {folder}");
+            // Hết thời gian timeout mà không tìm thấy file khớp số hóa đơn
+            System.Diagnostics.Debug.WriteLine($"⏱ Hết {timeoutSeconds}s không tìm thấy file PDF chứa số hóa đơn '{shdon}' trong thư mục: {folder}");
             return null;
         }
         /// <summary>
@@ -34055,14 +34644,14 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 switch (inv.NCC)
                 {
                     case "MyInvoice":
-                        await TaiHDMYINVOICE(true, inv.Mst, inv.SHDon, "", mabimat);
+                        await TaiHDMYINVOICE(false, inv.Mst, inv.SHDon, "", mabimat);
                         break;
                     case "Smartsign":
-                        await TaiHDSmartSign(true, inv.Mst, inv.SHDon, "", mabimat);
+                        await TaiHDSmartSign(false, inv.Mst, inv.SHDon, "", mabimat);
                         break;
 
                     case "VinInvoice":
-                        await TaiHDVNINVOICE(true, inv.Mst, inv.SHDon, "", mabimat);
+                        await TaiHDVNINVOICE(false, inv.Mst, inv.SHDon, "", mabimat);
                         break;
 
                     case "VIETTEL":
@@ -34080,11 +34669,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     case "VNPT":
                         if (IsPetrolimex(inv.Mst))
                         {
-                            TaiHDVNPTPETROLIMEX(true, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                            TaiHDVNPTPETROLIMEX(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
                         }
                         else
                         {
-                            TaiHDVNPT(true, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                            TaiHDVNPT(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
                         }
                         break;
                     case "FAST":
@@ -36868,44 +37457,47 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 string ncc = Convert.ToString(e.CellValue)?.Trim().ToUpper();
                 if (string.IsNullOrEmpty(ncc))
                     return;
-                System.Drawing.Image img = null;
 
-                if (ncc == "VIETTEL")
-                    img = nccImageList.Images["VIETTEL"];
+                // Lấy thông tin MST và Số hóa đơn để check file PDF đầu ra
+                object mstValue = gridView3.GetRowCellValue(e.RowHandle, "Mst");
+                object shdonValue = gridView3.GetRowCellValue(e.RowHandle, "SHDon");
 
-                else if (ncc == "MISA")
-                    img = nccImageList.Images["MISA"];
+                int year = dtTungay.DateTime.Year;
+                int month = dtTungay.DateTime.Month;
 
-                else if (ncc == "BKAV")
-                    img = nccImageList.Images["BKAV"];
+                // 📁 ĐỔI THÀNH THƯ MỤC ĐẦU RA (HDra)
+                string baseDir = Path.Combine(savedPath, $"HD{year}", "HDra", month.ToString());
 
-                else if (ncc == "FAST")
-                    img = nccImageList.Images["FAST"];
+                bool fileExists = false;
+                if (Directory.Exists(baseDir))
+                {
+                    string mstStr = mstValue?.ToString()?.Trim() ?? string.Empty;
+                    string shdonStr = shdonValue?.ToString()?.Trim() ?? string.Empty;
 
-                else if (ncc == "VNPT")
-                    img = nccImageList.Images["VNPT"];
+                    string[] pdfFiles = Directory.GetFiles(baseDir, "*.pdf");
+                    foreach (string filePath in pdfFiles)
+                    {
+                        string fileName = Path.GetFileName(filePath);
+                        bool matchMst = !string.IsNullOrEmpty(mstStr) && fileName.IndexOf(mstStr, StringComparison.OrdinalIgnoreCase) >= 0;
+                        bool matchShdon = !string.IsNullOrEmpty(shdonStr) && fileName.IndexOf(shdonStr, StringComparison.OrdinalIgnoreCase) >= 0;
 
-                else if (ncc == "MINVOICE")
-                    img = nccImageList.Images["MINVOICE"];
-                else if (ncc == "WIN TECH")
-                    img = nccImageList.Images["WinTechSolution"];
-                else if (ncc == "CYBER")
-                    img = nccImageList.Images["Cyber"];
-                else if (ncc == "SOFTDREAM")
-                    img = nccImageList.Images["Softdream"];
-                else if (ncc == "VISNAM")
-                    img = nccImageList.Images["Visnam"];
-                // Không có icon thì để DevExpress tự vẽ bình thường
+                        if (matchShdon)
+                        {
+                            fileExists = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Lấy Image gốc theo tên nhà cung cấp
+                System.Drawing.Image img = GetNccImage(ncc);
                 if (img == null)
                     return;
 
                 // Vẽ background của cell
                 e.Appearance.DrawBackground(e.Cache, e.Bounds);
 
-                // Khoảng cách icon với mép trái
                 int paddingLeft = 5;
-
-                // Kích thước icon
                 int iconSize = 20;
 
                 Rectangle iconRect = new Rectangle(
@@ -36915,10 +37507,31 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     iconSize
                 );
 
-                e.Graphics.DrawImage(
-                    img,
-                    iconRect
-                );
+                // 👉 XỬ LÝ HIỂN THỊ ICON (Đã tải: Màu sáng | Chưa tải: Màu xám mờ)
+                if (fileExists)
+                {
+                    e.Graphics.DrawImage(img, iconRect);
+                }
+                else
+                {
+                    using (var grayImg = MakeGrayscale((Bitmap)img))
+                    {
+                        using (var attr = new System.Drawing.Imaging.ImageAttributes())
+                        {
+                            float[][] colorMatrixElements = {
+                        new float[] {1,  0,  0,  0,  0},
+                        new float[] {0,  1,  0,  0,  0},
+                        new float[] {0,  0,  1,  0,  0},
+                        new float[] {0,  0,  0,  0.4f, 0}, // Độ mờ 40%
+                        new float[] {0,  0,  0,  0,  1}
+                    };
+                            var matrix = new System.Drawing.Imaging.ColorMatrix(colorMatrixElements);
+                            attr.SetColorMatrix(matrix);
+
+                            e.Graphics.DrawImage(grayImg, iconRect, 0, 0, grayImg.Width, grayImg.Height, GraphicsUnit.Pixel, attr);
+                        }
+                    }
+                }
 
                 // Vẽ text phía sau icon
                 Rectangle textRect = new Rectangle(
@@ -36928,6 +37541,12 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     e.Bounds.Height
                 );
 
+                // Nếu chưa tải thì chữ đổi sang màu xám cho đồng bộ
+                if (!fileExists)
+                {
+                    e.Appearance.ForeColor = Color.Gray;
+                }
+
                 e.Appearance.DrawString(
                     e.Cache,
                     ncc,
@@ -36935,12 +37554,12 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 );
 
                 e.Handled = true;
+                return;
             }
 
             GridView grid = sender as GridView;
             CustomDrawcellGrid(e, grid, 2);
         }
-
         private void gridView1_CustomDrawCell(object sender, DevExpress.XtraGrid.Views.Base.RowCellCustomDrawEventArgs e)
         {
             if (e.Column.FieldName == "NCC")
@@ -36948,50 +37567,48 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 string ncc = Convert.ToString(e.CellValue)?.Trim().ToUpper();
                 if (string.IsNullOrEmpty(ncc))
                     return;
-                System.Drawing.Image img = null;
 
-                if (ncc == "VIETTEL")
-                    img = nccImageList.Images["VIETTEL"];
+                object mstValue = gridView1.GetRowCellValue(e.RowHandle, "Mst");
+                object shdonValue = gridView1.GetRowCellValue(e.RowHandle, "SHDon");
+                int year = dtTungay.DateTime.Year;
+                int month = dtTungay.DateTime.Month;
+                string baseDir = Path.Combine(savedPath, $"HD{year}", "HDVao", month.ToString());
 
-                else if (ncc == "MISA")
-                    img = nccImageList.Images["MISA"];
+                bool fileExists = false;
 
-                else if (ncc == "BKAV")
-                    img = nccImageList.Images["BKAV"];
+                // 💡 TỐI ƯU HIỆU SUẤT: Thay vì gọi Directory.GetFiles() quét cả thư mục mỗi cell,
+                // nếu bạn biết cấu trúc tên file chuẩn (ví dụ: chứa MST hoặc Số hóa đơn), 
+                // bạn có thể tối ưu kiểm tra nhanh bằng cách duyệt mảng hoặc cache lại.
+                // Nếu vẫn giữ cách quét thư mục cũ, hãy đảm bảo dữ liệu không quá lớn:
+                if (Directory.Exists(baseDir))
+                {
+                    string mstStr = mstValue?.ToString()?.Trim() ?? string.Empty;
+                    string shdonStr = shdonValue?.ToString()?.Trim() ?? string.Empty;
 
-                else if (ncc == "FAST")
-                    img = nccImageList.Images["FAST"];
+                    string[] pdfFiles = Directory.GetFiles(baseDir, "*.pdf");
+                    foreach (string filePath in pdfFiles)
+                    {
+                        string fileName = Path.GetFileName(filePath);
+                        bool matchMst = !string.IsNullOrEmpty(mstStr) && fileName.IndexOf(mstStr, StringComparison.OrdinalIgnoreCase) >= 0;
+                        bool matchShdon = !string.IsNullOrEmpty(shdonStr) && fileName.IndexOf(shdonStr, StringComparison.OrdinalIgnoreCase) >= 0;
 
-                else if (ncc == "VNPT")
-                    img = nccImageList.Images["VNPT"];
+                        if (matchShdon)
+                        {
+                            fileExists = true;
+                            break; // Tìm thấy thì thoát vòng lặp luôn
+                        }
+                    }
+                }
 
-                else if (ncc == "MINVOICE")
-                    img = nccImageList.Images["MINVOICE"];
-                else if (ncc == "WIN TECH")
-                    img = nccImageList.Images["WinTechSolution"];
-                else if (ncc == "CYBER")
-                    img = nccImageList.Images["Cyber"];
-                else if (ncc == "SOFTDREAM")
-                    img = nccImageList.Images["Softdream"];
-                else if (ncc == "VISNAM")
-                    img = nccImageList.Images["Visnam"];
-                else if (ncc == "VININVOICE")
-                    img = nccImageList.Images["VinInvoice"];
-                else if (ncc == "SMARTSIGN")
-                    img = nccImageList.Images["Smartsign"];
-                else if (ncc == "MYINVOICE")
-                    img = nccImageList.Images["MyInvoice"];
-                // Không có icon thì để DevExpress tự vẽ bình thường
+                // Lấy Image gốc theo NCC
+                System.Drawing.Image img = GetNccImage(ncc);
                 if (img == null)
                     return;
 
                 // Vẽ background của cell
                 e.Appearance.DrawBackground(e.Cache, e.Bounds);
 
-                // Khoảng cách icon với mép trái
                 int paddingLeft = 5;
-
-                // Kích thước icon
                 int iconSize = 20;
 
                 Rectangle iconRect = new Rectangle(
@@ -37001,12 +37618,36 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     iconSize
                 );
 
-                e.Graphics.DrawImage(
-                    img,
-                    iconRect
-                );
+                // 👉 XỬ LÝ ẢNH XÁM NẾU CHƯA CÓ FILE
+                if (fileExists)
+                {
+                    // Đã tải: Vẽ ảnh gốc bình thường
+                    e.Graphics.DrawImage(img, iconRect);
+                }
+                else
+                {
+                    // Chưa tải: Vẽ ảnh chuyển sang màu xám (Grayscale) và làm mờ
+                    using (var grayImg = MakeGrayscale((Bitmap)img))
+                    {
+                        // Dùng ColorMatrix để chỉnh độ mờ (Alpha = 0.4 cho mờ đi)
+                        using (var attr = new System.Drawing.Imaging.ImageAttributes())
+                        {
+                            float[][] colorMatrixElements = {
+                        new float[] {1,  0,  0,  0,  0},
+                        new float[] {0,  1,  0,  0,  0},
+                        new float[] {0,  0,  1,  0,  0},
+                        new float[] {0,  0,  0,  0.4f, 0}, // Độ trong suốt 40% cho giống icon chưa tải
+                        new float[] {0,  0,  0,  0,  1}
+                    };
+                            var matrix = new System.Drawing.Imaging.ColorMatrix(colorMatrixElements);
+                            attr.SetColorMatrix(matrix);
 
-                // Vẽ text phía sau icon
+                            e.Graphics.DrawImage(grayImg, iconRect, 0, 0, grayImg.Width, grayImg.Height, GraphicsUnit.Pixel, attr);
+                        }
+                    }
+                }
+
+                // Vẽ text phía sau icon (Nếu chưa tải có thể cho chữ mờ đi một chút cho đồng bộ)
                 Rectangle textRect = new Rectangle(
                     iconRect.Right + 6,
                     e.Bounds.Y,
@@ -37014,20 +37655,66 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     e.Bounds.Height
                 );
 
-                e.Appearance.DrawString(
-                    e.Cache,
-                    ncc,
-                    textRect
-                );
+                // Đổi màu chữ xám nếu chưa tải để trực quan hơn
+                if (!fileExists)
+                {
+                    e.Appearance.ForeColor = Color.Gray;
+                }
 
+                e.Appearance.DrawString(e.Cache, ncc, textRect);
                 e.Handled = true;
             }
-
 
             GridView grid = sender as GridView;
             CustomDrawcellGrid(e, grid, 1);
         }
 
+        // Hàm phụ trợ chuyển đổi ảnh sang trắng đen (Grayscale)
+        private Bitmap MakeGrayscale(Bitmap original)
+        {
+            Bitmap newBitmap = new Bitmap(original.Width, original.Height);
+            using (Graphics g = Graphics.FromImage(newBitmap))
+            {
+                System.Drawing.Imaging.ColorMatrix colorMatrix = new System.Drawing.Imaging.ColorMatrix(
+                   new float[][]
+                   {
+               new float[] {.3f, .3f, .3f, 0, 0},
+               new float[] {.59f, .59f, .59f, 0, 0},
+               new float[] {.11f, .11f, .11f, 0, 0},
+               new float[] {0, 0, 0, 1, 0},
+               new float[] {0, 0, 0, 0, 1}
+                   });
+                using (System.Drawing.Imaging.ImageAttributes attributes = new System.Drawing.Imaging.ImageAttributes())
+                {
+                    attributes.SetColorMatrix(colorMatrix);
+                    g.DrawImage(original, new Rectangle(0, 0, original.Width, original.Height),
+                       0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attributes);
+                }
+            }
+            return newBitmap;
+        }
+
+        // Hàm rút gọn lấy ảnh theo tên NCC cho code gọn gàng
+        private System.Drawing.Image GetNccImage(string ncc)
+        {
+            switch (ncc)
+            {
+                case "VIETTEL": return nccImageList.Images["VIETTEL"];
+                case "MISA": return nccImageList.Images["MISA"];
+                case "BKAV": return nccImageList.Images["BKAV"];
+                case "FAST": return nccImageList.Images["FAST"];
+                case "VNPT": return nccImageList.Images["VNPT"];
+                case "MINVOICE": return nccImageList.Images["MINVOICE"];
+                case "WIN TECH": return nccImageList.Images["WinTechSolution"];
+                case "CYBER": return nccImageList.Images["Cyber"];
+                case "SOFTDREAM": return nccImageList.Images["Softdream"];
+                case "VISNAM": return nccImageList.Images["Visnam"];
+                case "VININVOICE": return nccImageList.Images["VinInvoice"];
+                case "SMARTSIGN": return nccImageList.Images["Smartsign"];
+                case "MYINVOICE": return nccImageList.Images["MyInvoice"];
+                default: return null;
+            }
+        }
         private void gridView5_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == System.Windows.Forms.Keys.Enter)
@@ -46675,10 +47362,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             if (pdfFile == null)
                             {
                                 Console.WriteLine("❌ Không tải được PDF sau 2 lần thử");
-                                XtraMessageBox.Show(
-                                    "Không thể tải PDF SmartSign.", "SmartSign",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Warning);
+                                //XtraMessageBox.Show(
+                                //    "Không thể tải PDF SmartSign.", "SmartSign",
+                                //    MessageBoxButtons.OK,
+                                //    MessageBoxIcon.Warning);
                                 return;
                             }
 
