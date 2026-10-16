@@ -68,5 +68,6 @@
         private System.Windows.Forms.RichTextBox richTextBox1;
         private DevExpress.XtraEditors.SimpleButton btnThucthi;
         private DevExpress.XtraEditors.SimpleButton btnClose;
+        private Microsoft.Web.WebView2.WinForms.WebView2 webView21;
     }
 }

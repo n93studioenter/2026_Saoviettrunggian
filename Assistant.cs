@@ -1,5 +1,7 @@
 ﻿using DevExpress.XtraEditors;
+using Microsoft.Web.WebView2.Core;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -11,15 +13,15 @@ namespace SaovietTax
         // ============ CẤU HÌNH ============
         private bool isExpanded = false;
         private readonly Size collapsedSize = new Size(60, 60);
-        private readonly Size expandedSize = new Size(460, 500);   // to hơn chút cho thoáng
+        private readonly Size expandedSize = new Size(760, 640);   // to hơn để xem web cho thoáng
         private readonly int margin = 15;
         private readonly int cornerRadius = 16;
 
         // Padding
-        private readonly int padding = 14;           // lề ngoài
-        private readonly int headerHeight = 50;      // chiều cao thanh tiêu đề
-        private readonly int buttonHeight = 42;      // chiều cao nút Thực thi
-        private readonly int buttonSpacing = 10;     // khoảng cách giữa các thành phần
+        private readonly int padding = 14;
+        private readonly int headerHeight = 50;
+        private readonly int buttonHeight = 42;
+        private readonly int buttonSpacing = 10;
 
         // Màu
         private readonly Color colorTop = Color.FromArgb(52, 152, 219);
@@ -27,9 +29,22 @@ namespace SaovietTax
 
         private const string PlaceholderText = "Nhập câu hỏi của bạn...";
 
+        // ============ DANH SÁCH AI ============
+        private readonly Dictionary<string, string> aiList = new Dictionary<string, string>()
+        {
+            { "ChatGPT",    "https://chat.openai.com/auth/login" },
+            { "Gemini",     "https://gemini.google.com/" },
+            { "Claude",     "https://claude.ai/login" },
+            { "Grok",       "https://grok.com/" },
+            { "Copilot",    "https://copilot.microsoft.com/" },
+            { "Perplexity", "https://www.perplexity.ai/" },
+        };
+
+        // ============ CONTROL AI ============
+        private DevExpress.XtraEditors.ListBoxControl lstAI;
+
         public Assistant()
         {
-            
             InitializeComponent();
         }
 
@@ -45,7 +60,6 @@ namespace SaovietTax
             PositionBottomRight();
             this.Invalidate();
             this.Refresh();
-            //this.Visible = true;
         }
 
         // ============ SETUP ============
@@ -74,10 +88,8 @@ namespace SaovietTax
             richTextBox1.BorderStyle = BorderStyle.None;
             richTextBox1.BackColor = Color.White;
             richTextBox1.ForeColor = Color.FromArgb(50, 50, 50);
-            // Padding bên trong RichTextBox
             richTextBox1.Padding = new Padding(10, 8, 10, 8);
 
-            // Placeholder
             richTextBox1.Text = PlaceholderText;
             richTextBox1.ForeColor = Color.Gray;
             richTextBox1.GotFocus += RichTextBox1_GotFocus;
@@ -90,6 +102,24 @@ namespace SaovietTax
             btnThucthi.Appearance.Options.UseBackColor = true;
             btnThucthi.Appearance.ForeColor = Color.FromArgb(41, 128, 185);
             btnThucthi.Appearance.Options.UseForeColor = true;
+
+            // ===== LISTBOX AI =====
+            lstAI = new DevExpress.XtraEditors.ListBoxControl();
+            lstAI.Font = new Font("Segoe UI", 10.5f);
+            lstAI.Appearance.Font = new Font("Segoe UI", 10.5f);
+            lstAI.Appearance.Options.UseFont = true;
+            lstAI.BorderStyle = DevExpress.XtraEditors.Controls.BorderStyles.NoBorder;
+            lstAI.BackColor = Color.White;
+            lstAI.ForeColor = Color.FromArgb(50, 50, 50);
+            foreach (var key in aiList.Keys) lstAI.Items.Add(key);
+            lstAI.SelectedIndexChanged += LstAI_SelectedIndexChanged;
+            this.Controls.Add(lstAI);
+            lstAI.BringToFront();
+
+            // ===== WEBVIEW2 =====
+            webView21 = new Microsoft.Web.WebView2.WinForms.WebView2();
+            this.Controls.Add(webView21);
+            webView21.BringToFront();
 
             // Kích thước ban đầu
             this.ClientSize = collapsedSize;
@@ -149,8 +179,13 @@ namespace SaovietTax
             PositionBottomRight();
             UpdateRegion();
             ShowContent();
-            LayoutControls();          // ← Căn vị trí + padding
+            LayoutControls();
             btnClose.BringToFront();
+
+            // Khởi tạo WebView2 lần đầu
+            if (webView21.CoreWebView2 == null)
+                InitWebView();
+
             this.Invalidate();
             this.Refresh();
         }
@@ -166,28 +201,40 @@ namespace SaovietTax
             this.Refresh();
         }
 
-        // ============ LAYOUT CONTROLS (có padding) ============
+        // ============ LAYOUT CONTROLS ============
         private void LayoutControls()
         {
             int w = this.ClientSize.Width;
             int h = this.ClientSize.Height;
 
-            // Nút close ở góc phải trên, cách lề 10px
+            // Nút close ở góc phải trên
             btnClose.Location = new Point(w - btnClose.Width - 10, 10);
 
-            // RichTextBox: 
-            //   - trên: headerHeight (50)
-            //   - dưới: chừa chỗ cho nút Thực thi (buttonHeight + buttonSpacing)
-            //   - trái/phải: padding (14)
-            int rtbTop = headerHeight;
-            int rtbBottom = h - buttonHeight - buttonSpacing * 2;
-            richTextBox1.Location = new Point(padding, rtbTop);
-            richTextBox1.Size = new Size(
-                w - padding * 2,
-                rtbBottom - rtbTop
-            );
+            // Vùng nội dung (dưới header, trên nút Thực thi)
+            int contentTop = headerHeight;
+            int contentBottom = h - buttonHeight - buttonSpacing * 2;
+            int contentHeight = contentBottom - contentTop;
+            int contentLeft = padding;
+            int contentWidth = w - padding * 2;
 
-            // Nút Thực thi: góc phải dưới, cách lề padding
+            // RichTextBox chiếm nửa trên
+            int rtbHeight = contentHeight / 2 - buttonSpacing / 2;
+            richTextBox1.Location = new Point(contentLeft, contentTop);
+            richTextBox1.Size = new Size(contentWidth, rtbHeight);
+
+            // ListBox AI bên trái, nửa dưới
+            int aiTop = contentTop + rtbHeight + buttonSpacing;
+            int aiHeight = contentHeight - rtbHeight - buttonSpacing;
+            int aiWidth = 150;
+
+            lstAI.Location = new Point(contentLeft, aiTop);
+            lstAI.Size = new Size(aiWidth, aiHeight);
+
+            // WebView2 bên phải ListBox
+            webView21.Location = new Point(contentLeft + aiWidth + buttonSpacing, aiTop);
+            webView21.Size = new Size(contentWidth - aiWidth - buttonSpacing, aiHeight);
+
+            // Nút Thực thi góc phải dưới
             btnThucthi.Location = new Point(
                 w - btnThucthi.Width - padding,
                 h - btnThucthi.Height - padding
@@ -206,6 +253,8 @@ namespace SaovietTax
             richTextBox1.Visible = true;
             btnThucthi.Visible = true;
             btnClose.Visible = true;
+            lstAI.Visible = true;
+            webView21.Visible = true;
         }
 
         private void HideContent()
@@ -213,6 +262,8 @@ namespace SaovietTax
             richTextBox1.Visible = false;
             btnThucthi.Visible = false;
             btnClose.Visible = false;
+            lstAI.Visible = false;
+            webView21.Visible = false;
         }
 
         // ============ PLACEHOLDER ============
@@ -271,7 +322,7 @@ namespace SaovietTax
             }
             else
             {
-                // Tiêu đề — canh giữa theo chiều dọc của header
+                // Tiêu đề
                 using (var font = new Font("Segoe UI", 12f, FontStyle.Bold))
                 using (var brush = new SolidBrush(Color.White))
                 using (var sf = new StringFormat
@@ -279,7 +330,7 @@ namespace SaovietTax
                     LineAlignment = StringAlignment.Center
                 })
                 {
-                    e.Graphics.DrawString("Trợ lý",
+                    e.Graphics.DrawString("Trợ lý AI",
                         font, brush,
                         new RectangleF(padding, 0, this.Width - 50, headerHeight),
                         sf);
@@ -298,21 +349,73 @@ namespace SaovietTax
 
             if (m.Msg == WM_NCHITTEST && isExpanded && (int)m.Result == HTCLIENT)
             {
-                Point clientPoint = this.PointToClient(Cursor.Position);
-                Rectangle closeArea = new Rectangle(
-                    btnClose.Left - 5, btnClose.Top - 5,
-                    btnClose.Width + 10, btnClose.Height + 10);
+                Point p = this.PointToClient(Cursor.Position);
 
-                if (closeArea.Contains(clientPoint))
-                    return;
+                // Không kéo khi click vào web / list / richtextbox / nút close
+                if (webView21 != null && webView21.Visible && webView21.Bounds.Contains(p)) return;
+                if (lstAI != null && lstAI.Visible && lstAI.Bounds.Contains(p)) return;
+                if (richTextBox1 != null && richTextBox1.Visible && richTextBox1.Bounds.Contains(p)) return;
+                if (btnClose != null && btnClose.Visible && btnClose.Bounds.Contains(p)) return;
+                if (btnThucthi != null && btnThucthi.Visible && btnThucthi.Bounds.Contains(p)) return;
 
                 m.Result = (IntPtr)HTCAPTION;
             }
         }
 
+        // ============ WEBVIEW2 ============
+        private async void InitWebView()
+        {
+            if (webView21.CoreWebView2 != null) return;
+
+            var env = await CoreWebView2Environment.CreateAsync(
+                userDataFolder: System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SaovietTax_WebView2")
+            );
+            await webView21.EnsureCoreWebView2Async(env);
+
+            // Chặn popup mở ra ngoài → điều hướng luôn trong web
+            webView21.CoreWebView2.NewWindowRequested += (s, ev) =>
+            {
+                ev.Handled = true;
+                webView21.CoreWebView2.Navigate(ev.Uri);
+            };
+        }
+
+        private async void LstAI_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string selected = lstAI.SelectedItem?.ToString();
+            if (string.IsNullOrEmpty(selected)) return;
+            if (!aiList.ContainsKey(selected)) return;
+
+            if (webView21.CoreWebView2 == null)
+            {
+                await webView21.EnsureCoreWebView2Async();
+                if (webView21.CoreWebView2 == null)
+                {
+                    InitWebView();
+                    // đợi khởi tạo xong
+                    await System.Threading.Tasks.Task.Delay(500);
+                }
+            }
+
+            if (webView21.CoreWebView2 != null)
+                webView21.CoreWebView2.Navigate(aiList[selected]);
+        }
+
+        // ============ NÚT THỰC THI ============
         private void btnThucthi_Click(object sender, EventArgs e)
         {
+            string prompt = GetPrompt();
+            if (string.IsNullOrEmpty(prompt))
+            {
+                XtraMessageBox.Show("Vui lòng nhập câu hỏi!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
+            // TODO: xử lý prompt ở đây
+            // Ví dụ: gửi lên API, hoặc nhập vào web đang mở
         }
     }
 }

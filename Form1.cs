@@ -7547,10 +7547,110 @@ Chỉ trả lời: CÓ hoặc KHÔNG
             // Cách 1: Dùng File.WriteAllText (đơn giản nhất)
             File.WriteAllText(filePath, mod);
         }
+        private void CleanupAppTempFolders()
+        {
+            try
+            {
+                string temp = Path.GetTempPath();
+                string[] appFolders = { "MisaTemp", "ViettelTemp", "InvoiceTemp", "BankTemp" };
 
+                foreach (var name in appFolders)
+                {
+                    string folder = Path.Combine(temp, name);
+                    if (!Directory.Exists(folder)) continue;
+
+                    int deletedFiles = 0;
+                    long freedBytes = 0;
+
+                    // Xóa file
+                    foreach (var f in Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories))
+                    {
+                        try
+                        {
+                            long size = new FileInfo(f).Length;
+                            File.Delete(f);
+                            deletedFiles++;
+                            freedBytes += size;
+                        }
+                        catch { }
+                    }
+
+                    // Xóa subfolder rỗng (kể cả folder GUID cũ)
+                    foreach (var d in Directory.GetDirectories(folder))
+                    {
+                        try
+                        {
+                            Directory.Delete(d, true);
+                        }
+                        catch { }
+                    }
+
+                    if (deletedFiles > 0)
+                    {
+                        Debug.WriteLine(
+                            $"🧹 {name}: xóa {deletedFiles} file, giải phóng {freedBytes / 1024.0 / 1024.0:F2} MB");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("CleanupAppTempFolders: " + ex.Message);
+            }
+        }
+        private string GetOrCleanTempFolder(string appName)
+        {
+            string tempFolder = Path.Combine(Path.GetTempPath(), appName);
+
+            if (Directory.Exists(tempFolder))
+            {
+                // Xóa toàn bộ file bên trong, GIỮ LẠI thư mục
+                try
+                {
+                    foreach (var f in Directory.GetFiles(tempFolder))
+                    {
+                        try { File.Delete(f); } catch { }
+                    }
+                    foreach (var d in Directory.GetDirectories(tempFolder))
+                    {
+                        try { Directory.Delete(d, true); } catch { }
+                    }
+                }
+                catch { }
+            }
+            else
+            {
+                try { Directory.CreateDirectory(tempFolder); } catch { }
+            }
+
+            return tempFolder;
+        }
+        private static void CleanOldChromeProfiles()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string[] profiles = Directory.GetDirectories(baseDir, "ChromeProfile_*");
+
+                foreach (var profile in profiles)
+                {
+                    try
+                    {
+                        // Chỉ xóa nếu không có process chrome.exe đang dùng
+                        Directory.Delete(profile, true);
+                        Console.WriteLine($"🧹 Đã xóa profile cũ: {profile}");
+                    }
+                    catch
+                    {
+                        // Có thể đang bị lock — bỏ qua
+                    }
+                }
+            }
+            catch { }
+        }
         private async void frmMain_Load(object sender, EventArgs e)
         {
-
+            CleanOldChromeProfiles();
+            CleanupAppTempFolders();
             //string rawPath = "C:\\Users\\Admin\\Desktop\\captcha_raw_1.png";
             //byte[] captchaBytes = File.ReadAllBytes(rawPath);
             //File.WriteAllBytes(rawPath, captchaBytes);
@@ -13467,34 +13567,38 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             // 2. Kiểm tra xem dòng đó có tồn tại hay không
             if (foundRow != null)
             {
-                //TbImport tbImports = null;
-                //try
-                //{
-                //    int lctype = chkDauvao.Checked ? 1 : 2;
-                //    tbImports=new TbImport
-                //    {
-                //        Path = foundRow.Field<string>("Path"),
-                //        Mst = foundRow.Field<string>("Mst"),
-                //        SHDon = foundRow.Field<string>("SHDon"),
-                //        NLap = foundRow.Field<DateTime>("NLap"),
-                //        Type = lctype.ToString(),
-                //        NCC = foundRow.Field<string>("NCC"),
-                //        KHHDon = foundRow.Field<string>("KHHDon"),
-                //        Khmshdon = foundRow.Field<string>("Khmshdon"),
-                //        hdon = foundRow.Field<string>("hdon"),
-                //        Noidung = foundRow.Field<string>("Noidung"),
-                //        TPhi = foundRow.Field<string>("TPhi"),
+                TbImport tbImports = null;
+                try
+                {
+                    if (chkTaihoadongoc.Checked)
+                    {
+                        int lctype = chkDauvao.Checked ? 1 : 2;
+                        tbImports = new TbImport
+                        {
+                            Path = foundRow.Field<string>("Path"),
+                            Mst = foundRow.Field<string>("Mst"),
+                            SHDon = foundRow.Field<string>("SHDon"),
+                            NLap = foundRow.Field<DateTime>("NLap"),
+                            Type = lctype.ToString(),
+                            NCC = foundRow.Field<string>("NCC"),
+                            KHHDon = foundRow.Field<string>("KHHDon"),
+                            Khmshdon = foundRow.Field<string>("Khmshdon"),
+                            hdon = foundRow.Field<string>("hdon"),
+                            Noidung = foundRow.Field<string>("Noidung"),
+                            TPhi = foundRow.Field<string>("TPhi"),
 
 
-                //    };
-                //    if (modeClick == 1)
-                //        EnqueuePdfDownload(tbImports);
-                //}
-                //catch (Exception ex)
-                //{
-                 
-                //}
-               
+                        };
+                        if (modeClick == 1 && chkTaihoadongoc.Checked)
+                            EnqueuePdfDownload(tbImports);
+                    }
+                      
+                }
+                catch (Exception ex)
+                {
+
+                }
+
                 // Nếu đã có tồn tại trong bảng, bạn có thể xử lý ở đây (ví dụ lấy thêm dữ liệu từ foundRow)
                 return null;
             }
@@ -19067,7 +19171,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                 Directory.CreateDirectory(baseDir);
 
-                string tempDownloadFolder = Path.Combine(Path.GetTempPath(), "MisaTemp", Guid.NewGuid().ToString("N"));
+                string tempDownloadFolder = GetOrCleanTempFolder("MisaTemp");
+
                 Directory.CreateDirectory(tempDownloadFolder);
 
                 // ═══════════════════════════════════════════════════════
@@ -19075,7 +19180,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 // ═══════════════════════════════════════════════════════
                 ChromeOptions options = new ChromeOptions();
 
-                options.AddArgument("--headless");
+               // options.AddArgument("--headless");
                 options.AddArgument("--disable-gpu");
                 options.AddArgument("--no-sandbox");
                 options.AddArgument("--disable-dev-shm-usage");
@@ -19100,7 +19205,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 IWebDriver driver = null;
                 try
                 {
-                    driver = new ChromeDriver(options);
+                    string driverDir = AppDomain.CurrentDomain.BaseDirectory;
+                    var service = ChromeDriverService.CreateDefaultService(driverDir);
+                    service.HideCommandPromptWindow = true;
+                    service.EnableVerboseLogging = true;
+                    service.LogPath = Path.Combine(Path.GetTempPath(), "chromedriver_misa.log");
+
+                    driver = new ChromeDriver(service, options);
                     driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(30);
 
                     // ═══ CDP: BẬT DOWNLOAD BEHAVIOR + BYPASS CSP ═══
@@ -19341,10 +19452,16 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     try { driver?.Dispose(); } catch { }
                     Console.WriteLine("Đã đóng trình duyệt.");
 
+                    // ✅ Xóa file bên trong, GIỮ thư mục để lần sau dùng lại
                     try
                     {
                         if (Directory.Exists(tempDownloadFolder))
-                            Directory.Delete(tempDownloadFolder, true);
+                        {
+                            foreach (var f in Directory.GetFiles(tempDownloadFolder))
+                            {
+                                try { File.Delete(f); } catch { }
+                            }
+                        }
                     }
                     catch { }
                 }
@@ -19904,7 +20021,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             await Task.Run(async () =>
             {
                 ChromeOptions options = new ChromeOptions();
-                 //options.AddArgument("--headless=new");
+                 options.AddArgument("--headless=new");
                 options.AddArgument("--disable-gpu");
                 options.AddArgument("--window-size=1920,1080");
                 options.AddArgument("--disable-notifications");
@@ -19933,7 +20050,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 IWebDriver driver = null;
                 try
                 {
-                    driver = new ChromeDriver(options);
+                    string driverDir = AppDomain.CurrentDomain.BaseDirectory;
+                    var service = ChromeDriverService.CreateDefaultService(driverDir);
+                    service.HideCommandPromptWindow = true;
+                    service.EnableVerboseLogging = true;
+                    service.LogPath = Path.Combine(Path.GetTempPath(), "chromedriver_misa.log");
+
+                    driver = new ChromeDriver(service, options);
                     driver.Navigate().GoToUrl(url);
 
                     WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
@@ -21089,7 +21212,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 IWebDriver driver = null;
                 try
                 {
-                    driver = new ChromeDriver(options);
+                    string driverDir = AppDomain.CurrentDomain.BaseDirectory;
+                    var service = ChromeDriverService.CreateDefaultService(driverDir);
+                    service.HideCommandPromptWindow = true;
+                    service.EnableVerboseLogging = true;
+                    service.LogPath = Path.Combine(Path.GetTempPath(), "chromedriver_misa.log");
+
+                    driver = new ChromeDriver(service, options);
 
                     // ═══ CDP: BẬT DOWNLOAD BEHAVIOR + BYPASS CSP ═══
                     try
@@ -21393,7 +21522,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 IWebDriver driver = null;
                 try
                 {
-                    driver = new ChromeDriver(options);
+                    string driverDir = AppDomain.CurrentDomain.BaseDirectory;
+                    var service = ChromeDriverService.CreateDefaultService(driverDir);
+                    service.HideCommandPromptWindow = true;
+                    service.EnableVerboseLogging = true;
+                    service.LogPath = Path.Combine(Path.GetTempPath(), "chromedriver_misa.log");
+
+                    driver = new ChromeDriver(service, options);
                     driver.Navigate().GoToUrl(url);
 
                     WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
@@ -21887,7 +22022,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             IWebDriver driver = null;
             try
             {
-                driver = new ChromeDriver(options);
+                string driverDir = AppDomain.CurrentDomain.BaseDirectory;
+                var service = ChromeDriverService.CreateDefaultService(driverDir);
+                service.HideCommandPromptWindow = true;
+                service.EnableVerboseLogging = true;
+                service.LogPath = Path.Combine(Path.GetTempPath(), "chromedriver_misa.log");
+
+                driver = new ChromeDriver(service, options);
                 driver.Navigate().GoToUrl(url);
 
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
@@ -22237,7 +22378,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             IWebDriver driver = null;
             try
             {
-                driver = new ChromeDriver(options);
+                string driverDir = AppDomain.CurrentDomain.BaseDirectory;
+                var service = ChromeDriverService.CreateDefaultService(driverDir);
+                service.HideCommandPromptWindow = true;
+                service.EnableVerboseLogging = true;
+                service.LogPath = Path.Combine(Path.GetTempPath(), "chromedriver_misa.log");
+
+                driver = new ChromeDriver(service, options);
                 driver.Navigate().GoToUrl(url);
 
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
@@ -22654,7 +22801,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             IWebDriver driver = null;
             try
             {
-                driver = new ChromeDriver(options);
+                string driverDir = AppDomain.CurrentDomain.BaseDirectory;
+                var service = ChromeDriverService.CreateDefaultService(driverDir);
+                service.HideCommandPromptWindow = true;
+                service.EnableVerboseLogging = true;
+                service.LogPath = Path.Combine(Path.GetTempPath(), "chromedriver_misa.log");
+
+                driver = new ChromeDriver(service, options);
                 driver.Navigate().GoToUrl(url);
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
 
@@ -22949,7 +23102,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             IWebDriver driver = null;
             try
             {
-                driver = new ChromeDriver(options);
+                string driverDir = AppDomain.CurrentDomain.BaseDirectory;
+                var service = ChromeDriverService.CreateDefaultService(driverDir);
+                service.HideCommandPromptWindow = true;
+                service.EnableVerboseLogging = true;
+                service.LogPath = Path.Combine(Path.GetTempPath(), "chromedriver_misa.log");
+
+                driver = new ChromeDriver(service, options);
                 driver.Navigate().GoToUrl(url);
 
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
@@ -23408,154 +23567,204 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         #endregion
         private async void gridControl1_DoubleClick(object sender, EventArgs e)
         {
-            this.Cursor = Cursors.WaitCursor;  // Con trỏ dạng đồng hồ cát (đang tải)
+            this.Cursor = Cursors.WaitCursor;
             GridView gridView = gridControl1.MainView as GridView;
 
             Point pt = gridView.GridControl.PointToClient(MousePosition);
             GridHitInfo hitInfo = gridView.CalcHitInfo(pt);
-            // Kiểm tra nếu nhấp vào một ô
+
             if (hitInfo.InRowCell)
             {
                 int rowHandle = hitInfo.RowHandle;
                 int columnIndex = hitInfo.Column.VisibleIndex;
+
+                // ═══════════════════════════════════════════════════════
+                // CỘT 2: TẢI HÓA ĐƠN
+                // ═══════════════════════════════════════════════════════
                 if (columnIndex == 2)
-                { 
-                    string NCC = gridView.GetRowCellValue(rowHandle, "NCC").ToString();  
-                    string path= gridView.GetRowCellValue(rowHandle, "Path").ToString();
-                    string shdon= gridView.GetRowCellValue(rowHandle, "SHDon").ToString(); 
+                {
+                    string NCC = gridView.GetRowCellValue(rowHandle, "NCC").ToString();
+                    string path = gridView.GetRowCellValue(rowHandle, "Path").ToString();
+                    string shdon = gridView.GetRowCellValue(rowHandle, "SHDon").ToString();
                     string mstNB = gridView.GetRowCellValue(rowHandle, "Mst").ToString();
-                    //KHHDon
-                    string KHHDon= gridView.GetRowCellValue(rowHandle, "KHHDon").ToString();
-                    string mabimat =GetSecretCode(path, NCC);
+                    string KHHDon = gridView.GetRowCellValue(rowHandle, "KHHDon").ToString();
+                    string mabimat = GetSecretCode(path, NCC);
 
+                    // ★ SỬA: dùng savedPath + năm động thay vì hardcode D:\DA3\DA3\Hoadon\HD2026
                     string loai = chkDauvao.Checked ? "HDVao" : "HDRa";
-                    string folder = $@"D:\DA3\DA3\Hoadon\HD2026\{loai}\{dtTungay.DateTime.Month}";
-                    // Lấy danh sách file PDF
-                    string[] pdfFiles = Directory.GetFiles(folder, "*.pdf");
+                    string folder = Path.Combine(
+                        savedPath,
+                        $"HD{dtTungay.DateTime.Year}",
+                        loai,
+                        dtTungay.DateTime.Month.ToString());
 
-                    Console.WriteLine($"Tìm thấy {pdfFiles.Length} file PDF:");
-                    foreach (string file in pdfFiles)
+                    // ★ SỬA: chuẩn hóa tên giống như khi lưu file
+                    string safeMst = MakeSafeFileName(mstNB);
+                    string safeShdon = MakeSafeFileName(shdon);
+                    string searchPattern = $"{safeMst}_{safeShdon}";
+
+                    Console.WriteLine($"📁 Thư mục: {folder}");
+                    Console.WriteLine($"🔍 Tìm file khớp: {searchPattern}");
+
+                    // ★ Kiểm tra thư mục tồn tại
+                    if (Directory.Exists(folder))
                     {
-                        if (file.Contains($"{mstNB}_{shdon}"))
+                        string[] pdfFiles = Directory.GetFiles(folder, "*.pdf");
+                        Console.WriteLine($"📄 Có {pdfFiles.Length} file PDF trong thư mục");
+
+                        foreach (string file in pdfFiles)
                         {
-                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                            string fileName = Path.GetFileNameWithoutExtension(file);
+                            Console.WriteLine($"   - {fileName}");
+
+                            // ★ So sánh chính xác + xử lý file trùng tên (_1, _2)
+                            if (fileName.Equals(searchPattern, StringComparison.OrdinalIgnoreCase)
+                                || fileName.StartsWith(searchPattern + "_", StringComparison.OrdinalIgnoreCase))
                             {
-                                FileName = file,
-                                UseShellExecute = true
-                            }); 
+                                Console.WriteLine($"✅ Tìm thấy file PDF đã tải: {file}");
+                                try
+                                {
+                                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                                    {
+                                        FileName = file,
+                                        UseShellExecute = true
+                                    });
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"⚠️ Không mở được file: {ex.Message}");
+                                }
+                                this.Cursor = Cursors.Default;
+                                return;
+                            }
+                        }
+
+                        Console.WriteLine("❌ Không có file PDF khớp — sẽ tải từ web");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"⚠️ Thư mục không tồn tại: {folder}");
+                    }
+
+                    // ═══════════════════════════════════════════════════════
+                    // KHÔNG TÌM THẤY → TẢI TỪ WEB
+                    // ═══════════════════════════════════════════════════════
+                    try
+                    {
+                        if (NCC == "MyInvoice")
+                            TaiHDMYINVOICE(true, mstNB, shdon, "", mabimat);
+                        else if (NCC == "Smartsign")
+                            TaiHDSmartSign(true, mstNB, shdon, "", mabimat);
+                        else if (NCC == "VinInvoice")
+                            TaiHDVNINVOICE(true, mstNB, shdon, "", mabimat);
+                        else if (NCC == "VNPT")
+                        {
+                            if (IsPetrolimex(mstNB))
+                                TaiHDVNPTPETROLIMEX(true, mstNB, shdon, KHHDon, mabimat);
+                            else
+                                TaiHDVNPT(true, mstNB, shdon, KHHDon, mabimat);
+                        }
+                        else if (NCC == "MISA")
+                            GetHoaDonMisa(true, mabimat, mstNB, shdon);
+                        else if (NCC == "VIETTEL")
+                            await TraCuuNCC(true, mstNB, mabimat, shdon);
+                        else if (NCC == "BKAV")
+                            TaiBKAV(true, mstNB, shdon, KHHDon, mabimat);
+                        else if (NCC == "MINVOICE")
+                            TaiMINVOICE(true, mstNB, shdon, KHHDon, mabimat);
+                        else if (NCC == "FAST")
+                            TaiFAST(true, mstNB, shdon, KHHDon, mabimat);
+                        else if (NCC == "Win Tech")
+                            TaiWinTech(true, mstNB, shdon, KHHDon, mabimat);
+                        else if (NCC == "Cyber")
+                            TaiCyber(true, mstNB, shdon, KHHDon, mabimat);
+                        else if (NCC == "Softdream")
+                            TaiSoftdream(true, mstNB, shdon, KHHDon, mabimat);
+                        else if (NCC == "Visnam")
+                            TaiVisnam(true, mstNB, shdon, KHHDon, mabimat);
+                        else
+                            Console.WriteLine($"⚠️ NCC không xác định: {NCC}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"❌ Lỗi khi tải hóa đơn từ {NCC}: {ex.Message}");
+                    }
+                    finally
+                    {
+                        this.Cursor = Cursors.Default;
+                    }
+                    return;
+                }
+
+                // ═══════════════════════════════════════════════════════
+                // CÁC CỘT KHÁC (≠ 1) — BỎ QUA
+                // ═══════════════════════════════════════════════════════
+                if (columnIndex != 1)
+                {
+                    this.Cursor = Cursors.Default;
+                    return;
+                }
+
+                // ═══════════════════════════════════════════════════════
+                // CỘT 1: MỞ XML / WEBBROWSER
+                // ═══════════════════════════════════════════════════════
+                try
+                {
+                    System.Windows.Forms.WebBrowser webBrowser1 = new System.Windows.Forms.WebBrowser
+                    {
+                        Dock = DockStyle.Fill
+                    };
+
+                    var hiddenValue = gridView.GetRowCellValue(hitInfo.RowHandle, gridView.Columns["Path"]);
+
+                    if (!File.Exists(hiddenValue.ToString()))
+                    {
+                        Match match = Regex.Match(hiddenValue.ToString(), @"\\Hoadon\\.*$", RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                            string result = match.Value;
+                            hiddenValue = pathThumuc + result;
+
+                            Regex Pattern = new Regex(
+                                @"^(?<date>\d{8})_(?<mst>\d{10,13}(?:-\d{1,5})?)_(?<sohd>[A-Za-z0-9]+)_(?<kyhieu>[A-Za-z0-9\-]+)\.xml$",
+                                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+                            string fileName = Path.GetFileName(hiddenValue.ToString());
+                            var match2 = Pattern.Match(fileName);
+
+                            string mst = match2.Groups["mst"].Value;
+                            string shdon2 = match2.Groups["sohd"].Value;
+                            string kyhieu = match2.Groups["kyhieu"].Value;
+
+                            TbImport selectedRow = new TbImport();
+                            selectedRow.Mst = mst;
+                            selectedRow.SHDon = shdon2;
+                            selectedRow.KHHDon = kyhieu;
+                            selectedRow.Khmshdon = gridView.GetRowCellValue(
+                                hitInfo.RowHandle, gridView.Columns["Khmshdon"]).ToString();
+
+                            TaihoadonDbclick(selectedRow);
                             return;
                         }
                     }
-                    if (NCC == "MyInvoice")
-                    {
-                         TaiHDMYINVOICE(true, mstNB, shdon, "", mabimat);
-                    }
-                    if (NCC == "Smartsign")
-                    {
-                        TaiHDSmartSign(true, mstNB, shdon, "", mabimat);
-                    }
-                    if (NCC == "VinInvoice")
-                    {
-                        TaiHDVNINVOICE(true, mstNB, shdon,"",mabimat);
-                    }
-                    if (NCC == "VNPT")
-                    {
-                        if (IsPetrolimex(mstNB))
-                        {
-                            TaiHDVNPTPETROLIMEX(true, mstNB, shdon, KHHDon, mabimat);
-                        }
-                        else
-                        {
-                            TaiHDVNPT(true, mstNB, shdon, KHHDon, mabimat);
-                        }
-                    }
-                    if (NCC == "MISA")
-                    {
-                        GetHoaDonMisa(true,mabimat,mstNB,shdon);
-                    }
-                    if (NCC == "VIETTEL")
-                    {
-                        await TraCuuNCC(true,mstNB, mabimat, shdon);
-                    }
-                    if (NCC == "BKAV")
-                    {
-                       TaiBKAV(true,mstNB,shdon, KHHDon,mabimat);
-                    }
-                    if (NCC == "MINVOICE")
-                    {
-                        TaiMINVOICE(true, mstNB, shdon, KHHDon, mabimat);
-                    }
-                    if (NCC == "FAST")
-                    {
-                        TaiFAST(true, mstNB, shdon, KHHDon, mabimat);
-                    }
-                    if (NCC == "Win Tech")
-                    {
-                        TaiWinTech(true, mstNB, shdon, KHHDon, mabimat);
-                    }
-                    if (NCC == "Cyber")
-                    {
-                        TaiCyber(true, mstNB, shdon, KHHDon, mabimat);
-                    }
-                    if (NCC == "Softdream")
-                    {
-                        TaiSoftdream(true, mstNB, shdon, KHHDon, mabimat);
-                    }
-                    if (NCC == "Visnam")
-                    {
-                        TaiVisnam(true, mstNB, shdon, KHHDon, mabimat);
-                    }
+
+                    frmWebbrowser frmCongTrinh = new frmWebbrowser();
+                    frmCongTrinh.Text = hiddenValue.ToString().Replace(".xml", "");
+                    frmCongTrinh.Show();
+                    frmCongTrinh.BringToFront();
+                    frmCongTrinh.Activate();
+                    frmCongTrinh.Controls.Add(webBrowser1);
+
+                    string filePath = hiddenValue.ToString().Replace(".xml", ".html");
+                    webBrowser1.Navigate("file:///" + filePath.Replace("\\", "/"));
                 }
-
-                if (columnIndex != 1)
-                    return;
-                System.Windows.Forms.WebBrowser webBrowser1 = new System.Windows.Forms.WebBrowser
+                catch (Exception ex)
                 {
-                    Dock = DockStyle.Fill // Đổ đầy không gian của form
-                };
-                // Lấy giá trị trong ô đã nhấp
-                var hiddenValue = gridView.GetRowCellValue(hitInfo.RowHandle, gridView.Columns["Path"]);
-                if (!File.Exists(hiddenValue.ToString()))
-                {
-                    Match match = Regex.Match(hiddenValue.ToString(), @"\\Hoadon\\.*$", RegexOptions.IgnoreCase);
-                    if (match.Success)
-                    {
-                        string result = match.Value; // "\Hoadon\HDVao\12\0306340860_2880_C25TDT.xml"
-                        hiddenValue = pathThumuc + result;
-                                            Regex Pattern = new Regex(
-                         @"^(?<date>\d{8})_(?<mst>\d{10,13}(?:-\d{1,5})?)_(?<sohd>[A-Za-z0-9]+)_(?<kyhieu>[A-Za-z0-9\-]+)\.xml$",
-                         RegexOptions.IgnoreCase | RegexOptions.Compiled);
-                        string fileName = Path.GetFileName(hiddenValue.ToString());
-                        // fileName = "20260917_0100520429-001_42416_C26TBR.xml"
-
-                        var match2 = Pattern.Match(fileName);
-                        string mst = match2.Groups["mst"].Value;
-                        string shdon = match2.Groups["sohd"].Value.ToString();
-                        string kyhieu = match2.Groups["kyhieu"].Value;
-                        string khs = "1";
-                        //Thực hiện đăng nhập
-                        TbImport selectedRow = new TbImport();
-                        selectedRow.Mst = mst;
-                        selectedRow.SHDon = shdon;
-                        selectedRow.KHHDon = kyhieu;
-                        selectedRow.Khmshdon = gridView.GetRowCellValue(hitInfo.RowHandle, gridView.Columns["Khmshdon"]).ToString();
-                        TaihoadonDbclick(selectedRow);
-                        return;
-                    } 
-
+                    Console.WriteLine($"❌ Lỗi mở XML/WebBrowser: {ex.Message}");
                 }
-                frmWebbrowser frmCongTrinh = new frmWebbrowser();
-                frmCongTrinh.Text = hiddenValue.ToString().Replace(".xml", "");
-                frmCongTrinh.Show();
-                frmCongTrinh.BringToFront();
-                frmCongTrinh.Activate();
-                // Thêm điều khiển WebBrowser vào Form
-                frmCongTrinh.Controls.Add(webBrowser1);
-                string filePath = hiddenValue.ToString().Replace(".xml", ".html");
-
-                webBrowser1.Navigate("file:///" + filePath.Replace("\\", "/"));
             }
-            this.Cursor = Cursors.Default;     // Mặc định (thường là Arrow)
+
+            this.Cursor = Cursors.Default;
         }
         private bool IsPetrolimex(string mstNB)
         {
@@ -24917,8 +25126,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             }
             if (sohieu.Length > 15)
                 sohieu = sohieu.Substring(0, 15);
-            //if (DVTinh == "")
-            //    DVTinh = "xxx";
+            if (DVTinh == "")
+                DVTinh = "xxx";
             if (DVTinh.Length > 10)
                 DVTinh = DVTinh.Substring(0, 10);
             if (!lstvt.Any(m => m.SoHieu.ToLower() == sohieu.ToLower()))
@@ -34422,7 +34631,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             // ═══════════════════════════════════════════════════════
             // ✅ ĐẨY PDF VÀO QUEUE NGAY — không cần chờ batch
             // ═══════════════════════════════════════════════════════
-            EnqueuePdfDownload(tb);
+            if (chkTaihoadongoc.Checked)
+                EnqueuePdfDownload(tb);
             Debug.WriteLine($"📥 Đã Enqueue PDF: {tb.SHDon}");
 
             // ============ 4. GHI DB ============
@@ -37191,7 +37401,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             Debug.WriteLine($"✅ Parse OK: HĐ {tb.SHDon}, NCC={tb.NCC}");
 
             // ✅ Đẩy PDF vào queue ngay
-            EnqueuePdfDownload(tb);
+            if (chkTaihoadongoc.Checked)
+                EnqueuePdfDownload(tb);
             Debug.WriteLine($"📥 Đã Enqueue PDF: {tb.SHDon}");
 
             // ============ 4. GHI DB ============
@@ -47476,7 +47687,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         }
         private async Task TraCuuNCC(bool toggle, string mst, string mabm, string shdon)
         {
-            // Đọc trước các giá trị UI trên luồng chính
+            // ═══ Đọc giá trị UI trên luồng chính ═══
             int year = dtTungay.DateTime.Year;
             int month = dtTungay.DateTime.Month;
             bool isDauVao = chkDauvao.Checked;
@@ -47485,6 +47696,24 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
             await Task.Run(async () =>
             {
+                // ═══════════════════════════════════════════════════════
+                // LOGGER
+                // ═══════════════════════════════════════════════════════
+                void Log(string msg)
+                {
+                    try
+                    {
+                        File.AppendAllText(
+                            Path.Combine(Path.GetTempPath(), "viettel_debug.log"),
+                            $"{DateTime.Now:HH:mm:ss.fff} [T{Thread.CurrentThread.ManagedThreadId}] {msg}{Environment.NewLine}");
+                    }
+                    catch { }
+                }
+
+                Log("=== BẮT ĐẦU TraCuuNCC ===");
+                Log($"mst={mst}, mabm={mabm}, shdon={shdon}, toggle={toggle}");
+                Log($"year={year}, month={month}, isDauVao={isDauVao}, isDauRa={isDauRa}");
+
                 // ═══════════════════════════════════════════════════════
                 // 1. XÁC ĐỊNH THƯ MỤC ĐÍCH
                 // ═══════════════════════════════════════════════════════
@@ -47497,88 +47726,94 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     baseDir = Path.Combine(baseSavedPath, $"HD{year}", "HDKhac", month.ToString());
 
                 try { Directory.CreateDirectory(baseDir); } catch { }
+                Log("baseDir = " + baseDir);
 
-                string tempDownloadFolder = Path.Combine(Path.GetTempPath(), "ViettelTemp", Guid.NewGuid().ToString("N"));
+                string tempDownloadFolder = GetOrCleanTempFolder("ViettelTemp");
                 try { Directory.CreateDirectory(tempDownloadFolder); } catch { }
+                Log("tempDownloadFolder = " + tempDownloadFolder);
 
                 // ═══════════════════════════════════════════════════════
-                // ⚙️ CHROME OPTIONS
+                // ⚙️ CHROME OPTIONS — TỐI GIẢN ĐỂ DEBUG
                 // ═══════════════════════════════════════════════════════
                 var options = new ChromeOptions();
-                options.AddArgument("--headless=new");
-                options.AddArgument("--disable-features=OptimizationHints,MediaRouter,PrivacySandboxSettings4," +
-                                    "PrivacySandboxAdsAPIs,InterestFeedContentSuggestions,Translate," +
-                                    "AcceptCHFrame,ChromeLabs,CalculateNativeWinOcclusion," +
-                                    "DialMediaRouteProvider,GlobalMediaControls," +
-                                    "WebAuthentication,WebAuthenticationCable," +
-                                    "WebBluetooth,WebBluetoothNewPermissionsBackend," +
-                                    "WebUsb,WebSerial,WebHID,WebNFC," +
-                                    "Serial,Bluetooth,HID,USB,NFC," +
-                                    "FileSystemAccessAPI,IdleDetection," +
-                                    "SyncDisabled,InfiniteSessionRestore");
+
+                // Chỉ giữ những flag thật sự cần thiết
                 options.AddArgument("--disable-notifications");
-                options.AddArgument("--disable-infobars");
-                options.AddArgument("--disable-popup-blocking");
-                options.AddArgument("--disable-save-password-bubble");
-                options.AddArgument("--disable-translate");
                 options.AddArgument("--no-first-run");
                 options.AddArgument("--no-default-browser-check");
-                options.AddArgument("--disable-default-apps");
-                options.AddArgument("--disable-component-update");
-                options.AddArgument("--disable-background-networking");
-                options.AddArgument("--disable-sync");
-                options.AddArgument("--metrics-recording-only");
-                options.AddArgument("--disable-backgrounding-occluded-windows");
-                options.AddArgument("--use-fake-ui-for-media-stream");
-                options.AddArgument("--use-fake-device-for-media-stream");
-                options.AddArgument("--deny-permission-prompts");
-                options.AddArgument("--disable-gpu");
-                options.AddArgument("--no-sandbox");
-                options.AddArgument("--disable-dev-shm-usage");
                 options.AddArgument("--disable-blink-features=AutomationControlled");
                 options.AddExcludedArgument("enable-automation");
                 options.AddAdditionalOption("useAutomationExtension", false);
 
+                // ★ Profile riêng đặt CẠNH EXE (không dùng %TEMP%)
+                string userDataDir = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    "ChromeProfile_" + Guid.NewGuid().ToString("N").Substring(0, 8));
+                try { Directory.CreateDirectory(userDataDir); } catch { }
+                options.AddArgument($"--user-data-dir={userDataDir}");
+                Log("userDataDir = " + userDataDir);
+
+                // Download preferences
                 options.AddUserProfilePreference("download.default_directory", tempDownloadFolder);
                 options.AddUserProfilePreference("download.prompt_for_download", false);
                 options.AddUserProfilePreference("download.directory_upgrade", true);
                 options.AddUserProfilePreference("safebrowsing.enabled", true);
+                options.AddUserProfilePreference("profile.default_content_setting_values.automatic_downloads", 1);
+                options.AddUserProfilePreference("profile.default_content_setting_values.popups", 1);
 
+                // Chặn permission popup
+                options.AddUserProfilePreference("profile.default_content_setting_values.notifications", 2);
                 options.AddUserProfilePreference("profile.default_content_setting_values.media_stream", 2);
                 options.AddUserProfilePreference("profile.default_content_setting_values.media_stream_mic", 2);
                 options.AddUserProfilePreference("profile.default_content_setting_values.media_stream_camera", 2);
                 options.AddUserProfilePreference("profile.default_content_setting_values.geolocation", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.notifications", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.midi_sysex", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.push_messaging", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.clipboard", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.sensors", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.payment_handler", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.usb_guard", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.bluetooth_guard", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.hid_guard", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.serial_guard", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.idle_detection", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.file_system_write_guard", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.automatic_downloads", 1);
-                options.AddUserProfilePreference("profile.default_content_setting_values.popups", 1);
-                options.AddUserProfilePreference("profile.default_content_setting_values.protocol_handlers", 2);
-                options.AddUserProfilePreference("profile.default_content_setting_values.native_file_system_write_guard", 2);
-                options.AddUserProfilePreference("profile.managed_default_content_settings.images", 1);
 
+                // Tắt password manager
                 options.AddUserProfilePreference("credentials_enable_service", false);
                 options.AddUserProfilePreference("profile.password_manager_enabled", false);
-                options.AddUserProfilePreference("profile.password_manager_leak_detection", false);
                 options.AddUserProfilePreference("autofill.profile_enabled", false);
-                options.AddUserProfilePreference("autofill.credit_card_enabled", false);
 
                 IWebDriver driver = null;
                 try
                 {
-                    driver = new ChromeDriver(options);
-                    driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(30);
+                    // ═══════════════════════════════════════════════════════
+                    // ★ KHỞI TẠO DRIVER
+                    // ═══════════════════════════════════════════════════════
+                    string driverDir = AppDomain.CurrentDomain.BaseDirectory;
+                    Log("driverDir = " + driverDir);
 
-                    // CDP permission setup
+                    string chromedriverPath = Path.Combine(driverDir, "chromedriver.exe");
+                    Log("chromedriver exists = " + File.Exists(chromedriverPath));
+                    if (!File.Exists(chromedriverPath))
+                    {
+                        Log("❌ KHÔNG TÌM THẤY chromedriver.exe tại " + chromedriverPath);
+                        return;
+                    }
+
+                    var service = ChromeDriverService.CreateDefaultService(driverDir);
+                    service.HideCommandPromptWindow = true;
+                    service.EnableVerboseLogging = true;
+                    service.LogPath = Path.Combine(Path.GetTempPath(), "chromedriver.log");
+
+                    Log("Chuẩn bị new ChromeDriver(service, options)...");
+                    driver = new ChromeDriver(service, options);
+                    Log("✅ new ChromeDriver OK");
+
+                    driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(30);
+                    Log("✅ Đã vượt qua khởi tạo driver");
+
+                    // ★ Test: đọc URL hiện tại để chắc Chrome còn sống
+                    try
+                    {
+                        Log("URL hiện tại = " + driver.Url);
+                        Log("Title = " + driver.Title);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log("⚠️ Không đọc được URL/Title: " + ex.Message);
+                    }
+
+                    // ═══ CDP permission setup ═══
                     try
                     {
                         if (driver is ChromeDriver chromeDriver)
@@ -47607,17 +47842,22 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             chromeDriver.ExecuteCdpCommand(
                                 "Page.setBypassCSP",
                                 new Dictionary<string, object> { { "enabled", true } });
+
+                            Log("✅ CDP setup OK");
                         }
                     }
                     catch (Exception cdpEx)
                     {
-                        Console.WriteLine($"⚠️ CDP setup warning: {cdpEx.Message}");
+                        Log("⚠️ CDP setup warning: " + cdpEx.Message);
                     }
 
                     // ═══════════════════════════════════════════════════════
                     // 2. TRUY CẬP TRANG
                     // ═══════════════════════════════════════════════════════
+                    Log("Navigate tới vinvoice...");
                     driver.Navigate().GoToUrl("https://vinvoice.viettel.vn/utilities/invoice-search");
+                    Log("✅ Navigate OK. URL = " + driver.Url);
+
                     await Task.Delay(300);
 
                     await TryDismissPermissionPopups(driver);
@@ -47655,11 +47895,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         codeInput.Clear();
                         codeInput.SendKeys(mabm);
 
-                        Console.WriteLine("✅ Đã nhập MST + mã tra cứu");
+                        Log("✅ Đã nhập MST + mã tra cứu");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"❌ Không nhập được form: {ex.Message}");
+                        Log($"❌ Không nhập được form: {ex.Message}");
                         return;
                     }
 
@@ -47673,14 +47913,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     while (captchaAttempt < maxCaptchaRetries && !captchaSuccess)
                     {
                         captchaAttempt++;
-                        Console.WriteLine($"🔵 Captcha lần {captchaAttempt}/{maxCaptchaRetries}");
+                        Log($"🔵 Captcha lần {captchaAttempt}/{maxCaptchaRetries}");
 
                         try
                         {
                             await TryDismissPermissionPopups(driver);
                             await Task.Delay(300);
 
-                            // ═══ Detect loại captcha — kiểm tra 2 lần để tránh false negative ═══
                             bool DetectSlider() => driver.FindElements(By.CssSelector("div.slider-button")).Count > 0;
                             bool DetectRecaptcha() => driver.FindElements(By.CssSelector("iframe[src*='recaptcha'], div.g-recaptcha")).Count > 0;
                             bool DetectHcaptcha() => driver.FindElements(By.CssSelector("iframe[src*='hcaptcha'], div.h-captcha")).Count > 0;
@@ -47691,7 +47930,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             bool hasHcaptcha = DetectHcaptcha();
                             bool hasTurnstile = DetectTurnstile();
 
-                            // Kiểm tra lại lần 2 nếu không thấy captcha nào
                             if (!hasSlider && !hasRecaptcha && !hasHcaptcha && !hasTurnstile)
                             {
                                 await Task.Delay(800);
@@ -47701,30 +47939,28 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 hasTurnstile = DetectTurnstile();
                             }
 
-                            Console.WriteLine($"🔍 Captcha: slider={hasSlider}, recaptcha={hasRecaptcha}, hcaptcha={hasHcaptcha}, turnstile={hasTurnstile}");
+                            Log($"🔍 Captcha: slider={hasSlider}, recaptcha={hasRecaptcha}, hcaptcha={hasHcaptcha}, turnstile={hasTurnstile}");
 
                             if (!hasSlider && !hasRecaptcha && !hasHcaptcha && !hasTurnstile)
                             {
-                                Console.WriteLine("✅ Không có captcha — tiếp tục");
+                                Log("✅ Không có captcha — tiếp tục");
                                 captchaSuccess = true;
                                 break;
                             }
 
                             if (hasRecaptcha || hasHcaptcha || hasTurnstile)
                             {
-                                Console.WriteLine("⚠️ Captcha đã đổi loại — cần user nhập thủ công");
+                                Log("⚠️ Captcha đã đổi loại — cần user nhập thủ công");
                                 await Task.Delay(5000);
                                 captchaSuccess = true;
                                 break;
                             }
 
-                            // ═══ XỬ LÝ SLIDER CAPTCHA ═══
                             if (hasSlider)
                             {
-                                // Reset captcha trước khi xử lý (lần 2 trở đi)
                                 if (captchaAttempt > 1)
                                 {
-                                    Console.WriteLine("🔄 Reset captcha + nhập lại form...");
+                                    Log("🔄 Reset captcha + nhập lại form...");
                                     await ResetCaptchaAndForm(driver, mst, mabm);
                                     await Task.Delay(500);
                                     wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
@@ -47734,11 +47970,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                     await EnsurePuzzleAtStart(driver);
                                 }
 
-                                // ═══ LẤY ẢNH CAPTCHA ═══
                                 var bgImages = driver.FindElements(By.CssSelector("img.bg-image"));
                                 if (bgImages.Count == 0)
                                 {
-                                    Console.WriteLine("⚠️ Không tìm thấy img.bg-image");
+                                    Log("⚠️ Không tìm thấy img.bg-image");
                                     await Task.Delay(500);
                                     continue;
                                 }
@@ -47747,14 +47982,13 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 string bgSrc = bgImage.GetAttribute("src");
                                 if (string.IsNullOrEmpty(bgSrc))
                                 {
-                                    Console.WriteLine("⚠️ Không lấy được src");
+                                    Log("⚠️ Không lấy được src");
                                     await Task.Delay(300);
                                     continue;
                                 }
 
                                 string bgPath = SaveBase64ToFile(bgSrc, "bg");
 
-                                // ═══ KÍCH THƯỚC ẢNH GỐC vs HIỂN THỊ ═══
                                 int naturalW, naturalH;
                                 using (var tmpBmp = new Bitmap(bgPath))
                                 {
@@ -47764,7 +47998,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 int displayedW = bgImage.Size.Width;
                                 int displayedH = bgImage.Size.Height;
 
-                                // ✅ FIX: dùng devicePixelRatio để tính scale chính xác
                                 double dpr = 1.0;
                                 try
                                 {
@@ -47775,33 +48008,30 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 catch { }
 
                                 double scaleX = (double)displayedW / naturalW;
+                                Log($"📐 Gốc {naturalW}x{naturalH} | Hiển thị {displayedW}x{displayedH} | DPR={dpr:F2} | scaleX={scaleX:F3}");
 
-                                Console.WriteLine($"📐 Gốc {naturalW}x{naturalH} | Hiển thị {displayedW}x{displayedH} | DPR={dpr:F2} | scaleX={scaleX:F3}");
-
-                                // ═══ TÌM Ô ĐEN ═══
                                 int holeX_natural = FindHolePosition2(bgPath);
-                                Console.WriteLine($"🎯 Ô đen (gốc): x={holeX_natural}px");
+                                Log($"🎯 Ô đen (gốc): x={holeX_natural}px");
 
                                 if (holeX_natural <= 0)
                                 {
-                                    Console.WriteLine("⚠️ Không tìm được vị trí ô đen");
+                                    Log("⚠️ Không tìm được vị trí ô đen");
                                     try { File.Delete(bgPath); } catch { }
                                     await Task.Delay(500);
                                     continue;
                                 }
 
                                 int holeX_displayed = (int)Math.Round(holeX_natural * scaleX);
-                                Console.WriteLine($"🎯 Ô đen (hiển thị): x={holeX_displayed}px");
+                                Log($"🎯 Ô đen (hiển thị): x={holeX_displayed}px");
 
                                 try { File.Delete(bgPath); } catch { }
 
-                                // ═══ LẤY PUZZLE + SLIDER ═══
                                 var puzzlePieces = driver.FindElements(By.CssSelector("img.puzzle-piece"));
                                 var sliderButtons = driver.FindElements(By.CssSelector("div.slider-button"));
 
                                 if (puzzlePieces.Count == 0 || sliderButtons.Count == 0)
                                 {
-                                    Console.WriteLine("⚠️ Thiếu puzzle-piece / slider-button");
+                                    Log("⚠️ Thiếu puzzle-piece / slider-button");
                                     await Task.Delay(500);
                                     continue;
                                 }
@@ -47813,16 +48043,14 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                     "arguments[0].scrollIntoView({block: 'center'});", sliderButton);
                                 await Task.Delay(300);
 
-                                // ═══ KIỂM TRA PUZZLE Ở VỊ TRÍ ĐẦU ═══
                                 string puzzleLeftStr = puzzlePiece.GetAttribute("style") ?? "";
-                                Console.WriteLine($"🧩 Puzzle style: {puzzleLeftStr}");
+                                Log($"🧩 Puzzle style: {puzzleLeftStr}");
 
                                 if (!puzzleLeftStr.Contains("left: 0px") && !puzzleLeftStr.Contains("left:0px"))
                                 {
-                                    Console.WriteLine("⚠️ Puzzle không ở vị trí đầu — reset");
+                                    Log("⚠️ Puzzle không ở vị trí đầu — reset");
                                     await EnsurePuzzleAtStart(driver);
                                     await Task.Delay(200);
-                                    // Lấy lại element mới sau reset
                                     puzzlePieces = driver.FindElements(By.CssSelector("img.puzzle-piece"));
                                     sliderButtons = driver.FindElements(By.CssSelector("div.slider-button"));
                                     if (puzzlePieces.Count == 0 || sliderButtons.Count == 0) continue;
@@ -47832,29 +48060,26 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                                 var puzzleSize = puzzlePiece.Size;
                                 int puzzleW = puzzleSize.Width;
-                                Console.WriteLine($"🧩 Puzzle-piece: {puzzleW}x{puzzleSize.Height}px");
+                                Log($"🧩 Puzzle-piece: {puzzleW}x{puzzleSize.Height}px");
 
-                                // ═══ TÍNH KHOẢNG CÁCH KÉO ═══
                                 int targetDistance = holeX_displayed - (puzzleW / 2);
-                                Console.WriteLine($"📏 targetDistance={targetDistance}px");
+                                Log($"📏 targetDistance={targetDistance}px");
 
                                 if (targetDistance <= 5)
                                 {
-                                    Console.WriteLine("⚠️ Khoảng cách quá nhỏ");
+                                    Log("⚠️ Khoảng cách quá nhỏ");
                                     await Task.Delay(300);
                                     continue;
                                 }
 
-                                // ═══ KÉO SLIDER — DÙNG CDP (trusted event) ═══
                                 await PerformSlideCdp(driver, sliderButton, targetDistance);
                                 await Task.Delay(1500);
 
                                 captchaSuccess = CheckCaptchaSuccess(driver);
 
-                                // ═══ RETRY NHANH TRONG CÙNG CAPTCHA ═══
                                 if (!captchaSuccess)
                                 {
-                                    Console.WriteLine("⚠️ Fail lần 1 — thử kéo lại (cùng captcha)...");
+                                    Log("⚠️ Fail lần 1 — thử kéo lại (cùng captcha)...");
                                     await Task.Delay(300);
 
                                     await EnsurePuzzleAtStart(driver);
@@ -47876,21 +48101,20 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                     }
                                 }
 
-                                // Debug screenshot
                                 try
                                 {
                                     string debugDir = Path.Combine(Path.GetTempPath(), "VinvoiceDebug");
                                     Directory.CreateDirectory(debugDir);
                                     string shot = Path.Combine(debugDir, $"slide_{captchaAttempt}.png");
                                     ((ITakesScreenshot)driver).GetScreenshot().SaveAsFile(shot);
-                                    Console.WriteLine($"📸 Debug: {shot}");
+                                    Log($"📸 Debug: {shot}");
                                 }
                                 catch { }
                             }
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"❌ Lỗi captcha lần {captchaAttempt}: {ex.Message}");
+                            Log($"❌ Lỗi captcha lần {captchaAttempt}: {ex}");
                         }
 
                         if (!captchaSuccess)
@@ -47901,11 +48125,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                     if (!captchaSuccess)
                     {
-                        Console.WriteLine("❌ Thử captcha nhiều lần không thành công.");
+                        Log("❌ Thử captcha nhiều lần không thành công.");
                         return;
                     }
 
-                    Console.WriteLine("✅ Captcha OK — chuẩn bị tìm kiếm");
+                    Log("✅ Captcha OK — chuẩn bị tìm kiếm");
                     await Task.Delay(800);
 
                     // ═══════════════════════════════════════════════════════
@@ -47919,7 +48143,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                         if (searchBtns.Count == 0)
                         {
-                            Console.WriteLine("❌ Không tìm thấy nút Tìm kiếm");
+                            Log("❌ Không tìm thấy nút Tìm kiếm");
                             return;
                         }
 
@@ -47928,7 +48152,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         await Task.Delay(300);
                         ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].click();", searchBtn);
 
-                        Console.WriteLine("✅ Đã click Tìm kiếm");
+                        Log("✅ Đã click Tìm kiếm");
                         await Task.Delay(500);
 
                         var pdfWaitCheck = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
@@ -47941,22 +48165,22 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 return btns.Count > 0 ? btns[0] : null;
                             });
                             searchSuccess = true;
-                            Console.WriteLine("✅ Có kết quả tìm kiếm");
+                            Log("✅ Có kết quả tìm kiếm");
                         }
                         catch
                         {
-                            Console.WriteLine("⚠️ Không thấy kết quả — có thể không có hóa đơn hoặc captcha sai");
+                            Log("⚠️ Không thấy kết quả — có thể không có hóa đơn hoặc captcha sai");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"❌ Lỗi tìm kiếm: {ex.Message}");
+                        Log($"❌ Lỗi tìm kiếm: {ex.Message}");
                         return;
                     }
 
                     if (!searchSuccess)
                     {
-                        Console.WriteLine("❌ Không có kết quả để tải");
+                        Log("❌ Không có kết quả để tải");
                         return;
                     }
 
@@ -47990,11 +48214,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                         if (pdfBtn == null)
                         {
-                            Console.WriteLine("❌ Không tìm thấy nút tải PDF");
+                            Log("❌ Không tìm thấy nút tải PDF");
                             return;
                         }
 
-                        Console.WriteLine("📥 Đang click tải PDF...");
+                        Log("📥 Đang click tải PDF...");
 
                         var beforeFiles = new HashSet<string>(
                             Directory.GetFiles(tempDownloadFolder, "*.*").Select(Path.GetFileName)
@@ -48004,7 +48228,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         await Task.Delay(300);
                         ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].click();", pdfBtn);
 
-                        Console.WriteLine("✅ Đã click tải PDF, chờ file...");
+                        Log("✅ Đã click tải PDF, chờ file...");
 
                         string latestPdfFile = null;
                         var deadline = DateTime.Now.AddSeconds(20);
@@ -48033,7 +48257,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                         if (latestPdfFile == null)
                         {
-                            Console.WriteLine("❌ Không tải được PDF hoặc quá thời gian");
+                            Log("❌ Không tải được PDF hoặc quá thời gian");
                             return;
                         }
 
@@ -48053,7 +48277,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         }
 
                         File.Move(latestPdfFile, newPath);
-                        Console.WriteLine($"📁 Đã lưu: {newPath}");
+                        Log($"📁 Đã lưu: {newPath}");
 
                         if (toggle)
                         {
@@ -48070,24 +48294,36 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"❌ Lỗi tải PDF: {ex.Message}");
+                        Log($"❌ Lỗi tải PDF: {ex}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"❌ Lỗi tổng: {ex.Message}");
+                    Log("❌ LỖI TỔNG: " + ex.ToString());
                 }
                 finally
                 {
+                    await Task.Delay(1500);
                     try { driver?.Quit(); } catch { }
                     try { driver?.Dispose(); } catch { }
+                    Log("Đã đóng trình duyệt.");
 
                     try
                     {
                         if (Directory.Exists(tempDownloadFolder))
-                            Directory.Delete(tempDownloadFolder, true);
+                        {
+                            foreach (var f in Directory.GetFiles(tempDownloadFolder))
+                            {
+                                try { File.Delete(f); } catch { }
+                            }
+                        }
                     }
                     catch { }
+
+                    // Xóa profile tạm
+                    try { Directory.Delete(userDataDir, true); } catch { }
+
+                    Log("=== KẾT THÚC TraCuuNCC ===");
                 }
             });
         }

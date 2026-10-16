@@ -184,6 +184,7 @@
             this.btnRefresh = new DevExpress.XtraEditors.SimpleButton();
             this.btnimport = new DevExpress.XtraEditors.SimpleButton();
             this.panelControl10 = new DevExpress.XtraEditors.PanelControl();
+            this.chkTaihoadongoc = new DevExpress.XtraEditors.CheckEdit();
             this.checkEdit2 = new DevExpress.XtraEditors.CheckEdit();
             this.txtTime1 = new DevExpress.XtraEditors.TextEdit();
             this.dtDenngay = new DevExpress.XtraEditors.DateEdit();
@@ -409,6 +410,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.chkVbdauvao.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.panelControl10)).BeginInit();
             this.panelControl10.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.chkTaihoadongoc.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.checkEdit2.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.txtTime1.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dtDenngay.Properties.CalendarTimeProperties)).BeginInit();
@@ -1821,11 +1823,11 @@
             // tableLayoutPanel1
             // 
             this.tableLayoutPanel1.ColumnCount = 5;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 56.11247F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 43.88753F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 61.8984F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 38.1016F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 323F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 119F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 82F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 84F));
             this.tableLayoutPanel1.Controls.Add(this.panelControl12, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl11, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl10, 0, 0);
@@ -1853,7 +1855,7 @@
             this.panelControl12.Controls.Add(this.radVbDauvao1);
             this.panelControl12.Controls.Add(this.btnClearNganhang);
             this.panelControl12.Controls.Add(this.btnLocdulieuNganhang);
-            this.panelControl12.Location = new System.Drawing.Point(751, 2);
+            this.panelControl12.Location = new System.Drawing.Point(749, 2);
             this.panelControl12.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl12.Name = "panelControl12";
             this.panelControl12.Size = new System.Drawing.Size(316, 138);
@@ -2002,10 +2004,10 @@
             this.panelControl11.Controls.Add(this.btnOpenFolder);
             this.panelControl11.Controls.Add(this.btnRefresh);
             this.panelControl11.Controls.Add(this.btnimport);
-            this.panelControl11.Location = new System.Drawing.Point(422, 2);
+            this.panelControl11.Location = new System.Drawing.Point(465, 2);
             this.panelControl11.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl11.Name = "panelControl11";
-            this.panelControl11.Size = new System.Drawing.Size(325, 138);
+            this.panelControl11.Size = new System.Drawing.Size(280, 138);
             this.panelControl11.TabIndex = 4;
             // 
             // simpleButton5
@@ -2053,7 +2055,7 @@
             this.panelControl8.Location = new System.Drawing.Point(4, 73);
             this.panelControl8.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl8.Name = "panelControl8";
-            this.panelControl8.Size = new System.Drawing.Size(317, 34);
+            this.panelControl8.Size = new System.Drawing.Size(272, 34);
             this.panelControl8.TabIndex = 35;
             // 
             // lblImporttdra
@@ -2185,6 +2187,7 @@
             // 
             // panelControl10
             // 
+            this.panelControl10.Controls.Add(this.chkTaihoadongoc);
             this.panelControl10.Controls.Add(this.checkEdit2);
             this.panelControl10.Controls.Add(this.txtTime1);
             this.panelControl10.Controls.Add(this.dtDenngay);
@@ -2205,8 +2208,16 @@
             this.panelControl10.Location = new System.Drawing.Point(2, 2);
             this.panelControl10.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl10.Name = "panelControl10";
-            this.panelControl10.Size = new System.Drawing.Size(416, 133);
+            this.panelControl10.Size = new System.Drawing.Size(459, 133);
             this.panelControl10.TabIndex = 3;
+            // 
+            // chkTaihoadongoc
+            // 
+            this.chkTaihoadongoc.Location = new System.Drawing.Point(343, 123);
+            this.chkTaihoadongoc.Name = "chkTaihoadongoc";
+            this.chkTaihoadongoc.Properties.Caption = "Tải hoá đơn gốc";
+            this.chkTaihoadongoc.Size = new System.Drawing.Size(108, 19);
+            this.chkTaihoadongoc.TabIndex = 44;
             // 
             // checkEdit2
             // 
@@ -2436,7 +2447,7 @@
             // 
             this.pictureEdit2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureEdit2.EditValue = ((object)(resources.GetObject("pictureEdit2.EditValue")));
-            this.pictureEdit2.Location = new System.Drawing.Point(1074, 2);
+            this.pictureEdit2.Location = new System.Drawing.Point(1072, 2);
             this.pictureEdit2.Margin = new System.Windows.Forms.Padding(2);
             this.pictureEdit2.Name = "pictureEdit2";
             this.pictureEdit2.Properties.ShowCameraMenuItem = DevExpress.XtraEditors.Controls.CameraMenuItemVisibility.Auto;
@@ -4577,6 +4588,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.panelControl10)).EndInit();
             this.panelControl10.ResumeLayout(false);
             this.panelControl10.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.chkTaihoadongoc.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.checkEdit2.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.txtTime1.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dtDenngay.Properties.CalendarTimeProperties)).EndInit();
@@ -5029,5 +5041,6 @@
         private DevExpress.XtraGrid.Columns.GridColumn colKHHDon;
         private DevExpress.XtraEditors.SimpleButton btnClauseAi;
         private DevExpress.XtraGrid.Columns.GridColumn colNCCRas;
+        private DevExpress.XtraEditors.CheckEdit chkTaihoadongoc;
     }
 }
