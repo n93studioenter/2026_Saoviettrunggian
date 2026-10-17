@@ -14,8 +14,8 @@ namespace SaovietTax
     static class Program
     {
         // ★ ĐƯỜNG DẪN TUYỆT ĐỐI TỚI SharedDLLs ★
+        //private static readonly string SharedDllsPath = @"C:\apps\SharedDLLs";
         private static readonly string SharedDllsPath = @"\\192.168.1.90\Ke toan 2025 New\2 Copi vao dung 4\Tools\Debug";
-
         static Mutex mutex;
 
         [STAThread]
@@ -24,7 +24,7 @@ namespace SaovietTax
             // ★ ĐĂNG KÝ RESOLVER TRƯỚC KHI LÀM BẤT CỨ GÌ ★
             AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
 
-            bool isAutoStart = args.Length > 0 && args[0] == "-autostart";
+            bool isAutoStart = args.Length > 0 && args[0] == " - autostart";
             try
             {
             }

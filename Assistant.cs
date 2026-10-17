@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Windows.Forms;
 
 namespace SaovietTax
@@ -368,7 +369,7 @@ namespace SaovietTax
             if (webView21.CoreWebView2 != null) return;
 
             var env = await CoreWebView2Environment.CreateAsync(
-                userDataFolder: System.IO.Path.Combine(
+                userDataFolder: Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "SaovietTax_WebView2")
             );
@@ -404,18 +405,78 @@ namespace SaovietTax
         }
 
         // ============ NÚT THỰC THI ============
-        private void btnThucthi_Click(object sender, EventArgs e)
+
+        // 1. Mở hộp thoại chọn file PDF
+        private async void btnThucthi_Click(object sender, EventArgs e)
         {
-            string prompt = GetPrompt();
-            if (string.IsNullOrEmpty(prompt))
+            if (webView21.CoreWebView2 == null)
             {
-                XtraMessageBox.Show("Vui lòng nhập câu hỏi!", "Thông báo",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                XtraMessageBox.Show("Trình duyệt AI chưa được khởi tạo!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // TODO: xử lý prompt ở đây
-            // Ví dụ: gửi lên API, hoặc nhập vào web đang mở
+            // 1. Mở hộp thoại chọn file PDF sao kê ngân hàng
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Filter = "PDF Files (*.pdf)|*.pdf|All Files (*.*)|*.*";
+                openFileDialog.Title = "Chọn file PDF sao kê ngân hàng cần chuyển sang Excel";
+
+                if (openFileDialog.ShowDialog() != DialogResult.OK) return;
+
+                string pdfPath = openFileDialog.FileName;
+
+                try
+                {
+                    // 2. Đưa file PDF vào Clipboard của Windows
+                    System.Collections.Specialized.StringCollection paths = new System.Collections.Specialized.StringCollection();
+                    paths.Add(pdfPath);
+                    Clipboard.SetFileDropList(paths);
+
+                    // 3. Click chuột / Focus vào ô nhập của ChatGPT bằng JavaScript
+                    await webView21.CoreWebView2.ExecuteScriptAsync("document.querySelector('#prompt-textarea')?.focus();");
+                    await System.Threading.Tasks.Task.Delay(300);
+
+                    // Gửi phím tắt Ctrl + V để dán file PDF vào khung chat
+                    SendKeys.Send("^v");
+
+                    // QUAN TRỌNG: Đợi từ 3 đến 4 giây để giao diện ChatGPT hiện thumbnail file PDF tải lên thành công
+                    await System.Threading.Tasks.Task.Delay(3500);
+
+                    // 4. Chuẩn bị câu lệnh (Prompt) yêu cầu AI đọc và chuyển bảng sang định dạng chuẩn để đưa vào Excel
+                    string userPrompt = GetPrompt();
+                    if (string.IsNullOrEmpty(userPrompt) || userPrompt == PlaceholderText)
+                    {
+                        userPrompt = "Đây là file PDF sao kê ngân hàng của tôi. Hãy trích xuất toàn bộ dữ liệu giao dịch thành một bảng Markdown hoàn chỉnh, giữ nguyên chính xác các cột (Ngày giao dịch, Nội dung, Số tiền đi, Số tiền đến, Số dư) để tôi có thể copy thẳng vào Excel mà không bị lệch dòng.";
+                    }
+
+                    // Đưa nội dung câu lệnh vào Clipboard
+                    Clipboard.SetText(userPrompt);
+
+                    // Focus lại ô nhập văn bản một lần nữa
+                    await webView21.CoreWebView2.ExecuteScriptAsync("document.querySelector('#prompt-textarea')?.focus();");
+                    await System.Threading.Tasks.Task.Delay(300);
+
+                    // Dán câu lệnh prompt vào
+                    SendKeys.Send("^v");
+
+                    // Đợi 1 giây để nút Gửi sáng lên
+                    await System.Threading.Tasks.Task.Delay(1000);
+
+                    // 5. Tự động bấm nút Gửi (Send) trên giao diện ChatGPT
+                    await webView21.CoreWebView2.ExecuteScriptAsync(@"
+                (function() {
+                    const sendButton = document.querySelector('button[data-testid=""send-button""]');
+                    if (sendButton) {
+                        sendButton.click();
+                    }
+                })();
+            ");
+                }
+                catch (Exception ex)
+                {
+                    XtraMessageBox.Show("Lỗi khi gửi file lên AI: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
         }
     }
 }

@@ -10,8 +10,10 @@ namespace SaovietTax.DTO
     public static class Kingsofthp
     {
         // ★ ĐƯỜNG DẪN SHARE CHỨA PYTHONOCR ★
+        //private const string ShareOcrPath =
+        //    @"\\192.168.1.90\Ke toan 2025 New\2 Copi vao dung 4\Tools\Debug\PythonOCR";
         private const string ShareOcrPath =
-            @"\\192.168.1.90\Ke toan 2025 New\2 Copi vao dung 4\Tools\Debug\PythonOCR";
+    @"C:\apps\SharedDLLs\PythonOCR";
 
         // ★ ĐƯỜNG DẪN LOCAL ★
         private static readonly string LocalOcrPath = Path.Combine(

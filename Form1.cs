@@ -25677,7 +25677,12 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     string mabimat = GetSecretCode(path, NCC);
 
                     string loai = chkDauvao.Checked ? "HDVao" : "HDRa";
-                    string folder = $@"D:\DA3\DA3\Hoadon\HD2026\{loai}\{dtTungay.DateTime.Month}";
+                    // string folder = $@"D:\DA3\DA3\Hoadon\HD2026\{loai}\{dtTungay.DateTime.Month}";
+                    string folder = Path.Combine(
+                        savedPath,
+                        $"HD{dtTungay.DateTime.Year}",
+                        loai,
+                        dtTungay.DateTime.Month.ToString());
                     // Lấy danh sách file PDF
                     string[] pdfFiles = Directory.GetFiles(folder, "*.pdf");
 
@@ -47687,29 +47692,48 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         }
         private async Task TraCuuNCC(bool toggle, string mst, string mabm, string shdon)
         {
-            // ═══ Đọc giá trị UI trên luồng chính ═══
+            void LogUI(string msg) =>
+            File.AppendAllText(Path.Combine(Path.GetTempPath(), "viettel_debug.log"),
+              $"{DateTime.Now:HH:mm:ss.fff} [UI] {msg}{Environment.NewLine}");
+
+            LogUI("ĐÃ VÀO TraCuuNCC");
+
+            LogUI("Bước 1: đọc dtTungay");
             int year = dtTungay.DateTime.Year;
             int month = dtTungay.DateTime.Month;
+            LogUI($"  → year={year}, month={month}");
+
+            LogUI("Bước 2: đọc checkbox");
             bool isDauVao = chkDauvao.Checked;
             bool isDauRa = chkDaura.Checked;
+            LogUI($"  → isDauVao={isDauVao}, isDauRa={isDauRa}");
+
+            LogUI("Bước 3: đọc savedPath");
             string baseSavedPath = savedPath;
+            LogUI($"  → baseSavedPath={baseSavedPath}");
+
+            LogUI("Bước 4: chuẩn bị vào Task.Run");
 
             await Task.Run(async () =>
             {
+              
                 // ═══════════════════════════════════════════════════════
                 // LOGGER
                 // ═══════════════════════════════════════════════════════
                 void Log(string msg)
                 {
                     try
-                    {
+                    { 
                         File.AppendAllText(
                             Path.Combine(Path.GetTempPath(), "viettel_debug.log"),
                             $"{DateTime.Now:HH:mm:ss.fff} [T{Thread.CurrentThread.ManagedThreadId}] {msg}{Environment.NewLine}");
                     }
-                    catch { }
+                    catch(Exception ex)
+                    {
+                       
+                    }
                 }
-
+               
                 Log("=== BẮT ĐẦU TraCuuNCC ===");
                 Log($"mst={mst}, mabm={mabm}, shdon={shdon}, toggle={toggle}");
                 Log($"year={year}, month={month}, isDauVao={isDauVao}, isDauRa={isDauRa}");
