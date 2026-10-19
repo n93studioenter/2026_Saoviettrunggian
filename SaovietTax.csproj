@@ -612,6 +612,12 @@
     <Compile Include="NhapFileExcel.Designer.cs">
       <DependentUpon>NhapFileExcel.cs</DependentUpon>
     </Compile>
+    <Compile Include="OcrPdf.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="OcrPdf.Designer.cs">
+      <DependentUpon>OcrPdf.cs</DependentUpon>
+    </Compile>
     <Compile Include="OllamaProductChecker.cs" />
     <Compile Include="PersistentClass1.cs" />
     <Compile Include="PersistentClass2.cs" />
@@ -834,6 +840,9 @@
     <EmbeddedResource Include="NhapFileExcel.resx">
       <DependentUpon>NhapFileExcel.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="OcrPdf.resx">
+      <DependentUpon>OcrPdf.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="PopupTaikhoan.resx">
       <DependentUpon>PopupTaikhoan.cs</DependentUpon>
     </EmbeddedResource>
@@ -916,6 +925,7 @@
     <None Include="Resources\Cyber.bmp" />
     <None Include="Resources\Cyber.png" />
     <None Include="Resources\cybericon.png" />
+    <None Include="Resources\exporttopdf_16x16.png" />
     <Content Include="tessdata\eng.traineddata" />
   </ItemGroup>
   <ItemGroup>

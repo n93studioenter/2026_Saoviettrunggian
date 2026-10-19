@@ -14191,6 +14191,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 Vat = SafeParse(node.SelectSingleNode("TSuat")?.InnerText?.Replace("%", ""))
             };
 
+            // ★ Guard: đảm bảo dt không null (dù chắc chắn không null, nhưng phòng hờ)
+            if (dt == null) return null;
+
             // ============ 5. CHIẾT KHẤU ============
             double chietkhau = 0;
             double.TryParse(node.SelectSingleNode("STCKhau")?.InnerText, out chietkhau);
@@ -14224,10 +14227,18 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 ? ""
                 : NormalizeVietnameseString(dt.Ten);
 
-            // ✅ Bước 8.2: Đảm bảo cache không null
+            // ✅ Bước 8.2: Đảm bảo cache không null + thread-safe
             if (cacheMatHangTrongHoaDon == null)
-                cacheMatHangTrongHoaDon = new Dictionary<string, TbImportDetail>(
-                    StringComparer.OrdinalIgnoreCase);
+            {
+                lock (cacheLock)
+                {
+                    if (cacheMatHangTrongHoaDon == null)
+                    {
+                        cacheMatHangTrongHoaDon = new Dictionary<string, TbImportDetail>(
+                            StringComparer.OrdinalIgnoreCase);
+                    }
+                }
+            }
 
             if (string.IsNullOrEmpty(keyCache))
             {
@@ -14243,9 +14254,12 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                 try
                 {
-                    hasCached = cacheMatHangTrongHoaDon.TryGetValue(keyCache, out cached)
-                                && cached != null
-                                && !string.IsNullOrEmpty(cached.SoHieu);
+                    lock (cacheLock)
+                    {
+                        hasCached = cacheMatHangTrongHoaDon.TryGetValue(keyCache, out cached)
+                                    && cached != null
+                                    && !string.IsNullOrEmpty(cached.SoHieu);
+                    }
                 }
                 catch (Exception exCache)
                 {
@@ -14276,21 +14290,34 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         dt.Percent = 0;
                     }
 
-                    // ✅ Ghi vào cache — an toàn tuyệt đối
-                    try
+                    // ✅ Ghi vào cache — an toàn tuyệt đối (chỉ cache khi có SoHieu)
+                    if (!string.IsNullOrEmpty(dt.SoHieu))
                     {
-                        cacheMatHangTrongHoaDon[keyCache] = new TbImportDetail
+                        try
                         {
-                            Ten = dt.Ten ?? "",
-                            SoHieu = dt.SoHieu ?? "",
-                            Percent = dt.Percent,
-                            DVT = dt.DVT ?? ""
-                        };
-                    }
-                    catch (Exception exCache)
-                    {
-                        LogToFile("ParseDetailNode/SetCache", exCache, keyCache);
-                        // Không crash nếu không ghi được cache
+                            // Tạo object cache TRƯỚC khi lock (giảm thời gian giữ lock)
+                            var cacheEntry = new TbImportDetail
+                            {
+                                Ten = dt.Ten ?? "",
+                                SoHieu = dt.SoHieu,
+                                Percent = dt.Percent,
+                                DVT = dt.DVT ?? ""
+                            };
+
+                            lock (cacheLock)
+                            {
+                                // Double-check cache không null sau lock
+                                if (cacheMatHangTrongHoaDon != null)
+                                {
+                                    cacheMatHangTrongHoaDon[keyCache] = cacheEntry;
+                                }
+                            }
+                        }
+                        catch (Exception exCache)
+                        {
+                            LogToFile("ParseDetailNode/SetCache", exCache, keyCache);
+                            // Không crash nếu không ghi được cache
+                        }
                     }
                 }
             }
@@ -14307,6 +14334,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
             return dt;
         }
+        // Khóa dùng cho cache (tránh race condition đa luồng)
+        private static readonly object cacheLock = new object();
+         
 
         /// <summary>
         /// Parse thuế suất — 1 pass, không lặp thừa
@@ -19180,7 +19210,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 // ═══════════════════════════════════════════════════════
                 ChromeOptions options = new ChromeOptions();
 
-               // options.AddArgument("--headless");
+               options.AddArgument("--headless");
                 options.AddArgument("--disable-gpu");
                 options.AddArgument("--no-sandbox");
                 options.AddArgument("--disable-dev-shm-usage");
@@ -47762,6 +47792,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 var options = new ChromeOptions();
 
                 // Chỉ giữ những flag thật sự cần thiết
+                options.AddArgument("--headless");
                 options.AddArgument("--disable-notifications");
                 options.AddArgument("--no-first-run");
                 options.AddArgument("--no-default-browser-check");
@@ -49771,6 +49802,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
         private void btnClauseAi_Click(object sender, EventArgs e)
         {
+            OcrPdf ocrPdf = new OcrPdf();
+            ocrPdf.ShowDialog();    
+            return;
             if (isdesign)
                 return;
             

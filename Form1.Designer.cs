@@ -1827,7 +1827,7 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 38.1016F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 323F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 119F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 84F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 85F));
             this.tableLayoutPanel1.Controls.Add(this.panelControl12, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl11, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl10, 0, 0);
@@ -1855,7 +1855,7 @@
             this.panelControl12.Controls.Add(this.radVbDauvao1);
             this.panelControl12.Controls.Add(this.btnClearNganhang);
             this.panelControl12.Controls.Add(this.btnLocdulieuNganhang);
-            this.panelControl12.Location = new System.Drawing.Point(749, 2);
+            this.panelControl12.Location = new System.Drawing.Point(748, 2);
             this.panelControl12.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl12.Name = "panelControl12";
             this.panelControl12.Size = new System.Drawing.Size(316, 138);
@@ -2004,7 +2004,7 @@
             this.panelControl11.Controls.Add(this.btnOpenFolder);
             this.panelControl11.Controls.Add(this.btnRefresh);
             this.panelControl11.Controls.Add(this.btnimport);
-            this.panelControl11.Location = new System.Drawing.Point(465, 2);
+            this.panelControl11.Location = new System.Drawing.Point(464, 2);
             this.panelControl11.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl11.Name = "panelControl11";
             this.panelControl11.Size = new System.Drawing.Size(280, 138);
@@ -2208,7 +2208,7 @@
             this.panelControl10.Location = new System.Drawing.Point(2, 2);
             this.panelControl10.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl10.Name = "panelControl10";
-            this.panelControl10.Size = new System.Drawing.Size(459, 133);
+            this.panelControl10.Size = new System.Drawing.Size(458, 133);
             this.panelControl10.TabIndex = 3;
             // 
             // chkTaihoadongoc
@@ -2447,7 +2447,7 @@
             // 
             this.pictureEdit2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureEdit2.EditValue = ((object)(resources.GetObject("pictureEdit2.EditValue")));
-            this.pictureEdit2.Location = new System.Drawing.Point(1072, 2);
+            this.pictureEdit2.Location = new System.Drawing.Point(1071, 2);
             this.pictureEdit2.Margin = new System.Windows.Forms.Padding(2);
             this.pictureEdit2.Name = "pictureEdit2";
             this.pictureEdit2.Properties.ShowCameraMenuItem = DevExpress.XtraEditors.Controls.CameraMenuItemVisibility.Auto;
