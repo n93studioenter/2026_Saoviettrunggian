@@ -334,6 +334,7 @@
       <DependentUpon>Assistant.cs</DependentUpon>
     </Compile>
     <Compile Include="BankReader\AcbPdfReader.cs" />
+    <Compile Include="BankReader\BankTextCleaner.cs" />
     <Compile Include="BankReader\VibPdfReader.cs" />
     <Compile Include="BkavInvoice.cs">
       <SubType>Form</SubType>

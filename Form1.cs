@@ -7649,6 +7649,12 @@ Chỉ trả lời: CÓ hoặc KHÔNG
         }
         private async void frmMain_Load(object sender, EventArgs e)
         {
+
+            string original = "CTY CHIEM BON THANH TOAN HD 3442-210826-16:01:27 6233ASCB02RYB1JG";
+
+            string cleaned = BankTextCleaner.CleanBankDescription(original);
+
+
             CleanOldChromeProfiles();
             CleanupAppTempFolders();
             //string rawPath = "C:\\Users\\Admin\\Desktop\\captcha_raw_1.png";
