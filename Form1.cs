@@ -13632,8 +13632,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             TbImport tbImport = null;
             try
             {
-               // tbImport = await Task.Run(() => ParseXmlInternal(pathXml, localType));
-               tbImport = ParseXmlInternal_Bkav(pathXml, localType);
+                tbImport = await Task.Run(() => ParseXmlInternal(pathXml, localType));
+               //tbImport = ParseXmlInternal_Bkav(pathXml, localType);
             }
             catch (Exception ex)
             {
@@ -27167,7 +27167,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             if (frmhh != null)
                                 frmhh.Close();
                             hoverTimer.Stop();
-                            frmHangHoa frmHangHoa = new frmHangHoa();
+                            frmHangHoa2026 frmHangHoa = new frmHangHoa2026();
                             frmHangHoa.frmMain = this;
                             frmHangHoa.Typeform = 1;
                             DTO.VatTu vatTu = new DTO.VatTu();
