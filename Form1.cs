@@ -108,6 +108,7 @@ using SaovietTax.NCC;
 using Serilog.Parsing;
 using Svg;
 using System;
+using System.Buffers.Text;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -7950,6 +7951,10 @@ Chỉ trả lời: CÓ hoặc KHÔNG
             assistant.Show();
             StartPdfDownloadWorker();
             KillOldOcrService();
+
+
+            //ParseXmlInternal_Bkav
+           
         }
         private void KillOldOcrService()
         {
@@ -13627,10 +13632,12 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             TbImport tbImport = null;
             try
             {
-                tbImport = await Task.Run(() => ParseXmlInternal(pathXml, localType));
+               // tbImport = await Task.Run(() => ParseXmlInternal(pathXml, localType));
+               tbImport = ParseXmlInternal_Bkav(pathXml, localType);
             }
             catch (Exception ex)
             {
+               
                 LogToFile("DocfileXmlOne", ex, pathXml);
             }
             finally
@@ -13955,6 +13962,273 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             }
 
             // ============ 17. GỘP 711/5211 ============
+            if (type == 1) Merge711Inplace(tbImport);
+            else Merge5211Inplace(tbImport);
+
+            return tbImport;
+        }
+        private TbImport ParseXmlInternal_Bkav(string pathXml, int type)
+        {
+            // ============ 1. LOAD XML ============
+            var xmlDoc = new XmlDocument();
+            var settings = new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Ignore,
+                XmlResolver = null,
+                Async = false,
+                CheckCharacters = false,
+                IgnoreWhitespace = true
+            };
+
+            using (var xmlReader = XmlReader.Create(pathXml, settings))
+            {
+                xmlDoc.Load(xmlReader);
+            }
+
+            XmlNode root = xmlDoc.DocumentElement;
+            if (root == null) return null;
+
+            // 🔥 Bkav bọc dữ liệu trong thẻ DLHDon
+            XmlNode dlHDon = root.SelectSingleNode("//DLHDon");
+            if (dlHDon == null) dlHDon = root; // Fallback nếu là XML chuẩn CQT
+
+            XmlNode ttChung = dlHDon.SelectSingleNode("//TTChung");
+            XmlNode nBan = root.SelectSingleNode("//NDHDon/NBan"); // Thay vì //NBan
+            XmlNode nMua = root.SelectSingleNode("//NDHDon/NMua"); // Thay vì //NMua
+            XmlNode ttToan = dlHDon.SelectSingleNode("//TToan");
+            XmlNode tHDon = dlHDon.SelectSingleNode("//THDon");
+
+            if (ttChung == null || ttToan == null) return null;
+
+            var tbImport = new TbImport { Path = pathXml };
+
+            // ============ 2. LOẠI HÓA ĐƠN ============
+            string thDonText = tHDon?.InnerText ?? "";
+            string thDonNorm = Helpers.NormalizeVietnameseString(thDonText.ToLower());
+            if (thDonNorm.Contains("giá trị gia tăng") || thDonNorm.Contains("gtgt"))
+                tbImport.hdon = "01";
+            else if (thDonNorm.Contains("bán hàng"))
+                tbImport.hdon = "02";
+            else
+                tbImport.hdon = "01";
+
+            // ============ 3. NGÀY LẬP ============
+            if (!DateTime.TryParse(ttChung.SelectSingleNode("NLap")?.InnerText, out DateTime nLap))
+                return null;
+            tbImport.NLap = nLap;
+
+            if (tbImport.NLap < dtTungay.DateTime || tbImport.NLap > dtDenngay.DateTime)
+                return null;
+
+            // ============ 4. SỐ HĐ, KÝ HIỆU ============
+            tbImport.SHDon = Helpers.RemoveLeadingZeros(ttChung.SelectSingleNode("SHDon")?.InnerText ?? "");
+            tbImport.KHHDon = ttChung.SelectSingleNode("KHHDon")?.InnerText ?? "";
+            tbImport.Khmshdon = ttChung.SelectSingleNode("KHMSHDon")?.InnerText ?? "";
+
+            // NCC phát hành (Bkav ghi MST của Bkav ở đây)
+            string nccRaw = ttChung.SelectSingleNode("MSTTCGP")?.InnerText;
+            tbImport.NCC = GetNCCNameCached(nccRaw);
+
+            string tPhiText = ttToan.SelectSingleNode("//TPhi")?.InnerText;
+            if (!string.IsNullOrEmpty(tPhiText) && double.TryParse(tPhiText, out double tPhiVal))
+                tbImport.TPhi = tPhiVal.ToString();
+
+            // ============ 5. MST CÔNG TY / ĐỐI TÁC ============
+            if (string.IsNullOrEmpty(mstcongty)) GetMST();
+
+            if (type == 1) // Hóa đơn mua vào (Bkav là người bán)
+            {
+                string mstMua = nMua?.SelectSingleNode("MST")?.InnerText;
+                // Nếu có MST mà không khớp thì bỏ qua (trừ khi mua cho người tiêu dùng không có MST)
+                if (!string.IsNullOrEmpty(mstMua) && mstcongty != mstMua && CCCD != mstMua) return null;
+
+                tbImport.Ten = Helpers.ConvertUnicodeToVni(nBan?.SelectSingleNode("Ten")?.InnerText ?? "");
+                tbImport.Mst = nBan?.SelectSingleNode("MST")?.InnerText ?? "";
+            }
+            else // Hóa đơn bán ra (Bkav là người mua hoặc bán cho người tiêu dùng)
+            {
+                string mstBan = nBan?.SelectSingleNode("MST")?.InnerText;
+                if (mstcongty != mstBan) return null;
+
+                // Lấy tên người mua (có thể là "Bán cho người tiêu dùng")
+                string tenDoiTac = !string.IsNullOrWhiteSpace(nMua?.SelectSingleNode("Ten")?.InnerText)
+                    ? nMua.SelectSingleNode("Ten").InnerText
+                    : nMua?.SelectSingleNode("HVTNMHang")?.InnerText ?? "";
+
+                tbImport.Ten = !string.IsNullOrEmpty(tenDoiTac)
+                    ? Helpers.ConvertUnicodeToVni(tenDoiTac) : "";
+
+                tbImport.Mst = nMua?.SelectSingleNode("MST")?.InnerText
+                    ?? nMua?.SelectSingleNode("CCCDan")?.InnerText ?? "";
+
+                // Xử lý logic khách lẻ
+                if (string.IsNullOrEmpty(tbImport.Ten)
+                    || tbImport.Ten.ToLower().Contains("khaùch khoâng laáy hoùa ñôn")
+                    || tbImport.Ten.ToLower().Contains("ngöôøi mua khoâng laáy hoùa ñôn")
+                    || tbImport.Ten.ToLower().Contains("khaùch leû")
+                    || tbImport.Ten.ToLower().Contains("bán cho người tiêu dùng"))
+                {
+                    var kl = GetKhachHangByCode("KL");
+                    if (kl != null)
+                    {
+                        tbImport.Ten = kl.Field<string>("Ten");
+                        tbImport.Mst = "KL";
+                    }
+                    else
+                    {
+                        // Nếu không có khách lẻ "KL", tự tạo mã
+                        tbImport.Mst = "KL";
+                        tbImport.Ten = "Khách lẻ";
+                    }
+                }
+            }
+
+            // ============ 6. SINH SỐ HIỆU KH NẾU THIẾU MST ============
+            if (string.IsNullOrEmpty(tbImport.Mst) && !string.IsNullOrEmpty(tbImport.Ten))
+            {
+                var existing = GetKhachHangByTen(tbImport.Ten);
+
+                if (existing == null || existing.Rows.Count == 0)
+                {
+                    string baseCode = GenerateAbbreviation(
+                        Helpers.ConvertVniToUnicode(tbImport.Ten),
+                        tbKhachhang.AsEnumerable().Select(r => r.Field<string>("SoHieu")).ToList()).ToUpper();
+
+                    string finalSH = baseCode;
+                    int suffix = 1;
+                    while (tbKhachhang.AsEnumerable().Any(r => r.Field<string>("SoHieu") == finalSH))
+                        finalSH = $"{baseCode}_{suffix++}";
+                    tbImport.Mst = finalSH;
+                }
+                else
+                {
+                    tbImport.Mst = existing.Rows[0].Field<string>("SoHieu");
+                }
+            }
+
+            // ============ 7. KIỂM TRA TRÙNG (THREAD-SAFE) ============
+            var key = NormalizeTbImportKey(tbImport.Mst, tbImport.SHDon, tbImport.NLap, type);
+            if (lookupTbImport.Contains(key)) return null;
+
+            bool isDupCurrent = false;
+            lock (_lstImportLock)
+            {
+                var currentList = type == 1 ? lstdsVao : lstdsRa;
+                if (currentList != null && currentList.Count > 0)
+                {
+                    isDupCurrent = currentList.Any(m =>
+                        m.SHDon == tbImport.SHDon
+                        && m.NLap.Date == tbImport.NLap.Date
+                        && m.Mst == tbImport.Mst);
+                }
+            }
+            if (isDupCurrent) return null;
+
+            bool isDupImport = false;
+            lock (_lstImportLock)
+            {
+                var importList = type == 1 ? lstImportVao : lstImportRa;
+                if (importList != null && importList.Count > 0)
+                {
+                    isDupImport = importList.Any(m =>
+                        m.SHDon == tbImport.SHDon
+                        && m.NLap.Date == tbImport.NLap.Date);
+                }
+            }
+            if (isDupImport) return null;
+
+            if (KiemtrahoadonCT(tbImport.SHDon, tbImport.KHHDon, tbImport.NLap, tbImport.Mst, type))
+                return null;
+
+            // ============ 8. KHỞI TẠO KHÁCH HÀNG MỚI ============
+            if (tbImport.Mst != "KL" && !CheckExistKH(tbImport.Mst))
+            {
+                XmlNode doiTacNode = (type == 1) ? nBan : nMua;
+                string dChi = doiTacNode?.SelectSingleNode("DChi")?.InnerText ?? "";
+                string sdt = doiTacNode?.SelectSingleNode("SDThoai")?.InnerText ?? "";
+
+                if (!string.IsNullOrEmpty(tbImport.Mst) && !string.IsNullOrEmpty(tbImport.Ten))
+                    InitCustomer(type == 1 ? 2 : 3, tbImport.Mst, tbImport.Ten, dChi, tbImport.Mst, "", sdt);
+                else
+                {
+                    var kl = GetKhachHangByCode("KL");
+                    if (kl != null)
+                    {
+                        tbImport.Ten = kl.Field<string>("Ten");
+                        tbImport.Mst = "KL";
+                    }
+                }
+            }
+
+            // ============ 9. ĐỊNH DANH TÀI KHOẢN ============
+            ApplyAccountRuleFromCache(tbImport, type);
+
+            tbImport.Status = 0;
+            tbImport.Ngaytao = DateTime.Now.ToShortDateString();
+
+            // ============ 10. TIỀN + THUẾ SUẤT ============
+            tbImport.TongTien = SafeParse(ttToan.SelectSingleNode("TgTTTBSo")?.InnerText);
+            tbImport.TgTCThue = SafeParse(ttToan.SelectSingleNode("TgTCThue")?.InnerText);
+            tbImport.TgTThue = SafeParse(ttToan.SelectSingleNode("TgTThue")?.InnerText);
+
+            tbImport.Vat = 0;
+            tbImport.Vat2 = "0";
+            tbImport.Vat3 = "0";
+
+            // Bkav khai báo thuế suất trong <THTTLTSuat>
+            var ttLTSuat = ttToan.SelectSingleNode("THTTLTSuat");
+            if (ttLTSuat != null)
+            {
+                var firstRateNode = ttLTSuat.SelectSingleNode("LTSuat/TSuat");
+                if (firstRateNode != null)
+                {
+                    string vatStr = firstRateNode.InnerText.Replace("%", "").Trim();
+                    if (double.TryParse(vatStr, out double vatVal))
+                    {
+                        tbImport.Vat = vatVal;
+                        tbImport.Vat2 = vatVal.ToString("0");
+                    }
+                }
+            }
+            else
+            {
+                ParseTaxRates(ttToan, tbImport); // Fallback hàm cũ
+            }
+
+            // ============ 11. CHI TIẾT HÀNG HÓA ============
+            cacheMatHangTrongHoaDon = new Dictionary<string, TbImportDetail>(StringComparer.OrdinalIgnoreCase);
+
+            // Bkav bọc danh sách hàng hóa trong <DSHHDVu>
+            var hhdNodes = dlHDon.SelectNodes("//DSHHDVu/HHDVu");
+            double finalTotal = 0;
+
+            if (hhdNodes != null)
+            {
+                foreach (XmlNode node in hhdNodes)
+                {
+                    try
+                    {
+                        var detail = ParseDetailNode(node, tbImport, type);
+                        if (detail == null) continue;
+
+                        finalTotal += detail.TTien;
+                        tbImport.tbImportDetails.Add(detail);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogToFile("ParseDetailNode", ex, node.SelectSingleNode("THHDVu")?.InnerText);
+                    }
+                }
+            }
+
+            // ============ 12. LÀM TRÒN + PHÂN BỔ SAI SỐ ============
+            RoundAndAllocateRemainder(tbImport, finalTotal);
+
+            // ============ 13. NỘI DUNG MẶC ĐỊNH ============
+            if (string.IsNullOrEmpty(tbImport.Noidung) && tbImport.tbImportDetails.Count > 0)
+                tbImport.Noidung = tbImport.tbImportDetails[0].Ten;
+
+            // ============ 14. GỘP 711/5211 ============
             if (type == 1) Merge711Inplace(tbImport);
             else Merge5211Inplace(tbImport);
 
@@ -45788,9 +46062,399 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
             return input;
         }
+        private IWebDriver _driver; 
+        private const string BASE_URL = "https://van.ehoadon.vn/";
+        private const string ZERO_GUID = "00000000-0000-0000-0000-000000000000";
+        private async Task TaihdBKAV()
+        {
+            var service = ChromeDriverService.CreateDefaultService();
+            service.HideCommandPromptWindow = true;
+            string username = "3500794980";
+            string password = "Inox@123456";
 
+            string downloadDir = Path.Combine(savedPath, $"HD{dtTungay.DateTime.Year}", "HdRa", dtTungay.DateTime.Month.ToString());
+            string savePdfDir = Path.Combine(savedPath, $"HD{dtTungay.DateTime.Year}", "HdRa", dtTungay.DateTime.Month.ToString());
+            string tempDownloadDir = Path.Combine(Path.GetTempPath(), "BkavTemp_" + Guid.NewGuid().ToString("N"));
+
+            Directory.CreateDirectory(downloadDir);
+            Directory.CreateDirectory(savePdfDir);
+            Directory.CreateDirectory(tempDownloadDir);
+
+            var options = new ChromeOptions();
+            options.AddArgument("--window-size=1920,1080");
+            options.AddArgument("--start-maximized");
+            options.AddUserProfilePreference("download.default_directory", tempDownloadDir);
+            options.AddUserProfilePreference("download.prompt_for_download", false);
+            options.AddUserProfilePreference("safebrowsing.enabled", false);
+            options.AddUserProfilePreference("profile.default_content_setting_values.automatic_downloads", 1);
+            options.AddArgument("--safebrowsing-disable-download-protection");
+            options.AddArgument("--disable-features=InsecureDownloadWarnings,DownloadBubble");
+
+            var driver = new ChromeDriver(service, options);
+            try
+            {
+                if (driver is ChromeDriver chromeDriver)
+                {
+                    chromeDriver.ExecuteCdpCommand("Page.setDownloadBehavior", new Dictionary<string, object>
+            {
+                { "behavior", "allow" },
+                { "downloadPath", tempDownloadDir }
+            });
+                }
+            }
+            catch { }
+
+            try
+            {
+                // ============ 1. ĐĂNG NHẬP & LỌC THỜI GIAN ============
+                driver.Navigate().GoToUrl(BASE_URL);
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+
+                var txtUser = wait.Until(d => d.FindElement(By.Id("txtUserName")));
+                txtUser.Clear(); txtUser.SendKeys(username ?? "");
+                var txtPass = driver.FindElement(By.Id("txtPassword"));
+                txtPass.Clear(); txtPass.SendKeys(password ?? "");
+                driver.FindElement(By.Id("btnLogin")).Click();
+
+                wait.Until(d => d.Url.Contains("QLHD"));
+                driver.Navigate().GoToUrl("https://van.ehoadon.vn/MTT?IsMTT=true");
+                wait.Until(d => d.Url.Contains("MTT"));
+                Thread.Sleep(2500);
+
+                var ddlCategory = wait.Until(d => d.FindElement(By.Id("body_ddlInvoiceDate_ddlCategory")));
+                new SelectElement(ddlCategory).SelectByValue("-2");
+                Thread.Sleep(1500);
+
+                var txtDateRanger = wait.Until(d => d.FindElement(By.Id("body_ddlInvoiceDate_txtDateRanger")));
+                string dateFrom = dtTungay.DateTime.ToString("dd/MM/yyyy");
+                string dateTo = DateTime.Now.ToString("dd/MM/yyyy");
+
+                ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView(true); arguments[0].focus();", txtDateRanger);
+                Thread.Sleep(300);
+                txtDateRanger.SendKeys(Keys.Control + "a");
+                txtDateRanger.SendKeys(Keys.Backspace);
+                Thread.Sleep(300);
+                txtDateRanger.SendKeys($"{dateFrom} - {dateTo}");
+                Thread.Sleep(500);
+                txtDateRanger.SendKeys(Keys.Tab);
+                Thread.Sleep(1500);
+
+                var btnSearch = wait.Until(d => d.FindElement(By.CssSelector("button.btn-search-invoice")));
+                ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView(true); arguments[0].click();", btnSearch);
+                Thread.Sleep(3000);
+
+                // ============ 2. QUÉT TABLE VÀ KIỂM TRA TRƯỚC ============
+                var rows = driver.FindElements(By.CssSelector("#gg-table-1 tbody tr"));
+                if (rows.Count == 0)
+                {
+                    Console.WriteLine("Không tìm thấy hóa đơn nào.");
+                    return;
+                }
+
+                Console.WriteLine($"Tìm thấy {rows.Count} hóa đơn. Bắt đầu kiểm tra...");
+
+                foreach (var row in rows)
+                {
+                    string guid = "";
+                    string mst = ""; // Table không hiển thị MST người bán, sẽ lấy từ config
+                    string soHD = "";
+                    string kyHieu = "";
+                    string dateStr = "";
+                    string soHD_RutGon = "";
+
+                    try
+                    {
+                        // Lấy dữ liệu ẩn từ thẻ input checkbox
+                        var chk = row.FindElement(By.CssSelector(".CheckOne input[data-invoiceguid]"));
+                        guid = chk.GetAttribute("data-invoiceguid");
+                        soHD = chk.GetAttribute("data-invno") ?? "";       // "123"
+                        kyHieu = chk.GetAttribute("data-invserial") ?? ""; // "C26MAA"
+                        string invDate = chk.GetAttribute("data-invdate") ?? ""; // "2026-10-19"
+
+                        if (string.IsNullOrEmpty(guid)) continue;
+
+                        // Lấy MST Người bán (Chính là username đang đăng nhập)
+                        mst = username;
+
+                        // Format lại ngày: "2026-10-19" -> "20261019"
+                        if (DateTime.TryParse(invDate, out DateTime dt))
+                            dateStr = dt.ToString("yyyyMMdd");
+                        else
+                            dateStr = invDate.Replace("-", "");
+
+                        soHD_RutGon = soHD.TrimStart('0');
+                        if (string.IsNullOrEmpty(soHD_RutGon)) soHD_RutGon = "0";
+
+                        // Tạo tên file dự kiến
+                        string expectedXmlPath = Path.Combine(downloadDir, $"{dateStr}_{mst}_{soHD_RutGon}_{kyHieu}.xml");
+                        string expectedPdfPath = Path.Combine(savePdfDir, $"{mst}_{soHD_RutGon}_{kyHieu}.pdf");
+
+                        bool hasXml = File.Exists(expectedXmlPath);
+                        bool hasPdf = File.Exists(expectedPdfPath);
+
+                        // Nếu ĐÃ CÓ ĐỦ CẢ 2 FILE THÌ BỎ QUA, KHÔNG MỞ POPUP
+                        if (hasXml && hasPdf)
+                        {
+                            Console.WriteLine($"  => [BỎ QUA] HĐ {soHD} đã có đủ XML & PDF.");
+                            continue;
+                        }
+
+                        Console.WriteLine($"  => [TẢI] HĐ {soHD} (XML: {(hasXml ? "Có" : "Thiếu")}, PDF: {(hasPdf ? "Có" : "Thiếu")})");
+
+                        // ============ 3. MỞ POPUP VÀ TẢI CÁC FILE BỊ THIẾU ============
+                        var viewBtn = row.FindElement(By.CssSelector("a.aviewInvoice"));
+                        ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView(true); arguments[0].click();", viewBtn);
+
+                        wait.Until(d => d.FindElement(By.Id("dialogViewDetail")).Displayed);
+                        Thread.Sleep(1500);
+
+                        // 3.1. Tải XML (Nếu thiếu)
+                        if (!hasXml)
+                        {
+                            try
+                            {
+                                driver.SwitchTo().Frame("framedialogViewDetail");
+                                foreach (var f in Directory.GetFiles(tempDownloadDir)) { try { File.Delete(f); } catch { } }
+
+                                var btnXml = wait.Until(d => d.FindElement(By.Id("btnDownload")));
+                                ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].click();", btnXml);
+
+                                string downloadedFile = null;
+                                for (int i = 0; i < 20; i++)
+                                {
+                                    Thread.Sleep(500);
+                                    var files = Directory.GetFiles(tempDownloadDir, "*.xml");
+                                    if (files.Length > 0 && !File.Exists(files[0] + ".crdownload"))
+                                    {
+                                        downloadedFile = files[0];
+                                        break;
+                                    }
+                                }
+
+                                if (downloadedFile != null)
+                                {
+                                    File.Move(downloadedFile, expectedXmlPath);
+                                    Console.WriteLine($"    -> Đã tải XML thành công.");
+                                }
+                                driver.SwitchTo().DefaultContent();
+                            }
+                            catch (Exception ex) { Console.WriteLine("    -> Lỗi tải XML: " + ex.Message); driver.SwitchTo().DefaultContent(); }
+                        }
+
+                        // 3.2. Tải PDF (Nếu thiếu)
+                        if (!hasPdf)
+                        {
+                            try
+                            {
+                                driver.SwitchTo().Frame("framedialogViewDetail");
+                                var objectTag = wait.Until(d => d.FindElement(By.CssSelector("#idcontent object[data*='.pdf'], object[type='application/pdf']")));
+                                string relativePath = objectTag.GetAttribute("data");
+
+                                if (!string.IsNullOrEmpty(relativePath))
+                                {
+                                    string fullPdfUrl = new Uri(new Uri(driver.Url), relativePath).ToString();
+                                    var b64Pdf = ((IJavaScriptExecutor)driver).ExecuteAsyncScript(@"
+                                var cb = arguments[arguments.length - 1];
+                                fetch(arguments[0], { credentials: 'include' })
+                                    .then(r => r.arrayBuffer())
+                                    .then(buf => {
+                                        var b = new Uint8Array(buf), s = '';
+                                        for (var i = 0; i < b.length; i += 0x8000)
+                                            s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+                                        cb(btoa(s));
+                                    }).catch(e => cb('ERROR:' + e));
+                            ", fullPdfUrl) as string;
+
+                                    if (!string.IsNullOrEmpty(b64Pdf) && !b64Pdf.StartsWith("ERROR:"))
+                                    {
+                                        File.WriteAllBytes(expectedPdfPath, Convert.FromBase64String(b64Pdf));
+                                        Console.WriteLine($"    -> Đã tải PDF thành công.");
+                                    }
+                                }
+                                driver.SwitchTo().DefaultContent();
+                            }
+                            catch (Exception ex) { Console.WriteLine("    -> Lỗi tải PDF: " + ex.Message); driver.SwitchTo().DefaultContent(); }
+                        }
+
+                        // 3.3. Đóng popup
+                        try
+                        {
+                            var closeBtn = driver.FindElement(By.CssSelector("button.ui-dialog-titlebar-close"));
+                            ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].click();", closeBtn);
+                        }
+                        catch { driver.FindElement(By.TagName("body")).SendKeys(Keys.Escape); }
+
+                        Thread.Sleep(1000); // Chờ popup đóng
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi xử lý HĐ {guid}: {ex.Message}");
+                        try { driver.SwitchTo().DefaultContent(); } catch { }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Lỗi thao tác Bkav: " + ex.Message, ex);
+            }
+            finally
+            {
+                try { driver.Quit(); } catch { }
+                try { if (Directory.Exists(tempDownloadDir)) Directory.Delete(tempDownloadDir, true); } catch { }
+                await Xulychonthang();
+            }
+        }
+        public async Task DownloadAllMTTInvoices(IWebDriver driver, string dateFrom, string dateTo, string saveDir)
+        {
+            var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+            Directory.CreateDirectory(saveDir);
+
+            try
+            {
+                // 1. Điều hướng vào trang Máy tính tiền (MTT)
+                driver.Navigate().GoToUrl("https://van.ehoadon.vn/MTT?IsMTT=true");
+                wait.Until(d => d.Url.Contains("MTT"));
+                Thread.Sleep(2000); // Chờ bảng load
+
+                // 2. Chọn "Khoảng thời gian"
+                var ddlCategory = wait.Until(d => d.FindElement(By.Id("body_ddlInvoiceDate_ddlCategory")));
+                var selectCategory = new SelectElement(ddlCategory);
+                selectCategory.SelectByValue("-2"); // -2 = Khoảng thời gian
+                Thread.Sleep(1000);
+
+                // 3. Nhập khoảng thời gian (Từ ngày - Đến ngày)
+                var txtDateRanger = wait.Until(d => d.FindElement(By.Id("body_ddlInvoiceDate_txtDateRanger")));
+                txtDateRanger.Clear();
+                Thread.Sleep(200);
+                // Định dạng của Bkav thường là dd/MM/yyyy - dd/MM/yyyy
+                txtDateRanger.SendKeys($"{dateFrom} - {dateTo}");
+                txtDateRanger.SendKeys(Keys.Tab);
+                Thread.Sleep(1000);
+
+                // 4. Bấm nút Tìm kiếm (Bạn hãy F12 kiểm tra lại ID chính xác của nút này)
+                var btnSearch = wait.Until(d => d.FindElement(By.Id("body_btnSearch")));
+                btnSearch.Click();
+                Thread.Sleep(2500); // Chờ dữ liệu trả về
+
+                // 5. Quét danh sách các hóa đơn đã phát hành
+                var invoicesToDownload = new List<Dictionary<string, string>>();
+
+                // Lấy tất cả các dòng trong bảng (Dùng selector chung cho MTT)
+                var rows = driver.FindElements(By.CssSelector("tr[data-invoiceguid]"));
+                foreach (var row in rows)
+                {
+                    string guid = row.GetAttribute("data-invoiceguid");
+                    if (string.IsNullOrEmpty(guid) || guid == "00000000-0000-0000-0000-000000000000") continue;
+
+                    string text = row.Text.ToLowerInvariant();
+                    // Chỉ lấy hóa đơn đã phát hành (ĐPH hoặc Đã phát hành)
+                    if (!text.Contains("đã phát hành") && !text.Contains("đph")) continue;
+
+                    // Lấy thông tin để đặt tên file (nếu có)
+                    string serial = "";
+                    string invoiceNo = "";
+                    try { serial = row.FindElement(By.CssSelector(".InvoiceSerial i, .InvoiceSerial")).Text.Trim(); } catch { }
+                    try { invoiceNo = row.FindElement(By.CssSelector(".InvoiceNo b, .InvoiceNo")).Text.Trim(); } catch { }
+
+                    invoicesToDownload.Add(new Dictionary<string, string>
+            {
+                { "guid", guid },
+                { "serial", serial },
+                { "invoice_no", invoiceNo }
+            });
+                }
+
+                if (invoicesToDownload.Count == 0)
+                {
+                    Console.WriteLine("Không tìm thấy hóa đơn nào trong khoảng thời gian này.");
+                    return;
+                }
+
+                Console.WriteLine($"Tìm thấy {invoicesToDownload.Count} hóa đơn. Bắt đầu tải...");
+
+                // 6. Tải từng hóa đơn
+                int successCount = 0;
+                foreach (var inv in invoicesToDownload)
+                {
+                    try
+                    {
+                        string guid = inv["guid"];
+                        string fileName = string.IsNullOrEmpty(inv["invoice_no"])
+                            ? $"{guid}.pdf"
+                            : $"{inv["serial"]}_{inv["invoice_no"]}.pdf";
+
+                        string savePath = Path.Combine(saveDir, fileName);
+
+                        await DownloadPdfFromViewDetail(driver, guid, savePath);
+                        successCount++;
+                        Console.WriteLine($"Đã tải ({successCount}/{invoicesToDownload.Count}): {fileName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi tải HĐ {inv["guid"]}: {ex.Message}");
+                    }
+
+                    // Nghỉ 800ms tránh bị Bkav rate-limit
+                    await Task.Delay(800);
+                }
+
+                Console.WriteLine($"Hoàn tất! Đã tải thành công {successCount}/{invoicesToDownload.Count} file.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Lỗi tiến trình: " + ex.Message);
+            }
+        }
+        private async Task DownloadPdfFromViewDetail(IWebDriver driver, string guid, string savePath)
+        {
+            var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+
+            // Mở trang chi tiết
+            driver.Navigate().GoToUrl($"https://van.ehoadon.vn/ViewDetailInvoice?InvoiceGUID={guid}");
+
+            // Chờ object PDF xuất hiện
+            var objectTag = wait.Until(d =>
+            {
+                try
+                {
+                    var el = d.FindElement(By.CssSelector("#idcontent object[data*='.pdf'], object[type='application/pdf']"));
+                    return el.Displayed ? el : null;
+                }
+                catch { return null; }
+            });
+
+            string relativePath = objectTag.GetAttribute("data");
+            if (string.IsNullOrEmpty(relativePath)) throw new Exception("Không tìm thấy đường dẫn PDF.");
+
+            string fullPdfUrl = new Uri(new Uri(driver.Url), relativePath).ToString();
+
+            // Fetch trong trang để lấy cookie
+            var b64 = ((IJavaScriptExecutor)driver).ExecuteAsyncScript(@"
+        var cb = arguments[arguments.length - 1];
+        fetch(arguments[0], { credentials: 'include', cache: 'no-store' })
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+            .then(buf => {
+                var b = new Uint8Array(buf), s = '';
+                for (var i = 0; i < b.length; i += 0x8000)
+                    s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+                cb(btoa(s));
+            })
+            .catch(e => cb('ERROR:' + e));
+    ", fullPdfUrl) as string;
+
+            if (string.IsNullOrEmpty(b64) || b64.StartsWith("ERROR:"))
+                throw new Exception("Không tải được PDF: " + b64);
+
+            byte[] pdfBytes = Convert.FromBase64String(b64);
+            if (pdfBytes.Length < 1000 || pdfBytes[0] != (byte)'%')
+                throw new Exception("Dữ liệu không phải PDF hợp lệ.");
+
+            File.WriteAllBytes(savePath, pdfBytes);
+        }
         private async Task Tainhacungcap()
         {
+            await TaihdBKAV();
+            return;
             string qrq = "SELECT * FROM tbInvoiceInfo";
             var dtInvoiceInfo = ExecuteQuery(qrq, null);
             var row = dtInvoiceInfo.Rows[0];
