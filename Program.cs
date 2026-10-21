@@ -86,7 +86,7 @@ namespace SaovietTax
                 //  vì đã có resolver, nhưng vẫn an toàn hơn nếu dùng reflection)
                 switch (content.Trim())
                 {
-                    case "1": Application.Run(CreateForm("SaovietTax.frmMain")); break;
+                    case "1": Application.Run(CreateForm("SaovietTax.APIInvoice")); break;
                     case "2": Application.Run(CreateForm("SaovietTax.KTHT")); break;
                     case "3": Application.Run(CreateForm("SaovietTax.frmTaihoadonvb")); break;
                     case "4": Application.Run(CreateForm("SaovietTax.Form3")); break;

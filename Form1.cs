@@ -27177,7 +27177,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             if (frmhh != null)
                                 frmhh.Close();
                             hoverTimer.Stop();
-                            frmHangHoa2026 frmHangHoa = new frmHangHoa2026();
+                            frmHangHoa frmHangHoa = new frmHangHoa();
                             frmHangHoa.frmMain = this;
                             frmHangHoa.Typeform = 1;
                             DTO.VatTu vatTu = new DTO.VatTu();
@@ -46101,8 +46101,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             Directory.CreateDirectory(tempDownloadDir);
 
             var options = new ChromeOptions();
-            options.AddArgument("--headless=new"); // Dùng headless mới (Chrome 109+)
-
+            options.AddArgument("--headless=new");
             options.AddArgument("--window-size=1920,1080");
             options.AddArgument("--start-maximized");
             options.AddUserProfilePreference("download.default_directory", tempDownloadDir);
@@ -46128,6 +46127,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
             try
             {
+                SetCaption($"Đang tiến hành đăng nhập hệ thống BKAV");
                 // ============ 1. ĐĂNG NHẬP & LỌC THỜI GIAN ============
                 driver.Navigate().GoToUrl(BASE_URL);
                 var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
@@ -46141,7 +46141,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 wait.Until(d => d.Url.Contains("QLHD"));
                 driver.Navigate().GoToUrl("https://van.ehoadon.vn/MTT?IsMTT=true");
                 wait.Until(d => d.Url.Contains("MTT"));
-                Thread.Sleep(2500);
+                Thread.Sleep(500);
 
                 var ddlCategory = wait.Until(d => d.FindElement(By.Id("body_ddlInvoiceDate_ddlCategory")));
                 new SelectElement(ddlCategory).SelectByValue("-2");
@@ -46173,12 +46173,52 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     return;
                 }
 
-                Console.WriteLine($"Tìm thấy {rows.Count} hóa đơn. Bắt đầu kiểm tra...");
+                // 🔥 BƯỚC 1: ĐẾM XEM CÓ BAO NHIÊU HÓA ĐƠN THỰC SỰ CẦN TẢI
+                SetCaption($"Đang lọc hoá đơn cần tải...");
+                int totalToDownload = 0;
+                foreach (var row in rows)
+                {
+                    try
+                    {
+                        var chk = row.FindElement(By.CssSelector(".CheckOne input[data-invoiceguid]"));
+                        string guid = chk.GetAttribute("data-invoiceguid");
+                        if (string.IsNullOrEmpty(guid)) continue;
+
+                        string soHD = chk.GetAttribute("data-invno") ?? "";
+                        string kyHieu = chk.GetAttribute("data-invserial") ?? "";
+                        string invDate = chk.GetAttribute("data-invdate") ?? "";
+
+                        string dateStr = DateTime.TryParse(invDate, out DateTime dt) ? dt.ToString("yyyyMMdd") : invDate.Replace("-", "");
+                        string soHD_RutGon = soHD.TrimStart('0');
+                        if (string.IsNullOrEmpty(soHD_RutGon)) soHD_RutGon = "0";
+
+                        string expectedXmlPath = Path.Combine(downloadDir, $"{dateStr}_{username}_{soHD_RutGon}_{kyHieu}.xml");
+                        string expectedPdfPath = Path.Combine(savePdfDir, $"{username}_{soHD_RutGon}_{kyHieu}.pdf");
+
+                        if (!File.Exists(expectedXmlPath) || !File.Exists(expectedPdfPath))
+                        {
+                            totalToDownload++;
+                        }
+                    }
+                    catch { }
+                }
+
+                if (totalToDownload == 0)
+                {
+                    SetCaption("Tất cả hóa đơn đã được tải đầy đủ.");
+                    Console.WriteLine("Tất cả hóa đơn đã có đủ XML & PDF.");
+                    return;
+                }
+                SetCaption($"Cần tải {totalToDownload} hóa đơn. Bắt đầu xử lý...");
+                Console.WriteLine($"Cần tải {totalToDownload} hóa đơn. Bắt đầu xử lý...");
+
+                // 🔥 BƯỚC 2: BẮT ĐẦU VÒNG LẶP TẢI
+                int downloadedCount = 0;
 
                 foreach (var row in rows)
                 {
                     string guid = "";
-                    string mst = ""; // Table không hiển thị MST người bán, sẽ lấy từ config
+                    string mst = username;
                     string soHD = "";
                     string kyHieu = "";
                     string dateStr = "";
@@ -46186,51 +46226,34 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                     try
                     {
-                        // Lấy dữ liệu ẩn từ thẻ input checkbox
                         var chk = row.FindElement(By.CssSelector(".CheckOne input[data-invoiceguid]"));
                         guid = chk.GetAttribute("data-invoiceguid");
-                        soHD = chk.GetAttribute("data-invno") ?? "";       // "123"
-                        kyHieu = chk.GetAttribute("data-invserial") ?? ""; // "C26MAA"
-                        string invDate = chk.GetAttribute("data-invdate") ?? ""; // "2026-10-19"
-
                         if (string.IsNullOrEmpty(guid)) continue;
 
-                        // Lấy MST Người bán (Chính là username đang đăng nhập)
-                        mst = username;
+                        soHD = chk.GetAttribute("data-invno") ?? "";
+                        kyHieu = chk.GetAttribute("data-invserial") ?? "";
+                        string invDate = chk.GetAttribute("data-invdate") ?? "";
 
-                        // Format lại ngày: "2026-10-19" -> "20261019"
-                        if (DateTime.TryParse(invDate, out DateTime dt))
-                            dateStr = dt.ToString("yyyyMMdd");
-                        else
-                            dateStr = invDate.Replace("-", "");
-
+                        dateStr = DateTime.TryParse(invDate, out DateTime dt) ? dt.ToString("yyyyMMdd") : invDate.Replace("-", "");
                         soHD_RutGon = soHD.TrimStart('0');
                         if (string.IsNullOrEmpty(soHD_RutGon)) soHD_RutGon = "0";
 
-                        // Tạo tên file dự kiến
                         string expectedXmlPath = Path.Combine(downloadDir, $"{dateStr}_{mst}_{soHD_RutGon}_{kyHieu}.xml");
                         string expectedPdfPath = Path.Combine(savePdfDir, $"{mst}_{soHD_RutGon}_{kyHieu}.pdf");
 
                         bool hasXml = File.Exists(expectedXmlPath);
                         bool hasPdf = File.Exists(expectedPdfPath);
 
-                        // Nếu ĐÃ CÓ ĐỦ CẢ 2 FILE THÌ BỎ QUA, KHÔNG MỞ POPUP
-                        if (hasXml && hasPdf)
-                        {
-                            Console.WriteLine($"  => [BỎ QUA] HĐ {soHD} đã có đủ XML & PDF.");
-                            continue;
-                        }
+                        if (hasXml && hasPdf) continue; // Đã có đủ thì bỏ qua
 
-                        Console.WriteLine($"  => [TẢI] HĐ {soHD} (XML: {(hasXml ? "Có" : "Thiếu")}, PDF: {(hasPdf ? "Có" : "Thiếu")})");
-
-                        // ============ 3. MỞ POPUP VÀ TẢI CÁC FILE BỊ THIẾU ============
+                        // Mở popup
                         var viewBtn = row.FindElement(By.CssSelector("a.aviewInvoice"));
                         ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView(true); arguments[0].click();", viewBtn);
 
                         wait.Until(d => d.FindElement(By.Id("dialogViewDetail")).Displayed);
                         Thread.Sleep(1500);
 
-                        // 3.1. Tải XML (Nếu thiếu)
+                        // Tải XML
                         if (!hasXml)
                         {
                             try
@@ -46263,7 +46286,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             catch (Exception ex) { Console.WriteLine("    -> Lỗi tải XML: " + ex.Message); driver.SwitchTo().DefaultContent(); }
                         }
 
-                        // 3.2. Tải PDF (Nếu thiếu)
+                        // Tải PDF
                         if (!hasPdf)
                         {
                             try
@@ -46298,7 +46321,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             catch (Exception ex) { Console.WriteLine("    -> Lỗi tải PDF: " + ex.Message); driver.SwitchTo().DefaultContent(); }
                         }
 
-                        // 3.3. Đóng popup
+                        // Đóng popup
                         try
                         {
                             var closeBtn = driver.FindElement(By.CssSelector("button.ui-dialog-titlebar-close"));
@@ -46307,6 +46330,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         catch { driver.FindElement(By.TagName("body")).SendKeys(Keys.Escape); }
 
                         Thread.Sleep(1000); // Chờ popup đóng
+
+                        // 🔥 BƯỚC 3: TĂNG BIẾN ĐẾM VÀ CẬP NHẬT CAPTION
+                        downloadedCount++;
+                        SetCaption($"Đã tải thành công {downloadedCount}/{totalToDownload} hóa đơn...");
                     }
                     catch (Exception ex)
                     {
@@ -46323,8 +46350,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             {
                 try { driver.Quit(); } catch { }
                 try { if (Directory.Exists(tempDownloadDir)) Directory.Delete(tempDownloadDir, true); } catch { }
-                progressPanel2.Visible = false;
-                await Xulychonthang();
             }
         }
         public async Task DownloadAllMTTInvoices(IWebDriver driver, string dateFrom, string dateTo, string saveDir)
@@ -46482,9 +46507,22 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             if (tbInvoiceInfo.Rows[0]["Url"].ToString() == "van.ehoadon.vn" && chkDaura.Checked && chkInvoice.Checked)
             {
                 progressPanel2.Visible = true;
-                progressPanel2.Caption = "Đang tải hóa đơn từ Bkav...";
-                Application.DoEvents();
-                await TaihdBKAV(); 
+                SetCaption("Đang bắt đầu tiến hành tải hoá đơn BKAV...");
+
+                // 🔥 ĐẨY XUỐNG LUỒNG NỀN ĐỂ KHÔNG ĐƠ UI
+                try
+                {
+                    await Task.Run(() => TaihdBKAV());
+                }
+                catch (Exception ex)
+                {
+                    XtraMessageBox.Show("Lỗi tải BKAV: " + ex.Message);
+                }
+                finally
+                {
+                    progressPanel2.Visible = false;
+                    await Xulychonthang();
+                }
             }
             if (tbInvoiceInfo.Rows[0]["Url"].ToString() == "vinvoice.viettel.vn" && chkDaura.Checked && chkInvoice.Checked)
             { 

@@ -1438,13 +1438,16 @@ WHERE IdNhap IS NOT NULL
     .Select((row, index) => new
     {
         lineNumber = index + 1,
-        itemCode = "",
+        //itemCode = "",
         itemName = Helpers.ConvertVniToUnicode(row["ItemName"].ToString()),
         unitName = Helpers.ConvertVniToUnicode(row["UnitName"].ToString()),
         unitPrice = Convert.ToDouble(row["UnitPrice"]),
         quantity = Convert.ToDouble(row["Quantity"]),
         itemTotalAmountWithoutVat = Convert.ToDouble(row["Amount"]),
-        selection = 1
+        vatPercentage = kq2.Rows[0]["TyLe"].ToString(),
+        vatAmount= Convert.ToDouble(row["Amount"]) * 0.1,
+        selection = 1,
+        itemTotalAmountWithVat = Convert.ToDouble(row["Amount"]) + (Convert.ToDouble(row["Amount"]) * 0.1),
     }).ToArray();
             progressPanel1.Caption = "Đang thực hiện tạo hoá đơn ...";
             Application.DoEvents();
@@ -1554,25 +1557,29 @@ WHERE IdNhap IS NOT NULL
                 dataJson.paymentMethodName = "TM/CK";
                 dataJson.domain = null;
                 dataJson.autoCreatePdfInstance = 0;
-                dataJson.invoiceTypeId = 5;
+                dataJson.invoiceTypeId = 12;
                 dataJson.listProduct = new
                 {
                     itemInfo = itemInfo,
-                    invoiceTaxBreakdowns = new[]
-                    {
-                        new
-                        {
-                            vatPercentage = kq2.Rows[0]["TyLe"].ToString(),
-                            vatTaxAmount = kq3.AsEnumerable().Where(m => m["MaTKTCCo"].ToString() == "14038").Sum(m => Convert.ToDouble(m["SoPS"])),
-                            vatTaxableAmount = kq3.AsEnumerable().Where(m => m["MaTKTCCo"].ToString() != "14038").Sum(m => Convert.ToDouble(m["SoPS"]))
-                        }
-                    }
-                 };
+                    invoiceTaxBreakdowns = new object[] { }
+                    //invoiceTaxBreakdowns = new[]
+                    //{
+                    //    new
+                    //    {
+                    //        vatPercentage = kq2.Rows[0]["TyLe"].ToString(),
+                    //        vatTaxAmount = kq3.AsEnumerable().Where(m => m["MaTKTCCo"].ToString() == "14038").Sum(m => Convert.ToDouble(m["SoPS"])),
+                    //        vatTaxableAmount = kq3.AsEnumerable().Where(m => m["MaTKTCCo"].ToString() != "14038").Sum(m => Convert.ToDouble(m["SoPS"]))
+                    //    }
+                    //}
+                };
                 dataJson.listInfoUpdate = new object[] { };
                 dataJson.exchangeRate = 1;
                 dataJson.listElectricityWater = new object[] { };
                 dataJson.totalAmountWithTaxInWords = "Bảy mươi tám nghìn bảy trăm sáu mươi đồng";
                 dataJson.hdbtscInfo = null;
+                dataJson.businessLocationCode = null;
+                dataJson.businessLocationName = null;
+                dataJson.businessLocationAddress = null;
                 dataJson.fileSpecification = null;
                 dataJson.listFuelInfo = new object[] { };
                 dataJson.source = "WEB";
