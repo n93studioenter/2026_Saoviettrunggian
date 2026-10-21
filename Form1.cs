@@ -13632,8 +13632,18 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             TbImport tbImport = null;
             try
             {
-                tbImport = await Task.Run(() => ParseXmlInternal(pathXml, localType));
-               //tbImport = ParseXmlInternal_Bkav(pathXml, localType);
+                string querycheck = @"SELECT * FROM tbInvoiceInfo ";
+
+                DataTable tbInvoiceInfo = ExecuteQuery(querycheck, null);
+                if (tbInvoiceInfo.Rows[0]["Url"].ToString()== "van.ehoadon.vn" && chkDaura.Checked && chkInvoice.Checked)
+                {
+                    tbImport = await Task.Run(() => ParseXmlInternal_Bkav(pathXml, localType));
+                }
+                else
+                {
+                    tbImport = await Task.Run(() => ParseXmlInternal(pathXml, localType));
+                }
+                    
             }
             catch (Exception ex)
             {
@@ -33352,17 +33362,17 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     var intersect = invoiceAttrs.Intersect(materialAttrs, StringComparer.OrdinalIgnoreCase).ToList();
                     if (intersect.Any())
                     {
-                        finalPercent += 15;
+                        finalPercent += 10; // Cộng nhẹ nếu thuộc tính kỹ thuật khớp
                         foreach (var a in intersect) matchedAttrs.Add(a);
                     }
                     else
                     {
-                        finalPercent -= 30;
+                        finalPercent -= 15; // Phạt vừa phải (VD: hóa đơn ghi 304, kho ghi 201)
                     }
                 }
                 else if (invoiceAttrs.Any() || materialAttrs.Any())
                 {
-                    finalPercent -= 20;
+                    finalPercent -= 5; // Phạt rất nhẹ nếu 1 bên thiếu thuộc tính
                 }
 
                 // ============ QUY CÁCH BONUS ============
@@ -33383,7 +33393,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     bool anyAttrInName = false;
                     foreach (var item in invoiceAttrs)
                     {
-                        if (tenChuanHoa.IndexOf(item, StringComparison.OrdinalIgnoreCase) >= 0)
+                        // 🔥 SỬA LỖI: Dùng Regex \b (Word Boundary) thay vì IndexOf để tránh dính chữ (ly trong thủy)
+                        if (System.Text.RegularExpressions.Regex.IsMatch(tenChuanHoa,
+                            $@"\b{System.Text.RegularExpressions.Regex.Escape(item)}\b",
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                         {
                             anyAttrInName = true;
                             break;
@@ -33422,12 +33435,19 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             // ============ SORT ============
             results.Sort((a, b) =>
             {
+                // 1. Ưu tiên điểm % cao nhất
                 int c = b.Percent.CompareTo(a.Percent);
                 if (c != 0) return c;
+
+                // 2. 🔥 ƯU TIÊN SỐ TỪ KHỚP (Giúp "Nước A-Dew 450ml chanh dây" thắng "Nước A-Dew 450ml")
                 c = b.MatchCount.CompareTo(a.MatchCount);
                 if (c != 0) return c;
+
+                // 3. Ưu tiên số thuộc tính khớp
                 c = b.AttrMatch.Count.CompareTo(a.AttrMatch.Count);
                 if (c != 0) return c;
+
+                // 4. Cuối cùng mới ưu tiên số lượng
                 return b.SoLuong.CompareTo(a.SoLuong);
             });
 
@@ -46081,6 +46101,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             Directory.CreateDirectory(tempDownloadDir);
 
             var options = new ChromeOptions();
+            options.AddArgument("--headless=new"); // Dùng headless mới (Chrome 109+)
+
             options.AddArgument("--window-size=1920,1080");
             options.AddArgument("--start-maximized");
             options.AddUserProfilePreference("download.default_directory", tempDownloadDir);
@@ -46301,6 +46323,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             {
                 try { driver.Quit(); } catch { }
                 try { if (Directory.Exists(tempDownloadDir)) Directory.Delete(tempDownloadDir, true); } catch { }
+                progressPanel2.Visible = false;
                 await Xulychonthang();
             }
         }
@@ -46453,212 +46476,223 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         }
         private async Task Tainhacungcap()
         {
-            await TaihdBKAV();
-            return;
-            string qrq = "SELECT * FROM tbInvoiceInfo";
-            var dtInvoiceInfo = ExecuteQuery(qrq, null);
-            var row = dtInvoiceInfo.Rows[0];
+            string querycheck = @"SELECT * FROM tbInvoiceInfo ";
 
-            string username = row["Username"]?.ToString();
-            string password = row["Password"]?.ToString();
-            //int SupplierId = int.Parse(row["SupplierId"]?.ToString());
-            int SupplierId = 0;
-            var url = "https://vinvoice.viettel.vn/api/auth/login";
-            using (HttpClientHandler handler = new HttpClientHandler())
+            DataTable tbInvoiceInfo = ExecuteQuery(querycheck, null);
+            if (tbInvoiceInfo.Rows[0]["Url"].ToString() == "van.ehoadon.vn" && chkDaura.Checked && chkInvoice.Checked)
             {
-                // Tùy chọn: tự động xử lý cookie
-                handler.UseCookies = true;
-                handler.CookieContainer = new CookieContainer();
+                progressPanel2.Visible = true;
+                progressPanel2.Caption = "Đang tải hóa đơn từ Bkav...";
+                Application.DoEvents();
+                await TaihdBKAV(); 
+            }
+            if (tbInvoiceInfo.Rows[0]["Url"].ToString() == "vinvoice.viettel.vn" && chkDaura.Checked && chkInvoice.Checked)
+            { 
+                string qrq = "SELECT * FROM tbInvoiceInfo";
+                var dtInvoiceInfo = ExecuteQuery(qrq, null);
+                var row = dtInvoiceInfo.Rows[0];
 
-                using (HttpClient client = new HttpClient(handler))
+                string username = row["Username"]?.ToString();
+                string password = row["Password"]?.ToString();
+                //int SupplierId = int.Parse(row["SupplierId"]?.ToString());
+                int SupplierId = 0;
+                var url = "https://vinvoice.viettel.vn/api/auth/login";
+                using (HttpClientHandler handler = new HttpClientHandler())
                 {
-                    // giống Postman
-                    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
-                    client.DefaultRequestHeaders.Add("Accept", "application/json");
+                    // Tùy chọn: tự động xử lý cookie
+                    handler.UseCookies = true;
+                    handler.CookieContainer = new CookieContainer();
 
-                    var json = $@"{{
+                    using (HttpClient client = new HttpClient(handler))
+                    {
+                        // giống Postman
+                        client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+                        client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+                        var json = $@"{{
                         ""username"": ""{username}"",
                         ""password"": ""{password}"",
                         ""rememberMe"": false,
                         ""captcha"": """"
                     }}";
-                    progressPanel1.Caption = "Thực hiện đăng nhập...";
-                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+                        progressPanel1.Caption = "Thực hiện đăng nhập...";
+                        var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                    var response = await client.PostAsync(url, content);
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        progressPanel1.Caption = "Thông tin đăng nhập không chính xác...";
-                        Application.DoEvents();
-                        Thread.Sleep(3000);
-                        Application.Exit();
-                    }
-                    // *** CÁCH LẤY COOKIE ***
-                    // Lấy tất cả cookies từ response
-                    var cookies = handler.CookieContainer.GetCookies(new Uri(url));
-
-                    foreach (System.Net.Cookie cookie in cookies)
-                    {
-                        //MessageBox.Show($"Cookie: {cookie.Name} = {cookie.Value}");
-
-                        // Nếu bạn muốn lấy riêng cookie __cf_bm
-                        if (cookie.Name == "__cf_bm")
+                        var response = await client.PostAsync(url, content);
+                        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                         {
-                            string cf_bm_value = cookie.Value;
-                            useCookie.__cf_bm = cf_bm_value;
+                            progressPanel1.Caption = "Thông tin đăng nhập không chính xác...";
+                            Application.DoEvents();
+                            Thread.Sleep(3000);
+                            Application.Exit();
                         }
-                        if (cookie.Name == "JSESSIONID")
+                        // *** CÁCH LẤY COOKIE ***
+                        // Lấy tất cả cookies từ response
+                        var cookies = handler.CookieContainer.GetCookies(new Uri(url));
+
+                        foreach (System.Net.Cookie cookie in cookies)
                         {
-                            string JSESSIONID_value = cookie.Value;
-                            useCookie.JSESSIONID = JSESSIONID_value;
+                            //MessageBox.Show($"Cookie: {cookie.Name} = {cookie.Value}");
+
+                            // Nếu bạn muốn lấy riêng cookie __cf_bm
+                            if (cookie.Name == "__cf_bm")
+                            {
+                                string cf_bm_value = cookie.Value;
+                                useCookie.__cf_bm = cf_bm_value;
+                            }
+                            if (cookie.Name == "JSESSIONID")
+                            {
+                                string JSESSIONID_value = cookie.Value;
+                                useCookie.JSESSIONID = JSESSIONID_value;
+                            }
+                            if (cookie.Name == "access_token")
+                            {
+                                string access_token_value = cookie.Value;
+                                useCookie.access_token = access_token_value;
+                            }
+                            if (cookie.Name == "session_token")
+                            {
+                                string session_token_value = cookie.Value;
+                                useCookie.session_token = session_token_value;
+                            }
                         }
-                        if (cookie.Name == "access_token")
-                        {
-                            string access_token_value = cookie.Value;
-                            useCookie.access_token = access_token_value;
-                        }
-                        if (cookie.Name == "session_token")
-                        {
-                            string session_token_value = cookie.Value;
-                            useCookie.session_token = session_token_value;
-                        }
-                    }
 
-                    var result = await response.Content.ReadAsStringAsync();
-                    try
-                    {
-                        loginResponse = JsonConvert.DeserializeObject<LoginResponse>(result);
-
-                    }
-                    catch(Exception ex)
-                    {
-                        XtraMessageBox.Show(ex.Message);
-                        return;
-                    }
-
-                    //Get Superid
-
-                    string urlsuper = $"https://vinvoice.viettel.vn/api/cluster5/services/einvoiceapplication/api/e-invoice/get-tenant-branch";
-                    if (!string.IsNullOrEmpty(useCookie.access_token))
-                    {
-                        client.DefaultRequestHeaders.Authorization =
-                            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", useCookie.access_token);
-                    }
-                    var responsess = await client.GetAsync(urlsuper);
-                    if (responsess.IsSuccessStatusCode)
-                    {
-                        string jsonResult = await responsess.Content.ReadAsStringAsync();
-                        JObject jsons = JObject.Parse(jsonResult);
-
-                        SupplierId = (int)jsons["data"][0]["id"];
-                    }
-
-
-                    if (loginResponse != null)
-                    {
-                        progressPanel1.Caption = "Đăng nhập hệ thống thành công...";
-                        Application.DoEvents();
-
+                        var result = await response.Content.ReadAsStringAsync();
                         try
                         {
-                            // ========================================
-                            // GỌI API LẤY DANH SÁCH HÓA ĐƠN
-                            // ========================================
-                            int page = 0;
-                            int size = 1000;
-                            int supplierId = SupplierId;
+                            loginResponse = JsonConvert.DeserializeObject<LoginResponse>(result);
 
-
-
-                            // API dùng giờ UTC (trừ 7 tiếng)
-                            string fromDate = dtTungay.DateTime.Date.AddHours(-7).ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-                            string toDate = dtDenngay.DateTime.Date.AddDays(1).AddSeconds(-1).AddHours(-7)
-                                                .ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-
-                            string urls = $"https://vinvoice.viettel.vn/api/cluster7/services/einvoiceapplication/api/invoice/search" +
-                                         $"?page={page}" +
-                                         $"&size={size}" +
-                                         $"&createdDate.greaterThanOrEqual={Uri.EscapeDataString(fromDate)}" +
-                                         $"&createdDate.lessThanOrEqual={Uri.EscapeDataString(toDate)}" +
-                                         $"&supplierId.equals={supplierId}" +
-                                         $"&dateType.equals=0" +
-                                         $"&invoiceStatus.equals=1" +
-                                         $"&invoiceTypeId.notEquals=52" +
-                                         $"&sort=issueDate,desc" +
-                                         $"&sort=invoiceNumber,desc";
-                            // Thêm Authorization header
-                            if (!string.IsNullOrEmpty(useCookie.access_token))
-                            {
-                                client.DefaultRequestHeaders.Authorization =
-                                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", useCookie.access_token);
-                            }
-
-                            var responses = await client.GetAsync(urls);
-
-                            if (responses.IsSuccessStatusCode)
-                            {
-                                string jsonResult = await responses.Content.ReadAsStringAsync();
-                                var searchResult = JsonConvert.DeserializeObject<SearchResponse>(jsonResult);
-
-                                // ========================================
-                                // KIỂM TRA VÀ XỬ LÝ DANH SÁCH HÓA ĐƠN
-                                // ========================================
-                                if (searchResult != null && searchResult.code == 200 && searchResult.data != null)
-                                {
-                                    var invoices = searchResult.data.content;
-                                    progressPanel2.Caption = $"✅ Tìm thấy {invoices.Count} hóa đơn. Bắt đầu tải...";
-                                    Application.DoEvents();
-
-                                    // Tạo thư mục lưu file
-                                    //string folderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Invoices");
-                                    //Directory.CreateDirectory(folderPath);
-
-                                    int successCount = 0;
-                                    int total = invoices.Count;
-                                    string pathravao = "HDRa";
-                                    string pathYear = $"HD{dtTungay.DateTime.Year}";
-                                    for (int i = 0; i < invoices.Count; i++)
-                                    {
-                                        var invoice = invoices[i];
-                                        string filename = $"{invoice.createdDate.ToString("yyyyMMdd")}_{mstcongty}_{invoice.invoiceNumber}_{invoice.invoiceSeri}.xml";
-                                        string filepath = Path.Combine(savedPath, pathYear, pathravao, dtTungay.DateTime.Month.ToString(), filename);
-                                        string filenamepdf = $"{invoice.createdDate.ToString("yyyyMMdd")}_{mstcongty}_{invoice.invoiceNumber}_{invoice.invoiceSeri}.pdf";
-                                        string filepathpdf = Path.Combine(savedPath, pathYear, pathravao, dtTungay.DateTime.Month.ToString(), filenamepdf);
-
-                                        DownloadInvoiceXml(client, invoice.id.ToString(), filepath);
-                                        DownloadInvoicePdf(client, invoice.id.ToString(), filepathpdf);
-                                        progressPanel2.Visible = true;
-                                        progressPanel2.Caption = $"Tải hoá đơn thứ {i}/{total}";
-                                        Application.DoEvents();
-                                        // Chờ 500ms để tránh rate limit
-                                        await Task.Delay(150);
-                                    }
-                                    progressPanel2.Visible = false;
-                                    XtraMessageBox.Show($"✅ Tải thành công {successCount}/{total} hóa đơn!");
-                                    btnChonthang.PerformClick();
-                                    //MessageBox.Show($"Hoàn thành tải {successCount}/{total} hóa đơn!\nLưu tại: {filepath}",
-                                    //               "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                }
-                                else
-                                {
-                                    progressPanel2.Caption = "❌ Không tìm thấy hóa đơn nào!";
-                                    MessageBox.Show("Không tìm thấy hóa đơn nào trong khoảng thời gian này!",
-                                                   "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                }
-                            }
-                            else
-                            {
-                                string error = await responses.Content.ReadAsStringAsync();
-                                progressPanel2.Caption = $"❌ Lỗi tìm kiếm: {responses.StatusCode}";
-                                MessageBox.Show($"Lỗi tìm kiếm: {responses.StatusCode}\n{error}",
-                                               "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
                         }
                         catch (Exception ex)
                         {
-                            progressPanel1.Caption = $"❌ Lỗi: {ex.Message}";
-                            MessageBox.Show($"Lỗi xử lý: {ex.Message}",
-                                           "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            XtraMessageBox.Show(ex.Message);
+                            return;
+                        }
+
+                        //Get Superid
+
+                        string urlsuper = $"https://vinvoice.viettel.vn/api/cluster5/services/einvoiceapplication/api/e-invoice/get-tenant-branch";
+                        if (!string.IsNullOrEmpty(useCookie.access_token))
+                        {
+                            client.DefaultRequestHeaders.Authorization =
+                                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", useCookie.access_token);
+                        }
+                        var responsess = await client.GetAsync(urlsuper);
+                        if (responsess.IsSuccessStatusCode)
+                        {
+                            string jsonResult = await responsess.Content.ReadAsStringAsync();
+                            JObject jsons = JObject.Parse(jsonResult);
+
+                            SupplierId = (int)jsons["data"][0]["id"];
+                        }
+
+
+                        if (loginResponse != null)
+                        {
+                            progressPanel1.Caption = "Đăng nhập hệ thống thành công...";
+                            Application.DoEvents();
+
+                            try
+                            {
+                                // ========================================
+                                // GỌI API LẤY DANH SÁCH HÓA ĐƠN
+                                // ========================================
+                                int page = 0;
+                                int size = 1000;
+                                int supplierId = SupplierId;
+
+
+
+                                // API dùng giờ UTC (trừ 7 tiếng)
+                                string fromDate = dtTungay.DateTime.Date.AddHours(-7).ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+                                string toDate = dtDenngay.DateTime.Date.AddDays(1).AddSeconds(-1).AddHours(-7)
+                                                    .ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+                                string urls = $"https://vinvoice.viettel.vn/api/cluster7/services/einvoiceapplication/api/invoice/search" +
+                                             $"?page={page}" +
+                                             $"&size={size}" +
+                                             $"&createdDate.greaterThanOrEqual={Uri.EscapeDataString(fromDate)}" +
+                                             $"&createdDate.lessThanOrEqual={Uri.EscapeDataString(toDate)}" +
+                                             $"&supplierId.equals={supplierId}" +
+                                             $"&dateType.equals=0" +
+                                             $"&invoiceStatus.equals=1" +
+                                             $"&invoiceTypeId.notEquals=52" +
+                                             $"&sort=issueDate,desc" +
+                                             $"&sort=invoiceNumber,desc";
+                                // Thêm Authorization header
+                                if (!string.IsNullOrEmpty(useCookie.access_token))
+                                {
+                                    client.DefaultRequestHeaders.Authorization =
+                                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", useCookie.access_token);
+                                }
+
+                                var responses = await client.GetAsync(urls);
+
+                                if (responses.IsSuccessStatusCode)
+                                {
+                                    string jsonResult = await responses.Content.ReadAsStringAsync();
+                                    var searchResult = JsonConvert.DeserializeObject<SearchResponse>(jsonResult);
+
+                                    // ========================================
+                                    // KIỂM TRA VÀ XỬ LÝ DANH SÁCH HÓA ĐƠN
+                                    // ========================================
+                                    if (searchResult != null && searchResult.code == 200 && searchResult.data != null)
+                                    {
+                                        var invoices = searchResult.data.content;
+                                        progressPanel2.Caption = $"✅ Tìm thấy {invoices.Count} hóa đơn. Bắt đầu tải...";
+                                        Application.DoEvents();
+
+                                        // Tạo thư mục lưu file
+                                        //string folderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Invoices");
+                                        //Directory.CreateDirectory(folderPath);
+
+                                        int successCount = 0;
+                                        int total = invoices.Count;
+                                        string pathravao = "HDRa";
+                                        string pathYear = $"HD{dtTungay.DateTime.Year}";
+                                        for (int i = 0; i < invoices.Count; i++)
+                                        {
+                                            var invoice = invoices[i];
+                                            string filename = $"{invoice.createdDate.ToString("yyyyMMdd")}_{mstcongty}_{invoice.invoiceNumber}_{invoice.invoiceSeri}.xml";
+                                            string filepath = Path.Combine(savedPath, pathYear, pathravao, dtTungay.DateTime.Month.ToString(), filename);
+                                            string filenamepdf = $"{invoice.createdDate.ToString("yyyyMMdd")}_{mstcongty}_{invoice.invoiceNumber}_{invoice.invoiceSeri}.pdf";
+                                            string filepathpdf = Path.Combine(savedPath, pathYear, pathravao, dtTungay.DateTime.Month.ToString(), filenamepdf);
+
+                                            DownloadInvoiceXml(client, invoice.id.ToString(), filepath);
+                                            DownloadInvoicePdf(client, invoice.id.ToString(), filepathpdf);
+                                            progressPanel2.Visible = true;
+                                            progressPanel2.Caption = $"Tải hoá đơn thứ {i}/{total}";
+                                            Application.DoEvents();
+                                            // Chờ 500ms để tránh rate limit
+                                            await Task.Delay(150);
+                                        }
+                                        progressPanel2.Visible = false;
+                                        XtraMessageBox.Show($"✅ Tải thành công {successCount}/{total} hóa đơn!");
+                                        btnChonthang.PerformClick();
+                                        //MessageBox.Show($"Hoàn thành tải {successCount}/{total} hóa đơn!\nLưu tại: {filepath}",
+                                        //               "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    }
+                                    else
+                                    {
+                                        progressPanel2.Caption = "❌ Không tìm thấy hóa đơn nào!";
+                                        MessageBox.Show("Không tìm thấy hóa đơn nào trong khoảng thời gian này!",
+                                                       "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    }
+                                }
+                                else
+                                {
+                                    string error = await responses.Content.ReadAsStringAsync();
+                                    progressPanel2.Caption = $"❌ Lỗi tìm kiếm: {responses.StatusCode}";
+                                    MessageBox.Show($"Lỗi tìm kiếm: {responses.StatusCode}\n{error}",
+                                                   "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                progressPanel1.Caption = $"❌ Lỗi: {ex.Message}";
+                                MessageBox.Show($"Lỗi xử lý: {ex.Message}",
+                                               "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
                         }
                     }
                 }

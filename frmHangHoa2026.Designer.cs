@@ -66,6 +66,8 @@
             this.txtSohieu = new DevExpress.XtraEditors.TextEdit();
             this.txtSearch = new DevExpress.XtraEditors.TextEdit();
             this.labelControl1 = new DevExpress.XtraEditors.LabelControl();
+            this.progressPanel1 = new DevExpress.XtraWaitForm.ProgressPanel();
+            this.txtMaSo = new DevExpress.XtraEditors.TextEdit();
             ((System.ComponentModel.ISupportInitialize)(this.txtDonvi.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.txtTenvattu.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.textEdit2.Properties)).BeginInit();
@@ -80,6 +82,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.txtGhichu.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.txtSohieu.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.txtSearch.Properties)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.txtMaSo.Properties)).BeginInit();
             this.SuspendLayout();
             // 
             // colTenVattu
@@ -247,6 +250,7 @@
             new DevExpress.XtraEditors.Controls.EditorButton(DevExpress.XtraEditors.Controls.ButtonPredefines.Combo)});
             this.comboBoxEdit1.Size = new System.Drawing.Size(235, 20);
             this.comboBoxEdit1.TabIndex = 4;
+            this.comboBoxEdit1.SelectedIndexChanged += new System.EventHandler(this.comboBoxEdit1_SelectedIndexChanged);
             // 
             // label2
             // 
@@ -351,20 +355,22 @@
             this.gridView1.GridControl = this.gridControl1;
             this.gridView1.Name = "gridView1";
             this.gridView1.OptionsView.ShowGroupPanel = false;
+            this.gridView1.RowClick += new DevExpress.XtraGrid.Views.Grid.RowClickEventHandler(this.gridView1_RowClick);
             // 
             // gridControl1
             // 
             this.gridControl1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.gridControl1.EmbeddedNavigator.Margin = new System.Windows.Forms.Padding(2, 3, 2, 3);
-            this.gridControl1.Location = new System.Drawing.Point(12, 101);
+            this.gridControl1.Location = new System.Drawing.Point(12, 119);
             this.gridControl1.MainView = this.gridView1;
             this.gridControl1.Margin = new System.Windows.Forms.Padding(2, 3, 2, 3);
             this.gridControl1.Name = "gridControl1";
-            this.gridControl1.Size = new System.Drawing.Size(674, 233);
+            this.gridControl1.Size = new System.Drawing.Size(674, 215);
             this.gridControl1.TabIndex = 38;
             this.gridControl1.ViewCollection.AddRange(new DevExpress.XtraGrid.Views.Base.BaseView[] {
             this.gridView1});
+            this.gridControl1.DoubleClick += new System.EventHandler(this.gridControl1_DoubleClick);
             // 
             // panelControl1
             // 
@@ -466,6 +472,7 @@
             this.txtSearch.Name = "txtSearch";
             this.txtSearch.Size = new System.Drawing.Size(297, 20);
             this.txtSearch.TabIndex = 24;
+            this.txtSearch.EditValueChanged += new System.EventHandler(this.txtSearch_EditValueChanged_1);
             // 
             // labelControl1
             // 
@@ -475,11 +482,37 @@
             this.labelControl1.TabIndex = 41;
             this.labelControl1.Text = "Tên sản phẩm trong kho";
             // 
+            // progressPanel1
+            // 
+            this.progressPanel1.Appearance.BackColor = System.Drawing.Color.Transparent;
+            this.progressPanel1.Appearance.Font = new System.Drawing.Font("Tahoma", 7.25F);
+            this.progressPanel1.Appearance.Options.UseBackColor = true;
+            this.progressPanel1.Appearance.Options.UseFont = true;
+            this.progressPanel1.AppearanceCaption.Font = new System.Drawing.Font("Tahoma", 7.25F);
+            this.progressPanel1.AppearanceCaption.Options.UseFont = true;
+            this.progressPanel1.Location = new System.Drawing.Point(378, 95);
+            this.progressPanel1.Name = "progressPanel1";
+            this.progressPanel1.Size = new System.Drawing.Size(307, 20);
+            this.progressPanel1.TabIndex = 50;
+            this.progressPanel1.Text = "progressPanel1";
+            this.progressPanel1.Visible = false;
+            // 
+            // txtMaSo
+            // 
+            this.txtMaSo.Location = new System.Drawing.Point(86, 264);
+            this.txtMaSo.Margin = new System.Windows.Forms.Padding(2, 3, 2, 3);
+            this.txtMaSo.Name = "txtMaSo";
+            this.txtMaSo.Size = new System.Drawing.Size(101, 20);
+            this.txtMaSo.TabIndex = 51;
+            this.txtMaSo.Visible = false;
+            // 
             // frmHangHoa2026
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(697, 417);
+            this.Controls.Add(this.txtMaSo);
+            this.Controls.Add(this.progressPanel1);
             this.Controls.Add(this.btnThoat);
             this.Controls.Add(this.simpleButton1);
             this.Controls.Add(this.textEdit2);
@@ -508,6 +541,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.txtGhichu.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.txtSohieu.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.txtSearch.Properties)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.txtMaSo.Properties)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -552,5 +586,7 @@
         private DevExpress.XtraEditors.TextEdit txtSohieu;
         private DevExpress.XtraEditors.TextEdit txtSearch;
         private DevExpress.XtraEditors.LabelControl labelControl1;
+        private DevExpress.XtraWaitForm.ProgressPanel progressPanel1;
+        private DevExpress.XtraEditors.TextEdit txtMaSo;
     }
 }
