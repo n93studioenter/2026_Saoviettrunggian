@@ -103,7 +103,7 @@ namespace SaovietTax
 
             var options = new ChromeOptions();
             // Bỏ comment nếu muốn ẩn:
-            // options.AddArgument("--headless=new");
+             options.AddArgument("--headless=new");
              options.AddArgument("--window-size=1920,1080");
 
             var driver = new ChromeDriver(service, options);

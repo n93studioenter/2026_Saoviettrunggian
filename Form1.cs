@@ -30420,13 +30420,17 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         {
             try
             {
+                var solver = new SvgCaptchaSolver();
+                string result = solver.SolveCaptcha(svgContent);
+
                 string svgPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "captcha.svg");
                 File.WriteAllText(svgPath, svgContent);
 
                 string base64 = SvgToBase64(svgContent);
                 Testimg2(base64);
 
-                return Readcapcha();
+               var pythoncapcha= Readcapcha();
+               return result;
             }
             catch (Exception ex)
             {
