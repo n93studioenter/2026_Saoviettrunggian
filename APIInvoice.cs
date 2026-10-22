@@ -1374,15 +1374,9 @@ WHERE IdNhap IS NOT NULL
             string sqlgp = @"
     SELECT tbGetphieu.*
     FROM tbGetphieu
-    INNER JOIN HOADON ON CStr(HOADON.MaSo) = tbGetphieu.MaCT
-    WHERE HOADON.MaSo = @MaSo";
-
-            parameterss = new OleDbParameter[]
-          {
-    new OleDbParameter(" ? ", kq2.Rows[0]["HOADON.MaSo"].ToString()),
-          };
-
-            var kqgphieu = ExecuteQuery(sqlgp, parameterss);
+    INNER JOIN ChungTu ON CStr(ChungTu.MaCT) = tbGetphieu.MaCT";
+ 
+            var kqgphieu = ExecuteQuery(sqlgp);
              
 
             //Lấy danh sách chứng từ từ MaCT
@@ -1535,9 +1529,9 @@ WHERE IdNhap IS NOT NULL
                 dataJson.invoiceSeri = tbtemplate.Rows[0]["KHHD"].ToString();
                 if (dtKhachhang.Rows[0]["MST"] != null && dtKhachhang.Rows[0]["MST"].ToString() != "..." && dtKhachhang.Rows[0]["MST"].ToString() != "00")
                     dataJson.buyerTaxCode = dtKhachhang.Rows[0]["MST"].ToString();
-                if (kq2.Rows[0]["Nguoimuahang"].ToString() != "...")
-                    dataJson.buyerName = Helpers.ConvertVniToUnicode(kq2.Rows[0]["Nguoimuahang"].ToString());
-                else
+                if (kqgphieu.Rows[0]["TenNM"].ToString() != "...")
+                    dataJson.buyerName = Helpers.ConvertVniToUnicode(kqgphieu.Rows[0]["TenNM"].ToString());
+                if (dtKhachhang.Rows[0]["MST"].ToString() == "00")
                 {
                     if (dataJson.buyerTaxCode == null)
                         dataJson.buyerName = "Bán cho người tiêu dùng";
@@ -1554,9 +1548,14 @@ WHERE IdNhap IS NOT NULL
                 dataJson.totalServiceChargeAmount = 0;
                 dataJson.totalExciseTaxAmount = 0;
                 dataJson.currencyCode = "VND";
-                if (kq2.Rows[0]["Nguoimuahang"].ToString() != "...")
+                if (dtKhachhang.Rows[0]["MST"].ToString() != "00")
                 {
                     dataJson.buyerViewStatus = 0;
+                    if (kqgphieu.Rows.Count > 0)
+                    {
+                        if (kqgphieu.Rows[0]["TenCty"].ToString() != "...")
+                            dataJson.buyerUnitName = Helpers.ConvertVniToUnicode(kqgphieu.Rows[0]["TenCty"].ToString());
+                    }
                 }
                 else
                 {
@@ -1565,11 +1564,7 @@ WHERE IdNhap IS NOT NULL
 
                     dataJson.invoiceTemplateId = int.Parse(getsplit[3].ToString());
                 dataJson.paymentMethod = 3;
-                if (kqgphieu.Rows.Count > 0)
-                {
-                    if (kqgphieu.Rows[0]["TenCty"].ToString() != "...")
-                        dataJson.buyerUnitName = Helpers.ConvertVniToUnicode(kqgphieu.Rows[0]["TenCty"].ToString());
-                }
+               
             
                 dataJson.paymentMethodName = "TM/CK";
                 dataJson.domain = null;
@@ -1614,7 +1609,7 @@ WHERE IdNhap IS NOT NULL
                 var saveUrl = "https://vinvoice.viettel.vn/api/cluster5/services/einvoiceapplication/api/invoice/draft/save";
                 var response = await client.PostAsync(saveUrl, formData);
                 var result = await response.Content.ReadAsStringAsync();
-                XtraMessageBox.Show(result);
+                //XtraMessageBox.Show(result);
 
                 if (response.IsSuccessStatusCode)
                 {
