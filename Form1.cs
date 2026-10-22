@@ -11915,18 +11915,29 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
 
                 // User-Agent đầy đủ hơn
+                // 1. Cập nhật User-Agent lên Chrome 155 (theo authority.txt mới nhất)
                 _client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36");
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36");
 
-                _client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7");
+                // 2. Thêm Accept (Bắt buộc phải có để báo cho server biết ta muốn nhận JSON/File)
+                _client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+
+                // 3. Sửa Accept-Language cho giống file authority.txt (chỉ để "vi" thay vì cả chuỗi dài)
+                _client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi");
+
                 _client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
                 _client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don");
-                _client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Google Chrome\";v=\"140\", \"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\"");
+
+                // 4. Cập nhật sec-ch-ua lên Chrome 155 (chú ý chữ "Not(A:Brand" đã bị đổi dấu ngoặc so với bản 140)
+                _client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Google Chrome\";v=\"155\", \"Chromium\";v=\"155\", \"Not(A:Brand\";v=\"24\"");
                 _client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
                 _client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
                 _client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
                 _client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
                 _client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
+
+                // 5. BỔ SUNG COOKIE (Rất quan trọng! Nếu bị lỗi 403 HTML, bạn phải lấy Cookie từ trình duyệt và dán vào đây)
+                // _client.DefaultRequestHeaders.TryAddWithoutValidation("Cookie", "JSESSIONID=...; TS0114b13e=...; jwt=...");
             }
 
             public static void UpdateToken(string token)
@@ -13635,7 +13646,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 string querycheck = @"SELECT * FROM tbInvoiceInfo ";
 
                 DataTable tbInvoiceInfo = ExecuteQuery(querycheck, null);
-                if (tbInvoiceInfo.Rows[0]["Url"].ToString()== "van.ehoadon.vn" && chkDaura.Checked && chkInvoice.Checked)
+                if (tbInvoiceInfo.Rows.Count>0 && tbInvoiceInfo.Rows[0]["Url"].ToString()== "van.ehoadon.vn" && chkDaura.Checked && chkInvoice.Checked)
                 {
                     tbImport = await Task.Run(() => ParseXmlInternal_Bkav(pathXml, localType));
                 }
@@ -34052,48 +34063,42 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             public double ThTien { get; set; }
             public double TThue { get; set; }
         }
-        public async Task Xulyexelvao(string token, int _type)
+        // Thêm tham số CancellationToken vào hàm
+        public async Task Xulyexelvao(string token, int _type, CancellationToken cancellationToken = default)
         {
             string tenfileExcel = "";
-            if (_type == 1)
-                tenfileExcel = "File excel hoá đơn nhận mã";
-            else if (_type == 2)
-                tenfileExcel = "File excel hoá đơn không nhận mã";
-            else if (_type == 3)
-                tenfileExcel = "File Excel hoá đơn máy tính tiền";
+            if (_type == 1) tenfileExcel = "File excel hoá đơn nhận mã";
+            else if (_type == 2) tenfileExcel = "File excel hoá đơn không nhận mã";
+            else if (_type == 3) tenfileExcel = "File Excel hoá đơn máy tính tiền";
 
-            // Tính ngày (từ đầu tháng → cuối tháng)
             DateTime dtFrom = new DateTime(dtTungay.DateTime.Year, dtTungay.DateTime.Month, 1);
             DateTime dtTo = dtFrom.AddMonths(1).AddDays(-1);
 
-            // Format đúng theo GDT (có T)
             string formattedDate1 = dtFrom.ToString("dd/MM/yyyy") + "T00:00:00";
             string formattedDate2 = dtTo.ToString("dd/MM/yyyy") + "T23:59:59";
 
             string url, filename;
-            string action = "";          // Action header
+            string action = "";
             string endPoint = "/tra-cuu/tra-cuu-hoa-don";
 
+            // Lưu ý: GDT đôi khi yêu cầu URL Encode cho các tham số, HttpClient sẽ tự lo phần path
             switch (_type)
             {
-                case 1: // Có mã CQT (ttxly == 5)
+                case 1:
                     url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel-sold?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==5&type=purchase";
                     filename = $"{mstcongty}_HDDienTuDaCapMa.xlsx";
                     action = "Xuất excel (hóa đơn mua vào)";
                     break;
-
-                case 2: // Không mã CQT (ttxly == 6)
+                case 2:
                     url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel-sold?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==6&type=purchase";
                     filename = $"{mstcongty}_HDDienTuKhongMa.xlsx";
                     action = "Xuất excel (hóa đơn mua vào)";
                     break;
-
-                case 3: // Máy tính tiền (ttxly == 8)
+                case 3:
                     url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel-sold?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==8&type=purchase";
                     filename = $"{mstcongty}_HDDienTuMayTinhTien.xlsx";
                     action = "Xuất excel (hóa đơn máy tính tiền mua vào)";
                     break;
-
                 default:
                     return;
             }
@@ -34104,15 +34109,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
             Directory.CreateDirectory(directoryPath);
 
-            // Nếu file đã tải gần đây (< 30 phút) thì bỏ qua
             if (File.Exists(filePath))
             {
                 DateTime lastWriteTime = File.GetLastWriteTime(filePath);
-                if ((DateTime.Now - lastWriteTime).TotalMinutes < 30)
-                {
-                    Console.WriteLine($"File đã tồn tại gần đây: {filePath}");
-                    return;
-                }
+                if ((DateTime.Now - lastWriteTime).TotalMinutes < 30) return;
             }
 
             int maxRetries = 3;
@@ -34121,27 +34121,35 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
             using (var client = new HttpClient())
             {
-                client.Timeout = TimeSpan.FromSeconds(10);
+                client.Timeout = TimeSpan.FromSeconds(15); // Tăng nhẹ timeout
 
-                // Header giống trình duyệt thật
                 client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36");
+
+                // CẬP NHẬT HEADER THEO FILE AUTHORITY.TXT
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
-                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don");
-                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Google Chrome\";v=\"140\", \"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\"");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Google Chrome\";v=\"155\", \"Chromium\";v=\"155\", \"Not(A:Brand\";v=\"24\"");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
 
+                // QUAN TRỌNG: Nếu GDT yêu cầu Cookie, bạn phải add vào đây. 
+                // Nếu không có cookie này, tỷ lệ bị 403 rất cao.
+                // client.DefaultRequestHeaders.TryAddWithoutValidation("Cookie", "JSESSIONID=...; TS0114b13e=...; jwt=...");
+
                 for (int attempt = 1; attempt <= maxRetries; attempt++)
                 {
                     try
                     {
+                        // KIỂM TRA HỦY TÁC VỤ
+                        cancellationToken.ThrowIfCancellationRequested();
+
                         if (serverMode == "1")
                         {
                             progressPanel1.Caption = $"Đang tải {tenfileExcel} (Lần {attempt}/{maxRetries})";
@@ -34150,24 +34158,23 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                         using (var request = new HttpRequestMessage(HttpMethod.Get, url))
                         {
-                            // Header đặc thù GDT (rất quan trọng)
                             request.Headers.TryAddWithoutValidation("Request-Id", Guid.NewGuid().ToString());
                             request.Headers.TryAddWithoutValidation("End-Point", endPoint);
                             request.Headers.TryAddWithoutValidation("Action", Uri.EscapeDataString(action));
 
-                            var response = await client.SendAsync(request);
+                            // TRUYỀN CANCELLATION TOKEN VÀO ĐÂY
+                            var response = await client.SendAsync(request, cancellationToken);
 
-                            // Xử lý 403
                             if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                             {
                                 string errBody = await response.Content.ReadAsStringAsync();
                                 bool isHtml = errBody.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase);
-
                                 Console.WriteLine($"Bị 403 {(isHtml ? "(HTML/WAF)" : "")} - lần {attempt}");
 
                                 if (attempt < maxRetries)
                                 {
-                                    await Task.Delay(retryDelayMs * attempt);
+                                    // TRUYỀN TOKEN VÀO HÀM DELAY
+                                    await Task.Delay(retryDelayMs * attempt, cancellationToken);
                                     continue;
                                 }
                                 else
@@ -34178,32 +34185,33 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             }
 
                             response.EnsureSuccessStatusCode();
-
                             byte[] fileBytes = await response.Content.ReadAsByteArrayAsync();
 
-                            // File quá nhỏ → thường là lỗi JSON/HTML
                             if (fileBytes.Length < 2048)
                             {
                                 string errorContent = Encoding.UTF8.GetString(fileBytes);
-                                Console.WriteLine("Nội dung lỗi (file nhỏ): " + errorContent.Substring(0, Math.Min(500, errorContent.Length)));
                                 throw new Exception("File tải về quá nhỏ (có thể bị chặn hoặc không có dữ liệu)");
                             }
 
-                            // Kiểm tra có phải file Excel thật không (PK header của ZIP/xlsx)
                             if (fileBytes.Length > 4 && fileBytes[0] == 0x50 && fileBytes[1] == 0x4B)
                             {
-                                // OK - là file zip/xlsx
+                                File.WriteAllBytes(filePath, fileBytes);
+                                success = true;
+                                break;
                             }
                             else
                             {
                                 string preview = Encoding.UTF8.GetString(fileBytes, 0, Math.Min(300, fileBytes.Length));
                                 throw new Exception("Dữ liệu trả về không phải file Excel: " + preview);
                             }
-
-                            File.WriteAllBytes(filePath, fileBytes);
-                            success = true;
-                            break;
                         }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // BẮT LỖI KHI NGƯỜI DÙNG HỦY
+                        Console.WriteLine("Tác vụ tải file đã bị hủy bởi người dùng.");
+                        ToastMeaasge("● Thông báo", "Đã hủy tải file.");
+                        return; // Thoát hàm luôn
                     }
                     catch (Exception ex)
                     {
@@ -34212,8 +34220,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         if (attempt == maxRetries)
                         {
                             ToastMeaasge("● Lỗi", "Không tải được file excel, sẽ thử lại sau 3s");
-                            await Task.Delay(3000);
-                            // Cẩn thận với PerformClick trong async
+                            await Task.Delay(3000, cancellationToken);
+
                             if (this.InvokeRequired)
                                 this.Invoke(new Action(() => simpleButton3.PerformClick()));
                             else
@@ -34221,7 +34229,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         }
                         else
                         {
-                            await Task.Delay(retryDelayMs * attempt);
+                            await Task.Delay(retryDelayMs * attempt, cancellationToken);
                         }
                     }
                 }
@@ -34405,7 +34413,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
             }
         }
-        public async Task Xulyexelra(string token, int _type)
+        // Thêm tham số CancellationToken vào hàm
+        public async Task Xulyexelra(string token, int _type, CancellationToken cancellationToken = default)
         {
             string tenfileExcel = "";
             if (_type == 1)
@@ -34474,25 +34483,31 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             {
                 client.Timeout = TimeSpan.FromSeconds(90);
 
-                // Header giống trình duyệt
+                // Header giống trình duyệt (Cập nhật theo authority.txt mới nhất)
                 client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
-                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don");
-                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Google Chrome\";v=\"140\", \"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\"");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Google Chrome\";v=\"155\", \"Chromium\";v=\"155\", \"Not(A:Brand\";v=\"24\"");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
 
+                // QUAN TRỌNG: Thêm Cookie nếu GDT yêu cầu (thay chuỗi cookie thật của bạn vào đây)
+                // client.DefaultRequestHeaders.TryAddWithoutValidation("Cookie", "JSESSIONID=...; TS0114b13e=...; jwt=...");
+
                 for (int attempt = 1; attempt <= maxRetries; attempt++)
                 {
                     try
                     {
+                        // Kiểm tra hủy tác vụ
+                        cancellationToken.ThrowIfCancellationRequested();
+
                         if (serverMode == "1")
                         {
                             progressPanel2.Caption = $"Đang tải {tenfileExcel} (Lần {attempt}/{maxRetries})";
@@ -34506,7 +34521,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             request.Headers.TryAddWithoutValidation("End-Point", endPoint);
                             request.Headers.TryAddWithoutValidation("Action", Uri.EscapeDataString(action));
 
-                            var response = await client.SendAsync(request);
+                            // Truyền token vào SendAsync
+                            var response = await client.SendAsync(request, cancellationToken);
 
                             // Xử lý 403
                             if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -34518,7 +34534,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                                 if (attempt < maxRetries)
                                 {
-                                    await Task.Delay(retryDelayMs * attempt);
+                                    await Task.Delay(retryDelayMs * attempt, cancellationToken);
                                     continue;
                                 }
                                 else
@@ -34552,15 +34568,14 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             break;
                         }
                     }
-                    catch (TaskCanceledException)
+                    catch (OperationCanceledException)
                     {
-                        Console.WriteLine($"Timeout khi tải {tenfileExcel} (Lần {attempt}/{maxRetries})");
-                        if (attempt == maxRetries)
-                        {
-                            XtraMessageBox.Show("Không thể tải file excel trong thời điểm hiện tại, vui lòng thử lại");
-                            return;
-                        }
+                        // Bắt lỗi khi người dùng chủ động Hủy tác vụ
+                        Console.WriteLine($"Tác vụ tải {tenfileExcel} đã bị hủy bởi người dùng.");
+                        ToastMeaasge("● Thông báo", "Đã hủy tải file.");
+                        return;
                     }
+                    
                     catch (Exception ex)
                     {
                         Console.WriteLine($"Lỗi khi tải {tenfileExcel} (Lần {attempt}/{maxRetries}): {ex.Message}");
@@ -34575,7 +34590,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     // Chờ trước khi thử lại
                     if (attempt < maxRetries)
                     {
-                        await Task.Delay(retryDelayMs * attempt);
+                        await Task.Delay(retryDelayMs * attempt, cancellationToken);
                     }
                 }
             }

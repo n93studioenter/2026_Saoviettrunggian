@@ -98,7 +98,7 @@
       <Version>4.51.0</Version>
     </PackageReference>
     <PackageReference Include="Selenium.WebDriver.ChromeDriver">
-      <Version>155.0.8059.8400</Version>
+      <Version>156.0.8078.4700</Version>
     </PackageReference>
     <PackageReference Include="SimMetrics.Net">
       <Version>1.0.5</Version>
@@ -324,6 +324,12 @@
     <Reference Include="UIAutomationTypes" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddThueSuat.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AddThueSuat.Designer.cs">
+      <DependentUpon>AddThueSuat.cs</DependentUpon>
+    </Compile>
     <Compile Include="APIInvoice.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -626,6 +632,7 @@
     <Compile Include="OllamaProductChecker.cs" />
     <Compile Include="PersistentClass1.cs" />
     <Compile Include="PersistentClass2.cs" />
+    <Compile Include="PersistentClass3.cs" />
     <Compile Include="PopupTaikhoan.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -718,6 +725,9 @@
     <Compile Include="XtraForm1.Designer.cs">
       <DependentUpon>XtraForm1.cs</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="AddThueSuat.resx">
+      <DependentUpon>AddThueSuat.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="APIInvoice.resx">
       <DependentUpon>APIInvoice.cs</DependentUpon>
     </EmbeddedResource>

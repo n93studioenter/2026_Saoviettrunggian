@@ -86,7 +86,7 @@ namespace SaovietTax
                 //  vì đã có resolver, nhưng vẫn an toàn hơn nếu dùng reflection)
                 switch (content.Trim())
                 {
-                    case "1": Application.Run(CreateForm("SaovietTax.APIInvoice")); break;
+                    case "1": Application.Run(CreateForm("SaovietTax.BkavInvoice")); break;
                     case "2": Application.Run(CreateForm("SaovietTax.KTHT")); break;
                     case "3": Application.Run(CreateForm("SaovietTax.frmTaihoadonvb")); break;
                     case "4": Application.Run(CreateForm("SaovietTax.Form3")); break;
@@ -101,6 +101,7 @@ namespace SaovietTax
                     case "13": Application.Run(CreateForm("SaovietTax.ExportExcelBC")); break;
                     case "14": Application.Run(CreateForm("SaovietTax.frmKiemtraUpdate")); break;
                     case "15": Application.Run(CreateForm("SaovietTax.frmTuKhoaHang")); break;
+                    case "16": Application.Run(CreateForm("SaovietTax.AddThueSuat")); break;
                 }
             }
         }

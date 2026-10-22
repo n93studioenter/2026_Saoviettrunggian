@@ -28,13 +28,33 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.progressPanel1 = new DevExpress.XtraWaitForm.ProgressPanel();
             this.SuspendLayout();
+            // 
+            // progressPanel1
+            // 
+            this.progressPanel1.Appearance.BackColor = System.Drawing.Color.Transparent;
+            this.progressPanel1.Appearance.Options.UseBackColor = true;
+            this.progressPanel1.AppearanceCaption.ForeColor = System.Drawing.Color.White;
+            this.progressPanel1.AppearanceCaption.Options.UseForeColor = true;
+            this.progressPanel1.AppearanceDescription.ForeColor = System.Drawing.Color.White;
+            this.progressPanel1.AppearanceDescription.Options.UseForeColor = true;
+            this.progressPanel1.Location = new System.Drawing.Point(11, 11);
+            this.progressPanel1.Margin = new System.Windows.Forms.Padding(2);
+            this.progressPanel1.Name = "progressPanel1";
+            this.progressPanel1.Size = new System.Drawing.Size(342, 37);
+            this.progressPanel1.TabIndex = 10;
+            this.progressPanel1.Text = "progressPanel1";
             // 
             // BkavInvoice
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.BackColor = System.Drawing.Color.MediumBlue;
+            this.ClientSize = new System.Drawing.Size(364, 62);
+            this.Controls.Add(this.progressPanel1);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.Name = "BkavInvoice";
             this.Text = "BkavInvoice";
             this.Load += new System.EventHandler(this.BkavInvoice_Load);
@@ -43,5 +63,6 @@
         }
 
         #endregion
+        private DevExpress.XtraWaitForm.ProgressPanel progressPanel1;
     }
 }

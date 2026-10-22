@@ -1408,6 +1408,7 @@ WHERE IdNhap IS NOT NULL
             dtHangHoa.Columns.Add("UnitPrice", typeof(decimal));
             dtHangHoa.Columns.Add("Quantity", typeof(decimal));
             dtHangHoa.Columns.Add("Amount", typeof(decimal));
+            dtHangHoa.Columns.Add("Thuesuat", typeof(int));
             foreach (DataRow row in kq3.Rows)
             {
                 try
@@ -1427,7 +1428,8 @@ WHERE IdNhap IS NOT NULL
                     double dongia = Math.Round((sops / soluong),2);
                     string tenhh = kqHangHoa.Rows[0]["TenVattu"].ToString();
                     string donvitinh = kqHangHoa.Rows[0]["DonVi"].ToString();
-                    dtHangHoa.Rows.Add("", tenhh, donvitinh, dongia, soluong, sops);
+                    int thuesuat= row["Thuesuat"] == DBNull.Value ? 0 : Convert.ToInt32(row["Thuesuat"]);
+                    dtHangHoa.Rows.Add("", tenhh, donvitinh, dongia, soluong, sops, thuesuat);
                 }
                 catch (Exception ex)
                 {
@@ -1435,19 +1437,34 @@ WHERE IdNhap IS NOT NULL
                 }
             }
             var itemInfo = dtHangHoa.AsEnumerable()
-    .Select((row, index) => new
+    .Select((row, index) =>
     {
-        lineNumber = index + 1,
-        //itemCode = "",
-        itemName = Helpers.ConvertVniToUnicode(row["ItemName"].ToString()),
-        unitName = Helpers.ConvertVniToUnicode(row["UnitName"].ToString()),
-        unitPrice = Convert.ToDouble(row["UnitPrice"]),
-        quantity = Convert.ToDouble(row["Quantity"]),
-        itemTotalAmountWithoutVat = Convert.ToDouble(row["Amount"]),
-        vatPercentage = kq2.Rows[0]["TyLe"].ToString(),
-        vatAmount= Convert.ToDouble(row["Amount"]) * 0.1,
-        selection = 1,
-        itemTotalAmountWithVat = Convert.ToDouble(row["Amount"]) + (Convert.ToDouble(row["Amount"]) * 0.1),
+        // Lấy thuế suất an toàn (tránh lỗi nếu kq2 không có dòng nào)
+        string defaultTyLe = (kq2 != null && kq2.Rows.Count > 0) ? kq2.Rows[0]["TyLe"].ToString() : "0";
+
+        string thueSuat = row["Thuesuat"]?.ToString()?.Trim() ?? "0";
+        string vatPercentageStr = (thueSuat != "0" && thueSuat != "") ? thueSuat : defaultTyLe;
+
+        // Ép kiểu số an toàn (tránh lỗi nếu ô trống)
+        double amount = row["Amount"] != DBNull.Value ? Convert.ToDouble(row["Amount"]) : 0;
+        double vatRate = double.TryParse(vatPercentageStr, out double r) ? r : 0;
+
+        double vatAmount = amount * vatRate / 100;
+
+        return new
+        {
+            lineNumber = index + 1,
+            //itemCode = "",
+            itemName = Helpers.ConvertVniToUnicode(row["ItemName"].ToString()),
+            unitName = Helpers.ConvertVniToUnicode(row["UnitName"].ToString()),
+            unitPrice = row["UnitPrice"] != DBNull.Value ? Convert.ToDouble(row["UnitPrice"]) : 0,
+            quantity = row["Quantity"] != DBNull.Value ? Convert.ToDouble(row["Quantity"]) : 0,
+            itemTotalAmountWithoutVat = amount,
+            vatPercentage = vatPercentageStr,
+            vatAmount = vatAmount,
+            selection = 1,
+            itemTotalAmountWithVat = amount + vatAmount,
+        };
     }).ToArray();
             progressPanel1.Caption = "Đang thực hiện tạo hoá đơn ...";
             Application.DoEvents();

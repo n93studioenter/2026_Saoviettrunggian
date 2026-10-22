@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.OleDb;
 using System.Diagnostics;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -20,6 +21,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace SaovietTax
 {
@@ -35,6 +37,15 @@ namespace SaovietTax
         public BkavInvoice()
         {
             InitializeComponent();
+            this.StartPosition = FormStartPosition.Manual;
+
+            // Đặt kích thước form (tuỳ chỉnh) 
+
+            // Đặt form ở góc phải dưới
+            this.Location = new Point(
+                Screen.PrimaryScreen.WorkingArea.Right - this.Width,
+                Screen.PrimaryScreen.WorkingArea.Bottom - this.Height
+            );
         }
 
         // ============ DB HELPERS (giữ nguyên) ============
@@ -92,8 +103,8 @@ namespace SaovietTax
 
             var options = new ChromeOptions();
             // Bỏ comment nếu muốn ẩn:
-            // options.AddArgument("--headless=new");
-            // options.AddArgument("--window-size=1920,1080");
+             options.AddArgument("--headless=new");
+             options.AddArgument("--window-size=1920,1080");
 
             var driver = new ChromeDriver(service, options);
             try
@@ -336,15 +347,25 @@ namespace SaovietTax
         // ================================================================
         // ============ TẠO HÓA ĐƠN NHÁP (theo Grok) ============
         // ================================================================
-        private string CreateDraftMTT(List<Product> products, string buyerMST, string invoiceDate, double taxRate)
+        private string CreateDraftMTT(List<Product> products, string buyerMST, string invoiceDate, double taxRate,int IsMTT)
         {
             var wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(30));
 
             // ============ 1. VÀO TRANG MÁY TÍNH TIỀN (MTT) ============
             Console.WriteLine("Đang mở trang Máy tính tiền (MTT)...");
-            _driver.Navigate().GoToUrl(BASE_URL + "MTT?IsMTT=true");
-            wait.Until(d => d.Url.Contains("MTT"));
-            Thread.Sleep(2500);
+            progressPanel1.Invoke(new Action(() =>
+            {
+                progressPanel1.Caption = "Đang thực hiện tạo hoá đơn...";
+                progressPanel1.Refresh();      // ép vẽ lại
+                Application.DoEvents();        // xử lý message queue
+            })); 
+
+            if (IsMTT == 1)
+            {
+                _driver.Navigate().GoToUrl(BASE_URL + "MTT?IsMTT=true");
+                wait.Until(d => d.Url.Contains("MTT"));
+                Thread.Sleep(2500);
+            }
 
             // ============ 2. BẤM NÚT THÊM MỚI ============
             Console.WriteLine("Đang bấm nút Thêm mới hóa đơn...");
@@ -507,8 +528,8 @@ namespace SaovietTax
                     try
                     {
                         var ddl = new SelectElement(_driver.FindElement(By.Id("ddlTaxRate")));
-                        try { ddl.SelectByText($"{taxRate}%"); }
-                        catch { try { ddl.SelectByValue(FallbackTaxId(taxRate)); } catch { } }
+                        try { ddl.SelectByText($"{p.TaxRate}%"); }
+                        catch { try { ddl.SelectByValue(FallbackTaxId(p.TaxRate)); } catch { } }
                     }
                     catch { }
 
@@ -622,7 +643,7 @@ namespace SaovietTax
                 var rows = dtInvoiceInfo.Rows[0];
                 string username = rows["Username"]?.ToString();
                 string password = rows["Password"]?.ToString();
-
+                int IsMTT = rows["IsMTT"] != DBNull.Value ? Convert.ToInt32(rows["IsMTT"]) : 0;
                 // 2. Đọc _content = "SoHieu_KyHieu_NgayCT"
                 var getsplit = _content.Split('_');
                 var qrTimct = @"
@@ -636,7 +657,11 @@ namespace SaovietTax
                     new OleDbParameter("?", getsplit[2]),
                 });
                 if (kq2.Rows.Count == 0)
-                    throw new Exception("Không tìm thấy chứng từ.");
+                {
+                    progressPanel1.Caption= "Không tìm thấy hóa đơn";
+                    return;
+                }
+                   
 
                 DateTime date = DateTime.ParseExact(kq2.Rows[0]["NgayCT"].ToString(), "dd/MM/yy hh:mm:ss tt", CultureInfo.InvariantCulture);
                 string formattedDate = date.ToString("dd/MM/yyyy");
@@ -657,18 +682,31 @@ namespace SaovietTax
 
                     double sops = string.IsNullOrEmpty(row["SoPS"].ToString()) ? 0 : Convert.ToDouble(row["SoPS"]);
                     double soluong = string.IsNullOrEmpty(row["SoPS2Co"].ToString()) ? 0 : Convert.ToDouble(row["SoPS2Co"]);
-                    products.Add(new Product
+                    // Lấy thuế suất an toàn ra biến trước
+                    double taxRate = 0;
+                    if (row["Thuesuat"] != DBNull.Value && row["Thuesuat"] != null)
                     {
-                        Name = Helpers.ConvertVniToUnicode(kqHH.Rows[0]["TenVattu"].ToString()),
-                        Unit = Helpers.ConvertVniToUnicode(kqHH.Rows[0]["DonVi"].ToString()),
-                        Qty = soluong,
-                        Price = soluong == 0 ? 0 : Math.Round(sops / soluong),
-                        TaxRate = Convert.ToDouble(kq2.Rows[0]["TyLe"] ?? 0),
-                    });
+                        double.TryParse(row["Thuesuat"].ToString(), out taxRate);
+                    }
+                    else
+                    {
+                        taxRate = kq2.Rows[0]["TyLe"] != DBNull.Value ? Convert.ToDouble(kq2.Rows[0]["TyLe"]) : 0;
+                    }
+
+                        products.Add(new Product
+                        {
+                            Name = Helpers.ConvertVniToUnicode(kqHH.Rows[0]["TenVattu"].ToString()),
+                            Unit = Helpers.ConvertVniToUnicode(kqHH.Rows[0]["DonVi"].ToString()),
+                            Qty = soluong,
+                            Price = soluong == 0 ? 0 : Math.Round(sops / soluong),
+                            TaxRate = taxRate,
+                        });
                 }
 
                 // 4. Đăng nhập
                 Console.WriteLine("Đang đăng nhập Bkav...");
+                progressPanel1.Caption = "Đang đăng nhập Bkav...";
+                Application.DoEvents();
                 _driver = LoginBkav(username, password);
 
                 // 5. Xóa nháp cũ nếu có
@@ -676,7 +714,7 @@ namespace SaovietTax
                 if (!string.IsNullOrEmpty(idnhap) && idnhap!="0")
                 {
                     Console.WriteLine("Đang xóa nháp cũ: " + idnhap);
-                    TryDeleteDraftMTT(idnhap);
+                    TryDeleteDraftMTT(idnhap, IsMTT);
                 }
 
                 // 6. Tạo nháp mới
@@ -684,8 +722,8 @@ namespace SaovietTax
                     products,
                     dtKhachhang.Rows[0]["MST"].ToString(),
                     formattedDate,
-                    Convert.ToDouble(kq2.Rows[0]["TyLe"] ?? 0));
-
+                    Convert.ToDouble(kq2.Rows[0]["TyLe"] ?? 0),
+                    IsMTT);
                 // 7. Lưu GUID
                 ExecuteQueryResult(@"UPDATE HoaDon SET IdNhap = ? WHERE MaSo = ?", new OleDbParameter[]
                 {
@@ -752,7 +790,7 @@ namespace SaovietTax
                 try { _driver.SwitchTo().DefaultContent(); } catch { }
             }
         }
-        private bool TryDeleteDraftMTT(string idnhap)
+        private bool TryDeleteDraftMTT(string idnhap,int IsMTT)
         {
             if (string.IsNullOrEmpty(idnhap) || idnhap == "0") return true; // Không có gì để xóa
 
@@ -762,7 +800,8 @@ namespace SaovietTax
                 var wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(10));
 
                 // 1. Chuyển sang trang MTT
-                _driver.Navigate().GoToUrl(BASE_URL + "MTT?IsMTT=true");
+                if (IsMTT == 1)
+                    _driver.Navigate().GoToUrl(BASE_URL + "MTT?IsMTT=true");
                 Thread.Sleep(2500); // Chờ bảng load
 
                 // 2. Tìm nút Xem/Sửa của hóa đơn (Dùng FindElements để không văng lỗi nếu không thấy)
@@ -825,8 +864,10 @@ namespace SaovietTax
         // ================================================================
         // ============ LOAD FORM ============
         // ================================================================
-        private void BkavInvoice_Load(object sender, EventArgs e)
+        private async void BkavInvoice_Load(object sender, EventArgs e)
         {
+            await Task.Yield();
+
             string dbPath = "";
             const string dbPassword = "1@35^7*9)1";
             string appPath = Assembly.GetExecutingAssembly().Location;
@@ -847,10 +888,51 @@ namespace SaovietTax
             }
             catch (Exception ex) { Console.WriteLine("Lỗi đọc invoice.txt: " + ex.Message); }
 
-            if (_content.Contains("PH_"))
-                PhatHanhHD();
+            if (_content.Contains("Huy"))
+            {
+                 Huyhoadon(_content.Replace("Huy_", ""));
+            }
             else
-                Addinvoice();
+            {
+                if (_content.Contains("PH_"))
+                    PhatHanhHD();
+                else
+                    Addinvoice();
+            }
+          
+        }
+        public void Huyhoadon(string idnhap)
+        {
+            try
+            {
+                progressPanel1.Invoke(new Action(() =>
+                {
+                    progressPanel1.Caption = "Đang huỷ hoá đơn BKAV...";
+                    progressPanel1.Refresh();      // ép vẽ lại
+                    Application.DoEvents();        // xử lý message queue
+                }));
+                var dtInvoiceInfo = ExecuteQuery("SELECT * FROM tbInvoiceInfo", null);
+                var rows = dtInvoiceInfo.Rows[0];
+                string username = rows["Username"]?.ToString();
+                string password = rows["Password"]?.ToString();
+                int IsMTT = rows["IsMTT"] != DBNull.Value ? Convert.ToInt32(rows["IsMTT"]) : 0;
+                _driver = LoginBkav(username, password);
+                Console.WriteLine("Đang xóa nháp cũ: " + idnhap);
+                TryDeleteDraftMTT(idnhap, IsMTT);
+                _driver.Quit();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ Lỗi: " + ex.Message);
+                XtraMessageBox.Show("Lỗi: " + ex.Message);
+
+            }
+            finally
+            {
+                try { _driver?.Quit(); } catch { }
+                _driver = null;
+                this.Close();
+            }
         }
 
         // ================================================================
@@ -865,7 +947,7 @@ namespace SaovietTax
                 var row = dtInfo.Rows[0];
                 string username = row["Username"]?.ToString();
                 string password = row["Password"]?.ToString();
-
+                int IsMTT = row["IsMTT"] != DBNull.Value ? Convert.ToInt32(row["IsMTT"]) : 0;   
                 // 2. Đăng nhập
                 Console.WriteLine("Đang đăng nhập để phát hành...");
                 _driver = LoginBkav(username, password);
@@ -876,6 +958,7 @@ namespace SaovietTax
                 string invoiceGuid = getsplit[1].ToLower();
 
                 // 4. Chuyển sang trang MTT để tìm hóa đơn
+                if(IsMTT==1)
                 _driver.Navigate().GoToUrl("https://van.ehoadon.vn/MTT?IsMTT=true");
                 wait.Until(d => d.Url.Contains("MTT"));
                 Thread.Sleep(2000);
