@@ -103,7 +103,7 @@ namespace SaovietTax
 
             var options = new ChromeOptions();
             // Bỏ comment nếu muốn ẩn:
-             options.AddArgument("--headless=new");
+            // options.AddArgument("--headless=new");
              options.AddArgument("--window-size=1920,1080");
 
             var driver = new ChromeDriver(service, options);
@@ -347,46 +347,88 @@ namespace SaovietTax
         // ================================================================
         // ============ TẠO HÓA ĐƠN NHÁP (theo Grok) ============
         // ================================================================
-        private string CreateDraftMTT(List<Product> products, string buyerMST, string invoiceDate, double taxRate,int IsMTT)
+        private void SetCaption(string text)
         {
+            if (progressPanel1.InvokeRequired)
+                progressPanel1.BeginInvoke(new Action(() => SetCaption(text)));
+            else
+            {
+                progressPanel1.Caption = text;
+                progressPanel1.Refresh();
+            }
+        }
+        private string CreateDraftMTT(List<Product> products, string buyerMST, string invoiceDate, double taxRate, int IsMTT)
+        {
+            if (products == null || products.Count == 0)
+                throw new Exception("Không có dòng hàng nào để tạo hoá đơn.");
+
             var wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(30));
 
             // ============ 1. VÀO TRANG MÁY TÍNH TIỀN (MTT) ============
             Console.WriteLine("Đang mở trang Máy tính tiền (MTT)...");
-            progressPanel1.Invoke(new Action(() =>
-            {
-                progressPanel1.Caption = "Đang thực hiện tạo hoá đơn...";
-                progressPanel1.Refresh();      // ép vẽ lại
-                Application.DoEvents();        // xử lý message queue
-            })); 
+            SetCaption("Đang thực hiện tạo hoá đơn...");
 
             if (IsMTT == 1)
             {
                 _driver.Navigate().GoToUrl(BASE_URL + "MTT?IsMTT=true");
                 wait.Until(d => d.Url.Contains("MTT"));
-                Thread.Sleep(2500);
+            }
+            else
+            {
+                _driver.Navigate().GoToUrl(BASE_URL + "QLHD");
+                wait.Until(d => d.Url.Contains("QLHD"));
             }
 
             // ============ 2. BẤM NÚT THÊM MỚI ============
             Console.WriteLine("Đang bấm nút Thêm mới hóa đơn...");
+            IWebElement btnAddNew = null;
             try
             {
-                var btnAddNew = wait.Until(d => d.FindElement(By.Id("body_btnAddNew")));
-                ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnAddNew);
+                btnAddNew = wait.Until(d =>
+                {
+                    try
+                    {
+                        var el = d.FindElement(By.Id("body_btnAddNew"));
+                        return el.Displayed && el.Enabled ? el : null;
+                    }
+                    catch { return null; }
+                });
             }
             catch
             {
-                var btnAddNew = wait.Until(d => d.FindElement(By.XPath("//a[contains(text(), 'Thêm mới')] | //button[contains(text(), 'Thêm mới')]")));
-                ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnAddNew);
+                try
+                {
+                    btnAddNew = wait.Until(d =>
+                    {
+                        try
+                        {
+                            var el = d.FindElement(By.XPath(
+                                "//a[contains(text(), 'Thêm mới')] | //button[contains(text(), 'Thêm mới')]"));
+                            return el.Displayed && el.Enabled ? el : null;
+                        }
+                        catch { return null; }
+                    });
+                }
+                catch { }
             }
+
+            if (btnAddNew == null)
+                throw new Exception("Không tìm thấy nút Thêm mới hoá đơn.");
+
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnAddNew);
 
             // ============ 3. CHỜ POPUP/IFRAME XUẤT HIỆN ============
             bool isIframe = false;
             try
             {
-                wait.Until(d => {
-                    var frames = d.FindElements(By.Id("framedialogInvoiceNewEdit"));
-                    return frames.Count > 0 && frames[0].Displayed;
+                wait.Until(d =>
+                {
+                    try
+                    {
+                        var frames = d.FindElements(By.Id("framedialogInvoiceNewEdit"));
+                        return frames.Count > 0 && frames[0].Displayed;
+                    }
+                    catch { return false; }
                 });
                 _driver.SwitchTo().Frame("framedialogInvoiceNewEdit");
                 isIframe = true;
@@ -394,91 +436,253 @@ namespace SaovietTax
             }
             catch
             {
-                Console.WriteLine("-> Không có iframe chính, thao tác trực tiếp trên trang.");
+                try
+                {
+                    var iframeEl = wait.Until(d =>
+                    {
+                        try
+                        {
+                            var els = d.FindElements(By.CssSelector("div.ui-dialog iframe"));
+                            return els.Count > 0 && els[0].Displayed ? els[0] : null;
+                        }
+                        catch { return null; }
+                    });
+                    _driver.SwitchTo().Frame(iframeEl);
+                    isIframe = true;
+                    Console.WriteLine("-> Vào iframe popup qua div.ui-dialog.");
+                }
+                catch
+                {
+                    throw new Exception("Popup hoá đơn không mở — không thể tạo nháp.");
+                }
             }
 
             try
             {
-                // ============ 4. ĐIỀN THÔNG TIN NGƯỜI MUA & NGÀY ============
+                // ============ 4. ĐIỀN THÔNG TIN NGƯỜI MUA ============
                 if (!string.IsNullOrEmpty(buyerMST))
                 {
-                    try
+                    bool mstOk = false;
+
+                    for (int attempt = 1; attempt <= 3 && !mstOk; attempt++)
                     {
-                        var txtBuyerSearch = wait.Until(d => d.FindElement(By.Id("txtBuyerSearch")));
-
-                        // 1. Click vào ô để lấy focus
-                        txtBuyerSearch.Click();
-                        Thread.Sleep(300);
-
-                        // 2. Gõ MST người mua
-                        txtBuyerSearch.SendKeys(buyerMST);
-                        Thread.Sleep(500);
-
-                        // 3. MẸO CỦA BKAV: Bôi đen toàn bộ (Ctrl + A) để kích hoạt hiện gợi ý
-                        txtBuyerSearch.SendKeys(OpenQA.Selenium.Keys.Control + "a");
-
-                        // 4. Chờ danh sách gợi ý xuất hiện
                         try
                         {
-                            wait.Until(d => {
-                                var items = d.FindElements(By.CssSelector("#eac-container-txtBuyerSearch .eac-item"));
-                                return items.Count > 0 && !string.IsNullOrEmpty(items[0].Text);
+                            Console.WriteLine($"[MST] Lần thử {attempt}/3 — nhập MST: {buyerMST}");
+
+                            // 1. Lấy ô nhập MST
+                            var txtBuyerSearch = wait.Until(d =>
+                            {
+                                try
+                                {
+                                    var el = d.FindElement(By.Id("txtBuyerSearch"));
+                                    return el.Displayed && el.Enabled ? el : null;
+                                }
+                                catch { return null; }
                             });
-                        }
-                        catch { Thread.Sleep(1500); }
 
-                        // 5. DÙNG JAVASCRIPT CLICK VÀO DÒNG GỢI Ý ĐẦU TIÊN (Bỏ qua màng chắn)
-                        try
-                        {
-                            string jsClick = @"
-                        var container = document.getElementById('eac-container-txtBuyerSearch');
-                        if (container) {
-                            var items = container.querySelectorAll('.eac-item');
-                            if (items.length > 0) {
-                                var evt = new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window });
-                                items[0].dispatchEvent(evt);
-                                items[0].click();
-                                return 'Clicked';
+                            if (txtBuyerSearch == null)
+                                throw new Exception("Không tìm thấy ô txtBuyerSearch.");
+
+                            // 2. Clear sạch (Ctrl+A rồi Delete) — tránh dính text cũ
+                            txtBuyerSearch.Click();
+                            txtBuyerSearch.SendKeys(OpenQA.Selenium.Keys.Control + "a");
+                            txtBuyerSearch.SendKeys(OpenQA.Selenium.Keys.Delete);
+                            Thread.Sleep(150);
+
+                            // 3. Gõ MST từng ký tự (50ms/ký tự) — Bkav kịp debounce autocomplete
+                            foreach (char c in buyerMST)
+                            {
+                                txtBuyerSearch.SendKeys(c.ToString());
+                                Thread.Sleep(50);
                             }
-                        }
-                        return 'Not Found';
-                    ";
-                            var clickResult = ((IJavaScriptExecutor)_driver).ExecuteScript(jsClick)?.ToString();
-                            Console.WriteLine("Kết quả click gợi ý: " + clickResult);
-                        }
-                        catch (Exception ex) { Console.WriteLine("Lỗi JS click: " + ex.Message); }
 
-                        // 6. Chờ Bkav điền Tên và Địa chỉ
-                        Thread.Sleep(2000);
+                            // 4. Chờ value thực sự đúng MST
+                            wait.Until(d =>
+                            {
+                                try
+                                {
+                                    return d.FindElement(By.Id("txtBuyerSearch")).GetAttribute("value")?.Trim() == buyerMST;
+                                }
+                                catch { return false; }
+                            });
+
+                            // 5. Chờ gợi ý xuất hiện VÀ có nội dung chứa MST (max 8s)
+                            IWebElement matchedItem = null;
+                            try
+                            {
+                                matchedItem = new WebDriverWait(_driver, TimeSpan.FromSeconds(8)).Until(d =>
+                                {
+                                    try
+                                    {
+                                        var items = d.FindElements(By.CssSelector("#eac-container-txtBuyerSearch .eac-item"));
+                                        if (items.Count == 0) return null;
+
+                                        foreach (var it in items)
+                                        {
+                                            if (!it.Displayed) continue;
+                                            var t = it.Text ?? "";
+                                            if (t.Contains(buyerMST))
+                                                return it;
+                                        }
+                                        return items[0].Displayed ? items[0] : null;
+                                    }
+                                    catch { return null; }
+                                });
+                            }
+                            catch
+                            {
+                                Console.WriteLine("[MST] Không thấy gợi ý sau 8s.");
+                            }
+
+                            if (matchedItem == null)
+                            {
+                                Console.WriteLine("[MST] Không có gợi ý — thử lại.");
+                                continue;
+                            }
+
+                            Console.WriteLine($"[MST] Click gợi ý: {matchedItem.Text}");
+
+                            // 6. Click bằng JS (dùng element đã verify khớp MST)
+                            ((IJavaScriptExecutor)_driver).ExecuteScript(@"
+                        var el = arguments[0];
+                        if (el) {
+                            var evtDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window });
+                            var evtUp   = new MouseEvent('mouseup',   { bubbles: true, cancelable: true, view: window });
+                            var evtClick= new MouseEvent('click',     { bubbles: true, cancelable: true, view: window });
+                            el.dispatchEvent(evtDown);
+                            el.dispatchEvent(evtUp);
+                            el.dispatchEvent(evtClick);
+                        }
+                    ", matchedItem);
+
+                            // 7. Chờ Bkav điền tên/địa chỉ (max 6s) — không throw nếu không có
+                            try
+                            {
+                                new WebDriverWait(_driver, TimeSpan.FromSeconds(6)).Until(d =>
+                                {
+                                    try
+                                    {
+                                        var txtName = d.FindElements(By.Id("txtBuyerName")).FirstOrDefault();
+                                        var txtAddr = d.FindElements(By.Id("txtBuyerAddress")).FirstOrDefault();
+                                        var nameOk = txtName != null && !string.IsNullOrEmpty(txtName.GetAttribute("value"));
+                                        var addrOk = txtAddr != null && !string.IsNullOrEmpty(txtAddr.GetAttribute("value"));
+                                        return nameOk || addrOk;
+                                    }
+                                    catch { return false; }
+                                });
+                            }
+                            catch
+                            {
+                                Console.WriteLine("[MST] Bkav không tự điền tên/địa chỉ sau 6s.");
+                            }
+
+                            // 8. Verify MST đã đúng chưa
+                            try
+                            {
+                                var valSearch = _driver.FindElement(By.Id("txtBuyerSearch")).GetAttribute("value")?.Trim() ?? "";
+                                string valTaxCode = "";
+                                try
+                                {
+                                    var elTax = _driver.FindElements(By.Id("txtBuyerTaxCode")).FirstOrDefault();
+                                    if (elTax != null) valTaxCode = elTax.GetAttribute("value")?.Trim() ?? "";
+                                }
+                                catch { }
+
+                                bool ok = valSearch == buyerMST || valTaxCode == buyerMST;
+                                Console.WriteLine($"[MST] Verify — search='{valSearch}', taxCode='{valTaxCode}' → {(ok ? "OK" : "SAI")}");
+                                mstOk = ok;
+                            }
+                            catch { mstOk = false; }
+
+                            if (!mstOk)
+                                Console.WriteLine("[MST] Verify thất bại — thử lại.");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[MST] Lỗi lần {attempt}: {ex.Message}");
+                        }
                     }
-                    catch (Exception ex) { Console.WriteLine("Lỗi khi nhập MST: " + ex.Message); }
+
+                    if (!mstOk)
+                        Console.WriteLine("[MST] ⚠️ Không nhập được MST sau 3 lần thử — vẫn tiếp tục tạo hoá đơn.");
+                    else
+                        Console.WriteLine("[MST] ✅ Nhập MST thành công.");
                 }
 
-                // Điền ngày hóa đơn
+                // ============ 4b. ĐIỀN NGÀY HÓA ĐƠN ============
                 try
                 {
-                    var txtDate = _driver.FindElement(By.Id("txtInvoiceDate"));
+                    var txtDate = wait.Until(d =>
+                    {
+                        try
+                        {
+                            var el = d.FindElement(By.Id("txtInvoiceDate"));
+                            return el.Displayed ? el : null;
+                        }
+                        catch { return null; }
+                    });
+
                     txtDate.Click();
                     txtDate.SendKeys(OpenQA.Selenium.Keys.Control + "a");
                     txtDate.SendKeys(OpenQA.Selenium.Keys.Backspace);
                     txtDate.SendKeys(invoiceDate);
                     txtDate.SendKeys(OpenQA.Selenium.Keys.Tab);
-                    Thread.Sleep(500);
+
+                    wait.Until(d =>
+                    {
+                        try
+                        {
+                            return d.FindElement(By.Id("txtInvoiceDate")).GetAttribute("value") == invoiceDate;
+                        }
+                        catch { return false; }
+                    });
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Lỗi nhập ngày hoá đơn: " + ex.Message);
+                }
 
                 // ============ 5. MỞ POPUP THÊM DÒNG HÀNG ============
-                var btnAddDetail = wait.Until(d => d.FindElement(By.Id("MasterPlaceHolderBlank_btnAddDetails")));
+                var btnAddDetail = wait.Until(d =>
+                {
+                    try
+                    {
+                        var el = d.FindElement(By.Id("MasterPlaceHolderBlank_btnAddDetails"));
+                        return el.Displayed && el.Enabled ? el : null;
+                    }
+                    catch { return null; }
+                });
+
+                if (btnAddDetail == null)
+                    throw new Exception("Không tìm thấy nút Thêm dòng hàng.");
+
                 ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnAddDetail);
 
-                // Đợi popup chi tiết (div.ui-dialog) hiển thị
-                wait.Until(d => d.FindElement(By.CssSelector("div.ui-dialog[aria-describedby='InvoiceDetailsNewEdit']")).Displayed);
-                Thread.Sleep(2000); // Chờ Bkav load iframe bên trong popup
+                // Chờ dialog chi tiết hiển thị
+                wait.Until(d =>
+                {
+                    try
+                    {
+                        var dlg = d.FindElements(By.CssSelector("div.ui-dialog[aria-describedby='InvoiceDetailsNewEdit']"));
+                        return dlg.Count > 0 && dlg[0].Displayed;
+                    }
+                    catch { return false; }
+                });
 
-                // TÌM VÀ SWITCH VÀO IFRAME CỦA POPUP CHI TIẾT (Tự động dò ID)
+                // Chờ iframe bên trong popup chi tiết sẵn sàng
                 bool isDetailIframeFound = false;
                 try
                 {
+                    wait.Until(d =>
+                    {
+                        try
+                        {
+                            var frames = d.FindElements(By.Id("frameInvoiceDetailsNewEdit"));
+                            return frames.Count > 0 && frames[0].Displayed;
+                        }
+                        catch { return false; }
+                    });
                     _driver.SwitchTo().Frame("frameInvoiceDetailsNewEdit");
                     isDetailIframeFound = true;
                 }
@@ -486,45 +690,87 @@ namespace SaovietTax
                 {
                     try
                     {
-                        // Nếu id bị đổi, tìm thẻ iframe nằm trong div dialog
-                        var iframeElement = _driver.FindElement(By.CssSelector("div[aria-describedby='InvoiceDetailsNewEdit'] iframe"));
-                        _driver.SwitchTo().Frame(iframeElement);
+                        var iframeEl = wait.Until(d =>
+                        {
+                            try
+                            {
+                                var els = d.FindElements(By.CssSelector("div[aria-describedby='InvoiceDetailsNewEdit'] iframe"));
+                                return els.Count > 0 && els[0].Displayed ? els[0] : null;
+                            }
+                            catch { return null; }
+                        });
+                        _driver.SwitchTo().Frame(iframeEl);
                         isDetailIframeFound = true;
                     }
-                    catch
-                    {
-                        Console.WriteLine("-> Không tìm thấy iframe popup chi tiết. Có thể Bkav đổi giao diện.");
-                    }
+                    catch { }
                 }
+
+                if (!isDetailIframeFound)
+                    throw new Exception("Không vào được iframe chi tiết dòng hàng — không thể tạo nháp.");
 
                 // ============ 6. NHẬP TỪNG DÒNG HÀNG ============
                 for (int i = 0; i < products.Count; i++)
                 {
                     var p = products[i];
 
-                    var txtItemName = wait.Until(d => d.FindElement(By.Id("txtItemName")));
+                    // --- Tên hàng ---
+                    var txtItemName = wait.Until(d =>
+                    {
+                        try
+                        {
+                            var el = d.FindElement(By.Id("txtItemName"));
+                            return el.Displayed ? el : null;
+                        }
+                        catch { return null; }
+                    });
+
                     txtItemName.Clear();
                     txtItemName.SendKeys(p.Name);
-                    Thread.Sleep(300);
 
-                    var sugg = _driver.FindElements(By.CssSelector("#eac-container-txtItemName .eac-item"));
-                    if (sugg.Count > 0) ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", sugg[0]);
+                    // Chờ gợi ý item (max 3s)
+                    IWebElement firstSugg = null;
+                    try
+                    {
+                        firstSugg = new WebDriverWait(_driver, TimeSpan.FromSeconds(3)).Until(d =>
+                        {
+                            try
+                            {
+                                var items = d.FindElements(By.CssSelector("#eac-container-txtItemName .eac-item"));
+                                return items.Count > 0 && items[0].Displayed ? items[0] : null;
+                            }
+                            catch { return null; }
+                        });
+                    }
+                    catch { }
 
-                    var txtUnit = _driver.FindElement(By.Id("txtUnitName"));
+                    if (firstSugg != null)
+                        ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", firstSugg);
+
+                    // --- Đơn vị ---
+                    var txtUnit = wait.Until(d =>
+                    {
+                        try
+                        {
+                            var el = d.FindElement(By.Id("txtUnitName"));
+                            return el.Displayed ? el : null;
+                        }
+                        catch { return null; }
+                    });
                     txtUnit.Clear();
                     txtUnit.SendKeys(p.Unit);
 
+                    // --- Số lượng ---
                     var txtQty = _driver.FindElement(By.Id("txtQty"));
                     txtQty.Clear();
                     txtQty.SendKeys(p.Qty.ToString(CultureInfo.InvariantCulture));
 
+                    // --- Đơn giá ---
                     var txtPrice = _driver.FindElement(By.Id("txtPrice"));
                     txtPrice.Clear();
                     txtPrice.SendKeys(p.Price.ToString("0", CultureInfo.InvariantCulture));
                     txtPrice.SendKeys(OpenQA.Selenium.Keys.Tab);
-                    Thread.Sleep(200);
 
-                    // Thuế suất
+                    // --- Thuế suất ---
                     try
                     {
                         var ddl = new SelectElement(_driver.FindElement(By.Id("ddlTaxRate")));
@@ -533,34 +779,82 @@ namespace SaovietTax
                     }
                     catch { }
 
-                    // Lưu dòng
+                    // --- Lưu dòng ---
                     if (i < products.Count - 1)
                     {
-                        _driver.FindElement(By.Id("btnAddAndContinue")).Click();
-                        wait.Until(d => d.FindElement(By.Id("txtItemName")).GetAttribute("value") == "");
+                        var btnAddContinue = wait.Until(d =>
+                        {
+                            try
+                            {
+                                var el = d.FindElement(By.Id("btnAddAndContinue"));
+                                return el.Displayed && el.Enabled ? el : null;
+                            }
+                            catch { return null; }
+                        });
+                        ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnAddContinue);
+
+                        // Chờ form reset (txtItemName rỗng)
+                        wait.Until(d =>
+                        {
+                            try
+                            {
+                                return d.FindElement(By.Id("txtItemName")).GetAttribute("value") == "";
+                            }
+                            catch { return false; }
+                        });
                     }
                     else
                     {
-                        _driver.FindElement(By.Id("btnAdd")).Click();
-                        Thread.Sleep(1500); // Chờ popup đóng lại
+                        var btnAdd = wait.Until(d =>
+                        {
+                            try
+                            {
+                                var el = d.FindElement(By.Id("btnAdd"));
+                                return el.Displayed && el.Enabled ? el : null;
+                            }
+                            catch { return null; }
+                        });
+                        ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnAdd);
+
+                        // Chờ popup chi tiết đóng
+                        wait.Until(d =>
+                        {
+                            try
+                            {
+                                var dialogs = d.FindElements(By.CssSelector("div.ui-dialog[aria-describedby='InvoiceDetailsNewEdit']"));
+                                return dialogs.Count == 0 || !dialogs[0].Displayed;
+                            }
+                            catch { return true; }
+                        });
                     }
+
                     Console.WriteLine($"Đã thêm dòng {i + 1}/{products.Count}: {p.Name}");
                 }
 
                 // ============ 7. LƯU HÓA ĐƠN ============
                 _driver.SwitchTo().DefaultContent();
 
-                // Trở lại iframe chính để bấm nút Ghi lại
                 if (isIframe)
                 {
                     try { _driver.SwitchTo().Frame("framedialogInvoiceNewEdit"); }
                     catch { }
                 }
 
-                var btnSave = wait.Until(d => d.FindElement(By.Id("btnSave")));
+                var btnSave = wait.Until(d =>
+                {
+                    try
+                    {
+                        var el = d.FindElement(By.Id("btnSave"));
+                        return el.Displayed && el.Enabled ? el : null;
+                    }
+                    catch { return null; }
+                });
+
+                if (btnSave == null)
+                    throw new Exception("Không tìm thấy nút Ghi lại.");
+
                 btnSave.Click();
-                Console.WriteLine("Đã bấm Ghi lại (Lưu hóa đơn)");
-                Thread.Sleep(4000); // Chờ 4s để bảng danh sách bên ngoài load lại
+                Console.WriteLine("Đã bấm Ghi lại — chờ GUID...");
 
                 // ============ 8. LẤY GUID HÓA ĐƠN VỪA TẠO ============
                 _driver.SwitchTo().DefaultContent();
@@ -572,7 +866,7 @@ namespace SaovietTax
                 }
                 catch { }
 
-                Thread.Sleep(2000);
+                Thread.Sleep(700);
 
                 var firstRow = _driver.FindElement(By.CssSelector("#gg-table-1 tbody tr:first-child"));
                 var checkbox = firstRow.FindElement(By.CssSelector(".CheckOne input"));
@@ -790,9 +1084,9 @@ namespace SaovietTax
                 try { _driver.SwitchTo().DefaultContent(); } catch { }
             }
         }
-        private bool TryDeleteDraftMTT(string idnhap,int IsMTT)
+        private bool TryDeleteDraftMTT(string idnhap, int IsMTT)
         {
-            if (string.IsNullOrEmpty(idnhap) || idnhap == "0") return true; // Không có gì để xóa
+            if (string.IsNullOrEmpty(idnhap) || idnhap == "0") return true;
 
             try
             {
@@ -801,24 +1095,35 @@ namespace SaovietTax
 
                 // 1. Chuyển sang trang MTT
                 if (IsMTT == 1)
+                {
                     _driver.Navigate().GoToUrl(BASE_URL + "MTT?IsMTT=true");
-                Thread.Sleep(2500); // Chờ bảng load
+                    Thread.Sleep(2500);
+                }
 
-                // 2. Tìm nút Xem/Sửa của hóa đơn (Dùng FindElements để không văng lỗi nếu không thấy)
+                // 2. ƯU TIÊN NÚT SỬA (aeditInvoice) — KHÔNG lấy nút Xem
                 var editBtns = _driver.FindElements(By.XPath(
-                    $"//a[contains(@onclick, '{idnhap.ToLower()}') and (contains(@class, 'aeditInvoice') or contains(@class, 'aviewInvoice'))]"));
+                    $"//a[contains(@onclick, '{idnhap.ToLower()}') and contains(@class, 'aeditInvoice')]"));
 
-                // Nếu không tìm thấy nút -> Hóa đơn đã bị xóa hoặc không tồn tại
                 if (editBtns.Count == 0)
                 {
-                    Console.WriteLine("-> Không tìm thấy nháp cũ trên lưới (Có thể đã bị xóa). Bỏ qua.");
+                    Console.WriteLine("-> Không tìm thấy nút SỬA của nháp cũ. Bỏ qua.");
                     return true;
                 }
 
-                // 3. Nếu tìm thấy, bấm vào nút
-                ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView(true); arguments[0].click();", editBtns[0]);
+                // ✅ Verify onclick đúng idnhap (chống match nhầm chuỗi con)
+                var onclick = editBtns[0].GetAttribute("onclick") ?? "";
+                Console.WriteLine($"[Del] Nút Sửa onclick = {onclick}");
+                if (!onclick.ToLower().Contains(idnhap.ToLower()))
+                {
+                    Console.WriteLine("[Del] ⚠️ Nút không khớp idnhap — KHÔNG xoá.");
+                    return false;
+                }
 
-                // 4. Chờ popup mở ra
+                // 3. Bấm nút Sửa
+                ((IJavaScriptExecutor)_driver).ExecuteScript(
+                    "arguments[0].scrollIntoView(true); arguments[0].click();", editBtns[0]);
+
+                // 4. Chờ popup Sửa mở
                 Thread.Sleep(2000);
                 try
                 {
@@ -827,15 +1132,30 @@ namespace SaovietTax
                 }
                 catch
                 {
-                    Console.WriteLine("-> Lỗi: Không mở được popup hóa đơn nháp.");
+                    Console.WriteLine("-> Lỗi: Không mở được popup Sửa hoá đơn.");
                     return false;
                 }
 
-                // 5. Bấm nút Xóa hóa đơn
-                var btnDelete = wait.Until(d => d.FindElement(By.Id("btnDeleteInvoice")));
+                // 5. Bấm nút Xoá
+                var btnDelete = wait.Until(d =>
+                {
+                    try
+                    {
+                        var el = d.FindElement(By.Id("btnDeleteInvoice"));
+                        return el.Displayed && el.Enabled ? el : null;
+                    }
+                    catch { return null; }
+                });
+
+                if (btnDelete == null)
+                {
+                    Console.WriteLine("-> Không thấy nút Xoá (có thể đang ở popup Xem thay vì Sửa).");
+                    return false;
+                }
+
                 ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnDelete);
 
-                // 6. Xác nhận xóa
+                // 6. Xác nhận xoá
                 Thread.Sleep(1500);
                 try
                 {
@@ -844,14 +1164,13 @@ namespace SaovietTax
                 }
                 catch
                 {
-                    // Thử tìm ngoài iframe
                     _driver.SwitchTo().DefaultContent();
                     var btnConfirmOut = wait.Until(d => d.FindElement(By.XPath("//button[contains(text(), 'Xoá khỏi hệ thống')]")));
                     ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnConfirmOut);
                 }
 
                 Console.WriteLine("✅ Đã xóa nháp cũ thành công.");
-                Thread.Sleep(2000); // Chờ Bkav xóa xong
+                Thread.Sleep(2000);
                 return true;
             }
             catch (Exception ex)
