@@ -96,14 +96,18 @@ namespace SaovietTax
         // ================================================================
         // ============ HÀM ĐĂNG NHẬP DÙNG CHUNG ============
         // ================================================================
-        private IWebDriver LoginBkav(string username, string password)
+        private IWebDriver LoginBkav(string username, string password,bool ishow)
         {
             var service = ChromeDriverService.CreateDefaultService();
             service.HideCommandPromptWindow = true;
 
             var options = new ChromeOptions();
             // Bỏ comment nếu muốn ẩn:
-             options.AddArgument("--headless=new");
+            if (!ishow)
+            {
+                options.AddArgument("--headless=new");
+            }
+             
              options.AddArgument("--window-size=1920,1080");
 
             var driver = new ChromeDriver(service, options);
@@ -1001,7 +1005,7 @@ namespace SaovietTax
                 Console.WriteLine("Đang đăng nhập Bkav...");
                 progressPanel1.Caption = "Đang đăng nhập Bkav...";
                 Application.DoEvents();
-                _driver = LoginBkav(username, password);
+                _driver = LoginBkav(username, password,false);
 
                 // 5. Xóa nháp cũ nếu có
                 string idnhap = kq2.Rows[0]["IdNhap"].ToString();
@@ -1235,7 +1239,7 @@ namespace SaovietTax
                 string username = rows["Username"]?.ToString();
                 string password = rows["Password"]?.ToString();
                 int IsMTT = rows["IsMTT"] != DBNull.Value ? Convert.ToInt32(rows["IsMTT"]) : 0;
-                _driver = LoginBkav(username, password);
+                _driver = LoginBkav(username, password,false);
                 Console.WriteLine("Đang xóa nháp cũ: " + idnhap);
                 TryDeleteDraftMTT(idnhap, IsMTT);
                 _driver.Quit();
@@ -1257,6 +1261,9 @@ namespace SaovietTax
         // ================================================================
         // ============ PHÁT HÀNH (giữ nguyên code cũ) ============
         // ================================================================
+        // Thêm các using cần thiết ở đầu file nếu chưa có:
+        // using System.Text.RegularExpressions;
+
         private void PhatHanhHD()
         {
             try
@@ -1266,73 +1273,238 @@ namespace SaovietTax
                 var row = dtInfo.Rows[0];
                 string username = row["Username"]?.ToString();
                 string password = row["Password"]?.ToString();
-                int IsMTT = row["IsMTT"] != DBNull.Value ? Convert.ToInt32(row["IsMTT"]) : 0;   
+                int IsMTT = row["IsMTT"] != DBNull.Value ? Convert.ToInt32(row["IsMTT"]) : 0;
+
                 // 2. Đăng nhập
-                Console.WriteLine("Đang đăng nhập để phát hành...");
-                _driver = LoginBkav(username, password);
-                var wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(20));
+                SetCaption("Đang đăng nhập Bkav...");
+                _driver = LoginBkav(username, password,true);
+                var wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(30));
 
                 // 3. Lấy GUID từ file txt (định dạng: PH_GUID_...)
                 var getsplit = _content.Split('_');
-                string invoiceGuid = getsplit[1].ToLower();
+                if (getsplit.Length < 2) throw new Exception("Định dạng file invoice.txt không hợp lệ.");
+                string invoiceGuid = getsplit[1].Trim().ToLower();
 
-                // 4. Chuyển sang trang MTT để tìm hóa đơn
-                if(IsMTT==1)
-                _driver.Navigate().GoToUrl("https://van.ehoadon.vn/MTT?IsMTT=true");
-                wait.Until(d => d.Url.Contains("MTT"));
-                Thread.Sleep(2000);
+                // 4. Mở trang danh sách hóa đơn (Bắt buộc phải qua danh sách để kích hoạt đúng luồng)
+                SetCaption("Đang mở danh sách hóa đơn...");
+                string listUrl = IsMTT == 1 ? BASE_URL + "MTT?IsMTT=true" : BASE_URL + "QLHD";
+                _driver.Navigate().GoToUrl(listUrl);
+                wait.Until(d => d.Url.Contains(IsMTT == 1 ? "MTT" : "QLHD"));
+                Thread.Sleep(2000); // Chờ grid load
 
-                // 5. Tìm nút Xem/Sửa của hóa đơn đó và click
-                var viewBtn = wait.Until(d => d.FindElement(By.XPath(
-                    $"//a[contains(@onclick, '{invoiceGuid}') and (contains(@class, 'aviewInvoice') or contains(@class, 'aeditInvoice'))]")));
-
-                // Dùng JS click để tránh bị che
-                ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView(true); arguments[0].click();", viewBtn);
-
-                // 6. Chờ popup mở ra
-                wait.Until(d => d.FindElement(By.Id("dialogViewDetail")).Displayed || d.FindElement(By.Id("framedialogInvoiceNewEdit")).Displayed);
-                Thread.Sleep(1500);
-
-                // 7. Tìm và bấm nút Phát hành (Tùy giao diện Bkav có thể là btnPublish, btnSign, btnRelease...)
-                // Mở iframe chứa popup
-                string frameId = _driver.FindElements(By.Id("framedialogInvoiceNewEdit")).Count > 0 ? "framedialogInvoiceNewEdit" : "framedialogViewDetail";
-                _driver.SwitchTo().Frame(frameId);
-
-                // Tìm nút Phát hành (Bạn có thể F12 để xem chính xác ID của nút này)
-                var btnPublish = wait.Until(d => d.FindElement(By.XPath("//button[contains(text(), 'Phát hành')] | //a[contains(text(), 'Phát hành')] | //*[@id='btnPublish'] | //*[@id='btnSign']")));
-
-                ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnPublish);
-                Console.WriteLine("Đã bấm nút Phát hành. Vui lòng chờ...");
-
-                // 8. Xử lý popup xác nhận (nếu có)
-                Thread.Sleep(1500);
+                // 5. Tìm đúng dòng hóa đơn và bấm nút "Xem Hóa Đơn" (viewInvoice)
+                SetCaption("Đang tìm và mở hóa đơn nháp...");
+                IWebElement btnView = null;
                 try
                 {
-                    // Chuyển về trang mặc định để tìm popup xác nhận (thường popup này hiện đè lên trên)
-                    _driver.SwitchTo().DefaultContent();
-                    var btnConfirm = wait.Until(d => d.FindElement(By.XPath("//button[contains(text(), 'Đồng ý')] | //button[contains(text(), 'Xác nhận')] | //button[contains(@class, 'btn-primary')]")));
-                    ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnConfirm);
-                    Console.WriteLine("Đã xác nhận phát hành.");
+                    // Tìm thẻ <tr> có chứa GUID trong thuộc tính data-invoiceguid hoặc trong HTML
+                    // Sau đó tìm nút có class 'viewInvoice' bên trong dòng đó.
+                    btnView = wait.Until(d =>
+                    {
+                        try
+                        {
+                            // Cách 1: Tìm theo data-invoiceguid (chuẩn nhất)
+                            var rows = d.FindElements(By.CssSelector($"tr[data-invoiceguid='{invoiceGuid}']"));
+                            if (rows.Count > 0)
+                            {
+                                var btn = rows[0].FindElements(By.CssSelector(".viewInvoice, [class*='viewInvoice']"));
+                                if (btn.Count > 0 && btn[0].Displayed) return btn[0];
+                            }
+
+                            // Cách 2: Fallback tìm theo onclick chứa GUID và class viewInvoice
+                            var fallback = d.FindElements(By.XPath($"//a[contains(@onclick, '{invoiceGuid}') and contains(@class, 'viewInvoice')]"));
+                            if (fallback.Count > 0 && fallback[0].Displayed) return fallback[0];
+
+                            return null;
+                        }
+                        catch { return null; }
+                    });
                 }
                 catch
                 {
-                    Console.WriteLine("Không có popup xác nhận hoặc đã tự động ký.");
+                    throw new Exception($"Không tìm thấy nút Xem Hóa Đơn cho GUID: {invoiceGuid}. Hãy kiểm tra lại trạng thái nháp trên Bkav.");
                 }
 
-                // 9. Chờ quá trình ký số (USB Token) hoàn tất
-                Console.WriteLine("Đang chờ ký số (nhớ cắm USB Token)...");
-                Thread.Sleep(5000);
+                // Cuộn tới và click bằng JS để tránh bị che
+                ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'}); arguments[0].click();", btnView);
+                Console.WriteLine("Đã bấm nút Xem Hóa Đơn.");
 
-                MessageBox.Show("Đã hoàn tất thao tác Phát hành!", "Thông báo");
+                // 6. Chờ popup chi tiết mở ra
+                SetCaption("Đang chờ cửa sổ hóa đơn mở...");
+                Thread.Sleep(2000);
+
+                // 7. Chuyển vào iframe để bấm nút Phát hành/Ký số
+                // Bkav thường dùng iframe có ID là 'framedialogInvoiceNewEdit' hoặc tương tự
+                bool inIframe = false;
+                try
+                {
+                    wait.Until(d => d.FindElements(By.Id("framedialogInvoiceNewEdit")).Count > 0);
+                    _driver.SwitchTo().Frame("framedialogInvoiceNewEdit");
+                    inIframe = true;
+                }
+                catch
+                {
+                    try
+                    {
+                        // Thử tìm iframe tổng quát trong dialog
+                        var iframe = wait.Until(d =>
+                        {
+                            var els = d.FindElements(By.CssSelector("div.ui-dialog iframe"));
+                            return els.Count > 0 && els[0].Displayed ? els[0] : null;
+                        });
+                        _driver.SwitchTo().Frame(iframe);
+                        inIframe = true;
+                    }
+                    catch
+                    {
+                        throw new Exception("Không tìm thấy khung cửa sổ hóa đơn (iframe).");
+                    }
+                }
+
+                // 8. Tìm nút Phát hành / Ký số (Cần F12 trên Bkav để lấy chính xác ID)
+                // Thường là btnPublish, btnSign, btnRelease, hoặc nút có text "Phát hành"
+                SetCaption("Đang tìm nút Phát hành/Ký số...");
+                IWebElement btnPublish = null;
+                try
+                {
+                    btnPublish = wait.Until(d =>
+                    {
+                        // Ưu tiên ID (Bkav thường dùng ID cố định)
+                        var byId = d.FindElements(By.Id("btnPublish"));
+                        if (byId.Count == 0) byId = d.FindElements(By.Id("btnSign"));
+                        if (byId.Count == 0) byId = d.FindElements(By.Id("btnRelease"));
+                        if (byId.Count > 0 && byId[0].Displayed) return byId[0];
+
+                        // Fallback theo text (ít chính xác hơn)
+                        var byText = d.FindElements(By.XPath("//button[contains(text(), 'Phát hành')] | //a[contains(text(), 'Phát hành')] | //input[contains(@value, 'Phát hành')]"));
+                        if (byText.Count > 0 && byText[0].Displayed) return byText[0];
+
+                        return null;
+                    });
+                }
+                catch
+                {
+                    throw new Exception("Không tìm thấy nút Phát hành. Có thể giao diện Bkav đã thay đổi, hãy F12 để kiểm tra lại ID nút.");
+                }
+
+                ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnPublish);
+                Console.WriteLine("Đã bấm nút Phát hành. Chờ xử lý...");
+
+                // 9. Xử lý popup xác nhận (nếu có)
+                Thread.Sleep(1500);
+                try
+                {
+                    _driver.SwitchTo().DefaultContent(); // Về trang chính để tìm popup confirm
+                    var btnConfirm = _driver.FindElements(By.XPath("//button[contains(text(), 'Đồng ý')] | //button[contains(text(), 'Xác nhận')] | //button[contains(@class, 'btn-primary')]"));
+                    if (btnConfirm.Count > 0 && btnConfirm[0].Displayed)
+                    {
+                        ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", btnConfirm[0]);
+                        Console.WriteLine("Đã xác nhận popup.");
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine("Không có popup xác nhận hoặc đã tự động xử lý.");
+                }
+
+                // 10. CHỜ KẾT QUẢ KÝ SỐ (Quan trọng: Không dùng Thread.Sleep cứng)
+                SetCaption("Đang chờ ký số (Vui lòng cắm USB Token và nhập mã PIN)...");
+                Console.WriteLine("Đang chờ ký số...");
+
+                // Chờ tối đa 60 giây để xem có thông báo thành công hoặc lỗi không
+                bool isSuccess = false;
+                bool isError = false;
+                string errorMessage = "";
+
+                var waitResult = new WebDriverWait(_driver, TimeSpan.FromSeconds(60));
+                try
+                {
+                    waitResult.Until(d =>
+                    {
+                        try
+                        {
+                            // Tìm thông báo thành công (Bkav thường hiện alert hoặc text "Đã phát hành")
+                            string pageSource = d.PageSource.ToLower();
+                            if (pageSource.Contains("đã phát hành") || pageSource.Contains("phát hành thành công") || pageSource.Contains("cấp số hóa đơn"))
+                            {
+                                isSuccess = true;
+                                return true;
+                            }
+
+                            // Tìm thông báo lỗi (sai PIN, hết hạn token, lỗi kết nối...)
+                            var errEl = d.FindElements(By.CssSelector(".error, .alert-danger, .toast-error"));
+                            if (errEl.Count > 0 && errEl[0].Displayed)
+                            {
+                                isError = true;
+                                errorMessage = errEl[0].Text;
+                                return true;
+                            }
+
+                            // Nếu popup đã đóng và quay về danh sách, có thể đã xong
+                            if (d.Url.Contains("MTT") || d.Url.Contains("QLHD"))
+                            {
+                                // Kiểm tra xem GUID còn ở trạng thái nháp không
+                                var rows = d.FindElements(By.CssSelector($"tr[data-invoiceguid='{invoiceGuid}']"));
+                                if (rows.Count > 0)
+                                {
+                                    string rowText = rows[0].Text.ToLower();
+                                    if (rowText.Contains("đã phát hành") || rowText.Contains("đph"))
+                                    {
+                                        isSuccess = true;
+                                        return true;
+                                    }
+                                }
+                            }
+
+                            return false;
+                        }
+                        catch { return false; }
+                    });
+                }
+                catch (WebDriverTimeoutException)
+                {
+                    // Hết thời gian chờ
+                }
+
+                if (isSuccess)
+                {
+                    SetCaption("Phát hành thành công!");
+                            ExecuteQueryResult(@"UPDATE HoaDon SET StatusPH = ? WHERE IdTemplate = ?", new OleDbParameter[]
+                     {
+                            new OleDbParameter("?", "1"),
+                            new OleDbParameter("?", invoiceGuid),
+                     });
+                    MessageBox.Show("Đã hoàn tất thao tác Phát hành hóa đơn!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else if (isError)
+                {
+                    SetCaption("Phát hành thất bại!");
+                    MessageBox.Show($"Lỗi phát hành: {errorMessage}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else
+                {
+                    // Trường hợp không rõ ràng, có thể do USB Token chưa cắm hoặc chưa ký xong
+                    SetCaption("Chờ xác nhận...");
+                    MessageBox.Show("Đã gửi lệnh phát hành nhưng chưa nhận được xác nhận tự động.\n\nVui lòng kiểm tra trực tiếp trên trình duyệt Bkav xem hóa đơn đã được cấp số chưa.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("❌ Lỗi phát hành: " + ex.Message);
-                MessageBox.Show("Lỗi phát hành: " + ex.Message);
+                SetCaption("Lỗi phát hành!");
+                MessageBox.Show("Lỗi phát hành: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                try { _driver?.Quit(); } catch { }
+                // Không tự động đóng Chrome ngay nếu đang chờ ký, nhưng nếu đã xong thì đóng
+                try
+                {
+                    if (_driver != null)
+                    {
+                        _driver.Quit();
+                    }
+                }
+                catch { }
                 _driver = null;
                 this.Close();
             }

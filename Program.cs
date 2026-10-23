@@ -15,7 +15,7 @@ namespace SaovietTax
     {
         // ★ ĐƯỜNG DẪN TUYỆT ĐỐI TỚI SharedDLLs ★
         //private static readonly string SharedDllsPath = @"C:\apps\SharedDLLs";
-        private static readonly string SharedDllsPath = @"\\192.168.1.90\Ke toan 2025 New\2 Copi vao dung 4\Tools\Debug";
+        private static readonly string SharedDllsPath = @"C:\apps\SharedDLLs";
         static Mutex mutex;
 
         [STAThread]
@@ -86,7 +86,7 @@ namespace SaovietTax
                 //  vì đã có resolver, nhưng vẫn an toàn hơn nếu dùng reflection)
                 switch (content.Trim())
                 {
-                    case "1": Application.Run(CreateForm("SaovietTax.APIInvoice")); break;
+                    case "1": Application.Run(CreateForm("SaovietTax.frmMain")); break;
                     case "2": Application.Run(CreateForm("SaovietTax.KTHT")); break;
                     case "3": Application.Run(CreateForm("SaovietTax.frmTaihoadonvb")); break;
                     case "4": Application.Run(CreateForm("SaovietTax.Form3")); break;
