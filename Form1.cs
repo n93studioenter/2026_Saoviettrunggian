@@ -14069,7 +14069,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             else // Hóa đơn bán ra (Bkav là người mua hoặc bán cho người tiêu dùng)
             {
                 string mstBan = nBan?.SelectSingleNode("MST")?.InnerText;
-                if (mstcongty != mstBan) return null;
+                //if (mstcongty != mstBan) return null;
 
                 // Lấy tên người mua (có thể là "Bán cho người tiêu dùng")
                 string tenDoiTac = !string.IsNullOrWhiteSpace(nMua?.SelectSingleNode("Ten")?.InnerText)
@@ -35060,7 +35060,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         {
             Debug.WriteLine("🟢 PdfDownloadConsumerLoop START");
 
-            const int MAX_PARALLEL = 5;
+            const int MAX_PARALLEL = 8;
             var sem = new SemaphoreSlim(MAX_PARALLEL, MAX_PARALLEL);
             var runningTasks = new List<Task>();
 
@@ -35075,7 +35075,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     var invLocal = inv;   // Capture
 
                     // ═══════════════════════════════════════════════════════
-                    // ✅ Semaphore BÊN TRONG Task.Run — 2 task chạy song song
+                    // ✅ Semaphore BÊN TRONG Task.Run — 8 task chạy song song
                     // ═══════════════════════════════════════════════════════
                     var task = Task.Run(async () =>
                     {
@@ -52293,7 +52293,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             LogToFile("KiemTraHetHanMatKhau", ex);
                         }
 
-                    }
+                    }   
 
                     if (loginResult.Status == LoginStatus.WrongCredentials)
                     {
