@@ -381,6 +381,7 @@
     <Compile Include="DTO\Rootclass.cs" />
     <Compile Include="DTO\RootDetail.cs" />
     <Compile Include="DTO\ScheduleHelper.cs" />
+    <Compile Include="DTO\SliderCaptchaSolver.cs" />
     <Compile Include="DTO\SvgCaptchaSolver.cs" />
     <Compile Include="DTO\SvgCaptchaSolver2.cs" />
     <Compile Include="DTO\TextSimilarityCalculator.cs" />

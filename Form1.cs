@@ -48553,7 +48553,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 var options = new ChromeOptions();
 
                 // Chỉ giữ những flag thật sự cần thiết
-                options.AddArgument("--headless");
+               // options.AddArgument("--headless");
                 options.AddArgument("--disable-notifications");
                 options.AddArgument("--no-first-run");
                 options.AddArgument("--no-default-browser-check");
