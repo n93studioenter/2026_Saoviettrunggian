@@ -384,6 +384,7 @@
     <Compile Include="DTO\SliderCaptchaSolver.cs" />
     <Compile Include="DTO\SvgCaptchaSolver.cs" />
     <Compile Include="DTO\SvgCaptchaSolver2.cs" />
+    <Compile Include="DTO\TabManager.cs" />
     <Compile Include="DTO\TextSimilarityCalculator.cs" />
     <Compile Include="DTO\VatTu.cs" />
     <Compile Include="DTO\VietnameseProductMatcher.cs" />

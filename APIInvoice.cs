@@ -1330,8 +1330,8 @@ WHERE IdNhap IS NOT NULL
             Application.DoEvents();
 
             string query = "SELECT * FROM tbRegister";
-            string pathluu = "";    
-            var kq = ExecuteQuery(query, null); 
+            string pathluu = "";
+            var kq = ExecuteQuery(query, null);
             try
             {
                 if (kq.Rows.Count > 0)
@@ -1344,57 +1344,65 @@ WHERE IdNhap IS NOT NULL
                     {
                         Directory.CreateDirectory(pathluu);
                     }
-                    //Lấy nam taichinh
                 }
             }
             catch (Exception ex)
             {
                 XtraMessageBox.Show(ex.Message);
             }
-            //Lấy tbgetphieu
+
+            // Lấy tbgetphieu
             var getsplit = _content.Split('_');
             progressPanel1.Caption = "Đang lấy thông tin hoá đơn...";
             Application.DoEvents();
-            // Có thể bạn nên JOIN theo ID, không phải MaSo
+
             var qrTimct = @"
-    SELECT ChungTu.*,HOADON.*
-    FROM ChungTu 
-    INNER JOIN HOADON ON HOADON.MaSo = ChungTu.MaSo 
-    WHERE ChungTu.SoHieu = ? AND KyHieu = ? AND NgayCT=? ";
+SELECT ChungTu.*,HOADON.*
+FROM ChungTu 
+INNER JOIN HOADON ON HOADON.MaSo = ChungTu.MaSo 
+WHERE ChungTu.SoHieu = ? AND KyHieu = ? AND NgayCT=? ";
 
             var parameterss = new OleDbParameter[]
             {
-    new OleDbParameter("?", getsplit[0]),
-    new OleDbParameter("?", getsplit[1]),
-    new OleDbParameter("?", getsplit[2])
+        new OleDbParameter("?", getsplit[0]),
+        new OleDbParameter("?", getsplit[1]),
+        new OleDbParameter("?", getsplit[2])
             };
 
             var kq2 = ExecuteQuery(qrTimct, parameterss);
+            if (kq2.Rows.Count == 0)
+            {
+                XtraMessageBox.Show("Không tìm thấy thông tin chứng từ.");
+                return;
+            }
 
             string sqlgp = @"
-    SELECT tbGetphieu.*
-    FROM tbGetphieu
-    INNER JOIN ChungTu ON CStr(ChungTu.MaCT) = tbGetphieu.MaCT";
- 
-            var kqgphieu = ExecuteQuery(sqlgp);
-             
+SELECT tbGetphieu.*
+FROM tbGetphieu
+INNER JOIN ChungTu ON CStr(ChungTu.MaCT) = tbGetphieu.MaCT where ChungTu.MaSo=?";
+            var paramss = new OleDbParameter[]
+            {
+        new OleDbParameter("?", kq2.Rows[0]["ChungTu.MaSo"])
+            };
+            var kqgphieu = ExecuteQuery(sqlgp, paramss);
 
-            //Lấy danh sách chứng từ từ MaCT
+            // Lấy danh sách chứng từ từ MaCT
             var sql = "SELECT * FROM KhachHang WHERE MaSo = ?";
             parameterss = new OleDbParameter[]
-          {
-    new OleDbParameter("?",  kq2.Rows[0]["MaKhachHang"]),
-          };
+            {
+        new OleDbParameter("?",  kq2.Rows[0]["MaKhachHang"]),
+            };
             var dtKhachhang = ExecuteQuery(sql, parameterss);
 
             sql = "SELECT * FROM ChungTu WHERE MaCT = ?";
             var param = new OleDbParameter[]
             {
-                new OleDbParameter("?", kq2.Rows[0]["MaCT"])
+        new OleDbParameter("?", kq2.Rows[0]["MaCT"])
             };
-            //Lấy data khách hàng Từ MaKhachHang 
+
             var kq3 = ExecuteQuery(sql, param);
-            //add datatable hang hoa
+
+            // DataTable hang hoa
             DataTable dtHangHoa = new DataTable();
             dtHangHoa.Columns.Add("ItemCode", typeof(string));
             dtHangHoa.Columns.Add("ItemName", typeof(string));
@@ -1403,26 +1411,31 @@ WHERE IdNhap IS NOT NULL
             dtHangHoa.Columns.Add("Quantity", typeof(decimal));
             dtHangHoa.Columns.Add("Amount", typeof(decimal));
             dtHangHoa.Columns.Add("Thuesuat", typeof(int));
+
             foreach (DataRow row in kq3.Rows)
             {
                 try
                 {
-                    if( row["MaVattu"].ToString().Trim() == "0")
+                    if (row["MaVattu"].ToString().Trim() == "0")
                     {
-                        continue; // Bỏ qua nếu MaVattu trống
+                        continue;
                     }
                     string sqlHangHoa = "SELECT * FROM Vattu WHERE MaSo = ?";
                     var paramHangHoa = new OleDbParameter[]
                     {
-                    new OleDbParameter("?", row["MaVattu"])
+                new OleDbParameter("?", row["MaVattu"])
                     };
                     var kqHangHoa = ExecuteQuery(sqlHangHoa, paramHangHoa);
-                    double sops = row["SoPS"].ToString() == "" ? 0 : Convert.ToDouble(row["SoPS"]);
-                    double soluong = row["SoPS2Co"].ToString() == "" ? 0 : Convert.ToDouble(row["SoPS2Co"]);
-                    double dongia = Math.Round((sops / soluong),2);
+
+                    decimal sops = row["SoPS"].ToString() == "" ? 0 : Convert.ToDecimal(row["SoPS"]);
+                    decimal soluong = row["SoPS2Co"].ToString() == "" ? 0 : Convert.ToDecimal(row["SoPS2Co"]);
+                    decimal dongia = soluong != 0 ? Math.Round((sops / soluong), 2) : 0;
+
                     string tenhh = kqHangHoa.Rows[0]["TenVattu"].ToString();
                     string donvitinh = kqHangHoa.Rows[0]["DonVi"].ToString();
-                    int thuesuat= row["Thuesuat"] == DBNull.Value ? 0 : Convert.ToInt32(row["Thuesuat"]);
+
+                    int thuesuat = row["Thuesuat"] == DBNull.Value ? 0 : Convert.ToInt32(row["Thuesuat"]);
+
                     dtHangHoa.Rows.Add("", tenhh, donvitinh, dongia, soluong, sops, thuesuat);
                 }
                 catch (Exception ex)
@@ -1430,38 +1443,39 @@ WHERE IdNhap IS NOT NULL
                     MessageBox.Show("Lỗi khi lấy thông tin hàng hóa: " + ex.Message);
                 }
             }
+
+            // Xử lý itemInfo với decimal và làm tròn
             var itemInfo = dtHangHoa.AsEnumerable()
-    .Select((row, index) =>
-    {
-        // Lấy thuế suất an toàn (tránh lỗi nếu kq2 không có dòng nào)
-        string defaultTyLe = (kq2 != null && kq2.Rows.Count > 0) ? kq2.Rows[0]["TyLe"].ToString() : "0";
+                .Select((row, index) =>
+                {
+                    string defaultTyLe = (kq2 != null && kq2.Rows.Count > 0) ? kq2.Rows[0]["TyLe"].ToString() : "0";
+                    string thueSuat = row["Thuesuat"]?.ToString()?.Trim() ?? "0";
+                    string vatPercentageStr = (thueSuat != "0" && thueSuat != "") ? thueSuat : defaultTyLe;
 
-        string thueSuat = row["Thuesuat"]?.ToString()?.Trim() ?? "0";
-        string vatPercentageStr = (thueSuat != "0" && thueSuat != "") ? thueSuat : defaultTyLe;
+                    decimal amount = row["Amount"] != DBNull.Value ? Convert.ToDecimal(row["Amount"]) : 0;
+                    decimal vatRate = decimal.TryParse(vatPercentageStr, out decimal r) ? r : 0;
 
-        // Ép kiểu số an toàn (tránh lỗi nếu ô trống)
-        double amount = row["Amount"] != DBNull.Value ? Convert.ToDouble(row["Amount"]) : 0;
-        double vatRate = double.TryParse(vatPercentageStr, out double r) ? r : 0;
+                    // Làm tròn tiền thuế (0 chữ số thập phân)
+                    decimal vatAmount = Math.Round(amount * vatRate / 100, 0, MidpointRounding.AwayFromZero);
 
-        double vatAmount = amount * vatRate / 100;
+                    return new
+                    {
+                        lineNumber = index + 1,
+                        itemName = Helpers.ConvertVniToUnicode(row["ItemName"].ToString()),
+                        unitName = Helpers.ConvertVniToUnicode(row["UnitName"].ToString()),
+                        unitPrice = row["UnitPrice"] != DBNull.Value ? Convert.ToDecimal(row["UnitPrice"]) : 0,
+                        quantity = row["Quantity"] != DBNull.Value ? Convert.ToDecimal(row["Quantity"]) : 0,
+                        itemTotalAmountWithoutVat = amount,
+                        vatPercentage = vatPercentageStr,
+                        vatAmount = vatAmount,
+                        selection = 1,
+                        itemTotalAmountWithVat = amount + vatAmount,
+                    };
+                }).ToArray();
 
-        return new
-        {
-            lineNumber = index + 1,
-            //itemCode = "",
-            itemName = Helpers.ConvertVniToUnicode(row["ItemName"].ToString()),
-            unitName = Helpers.ConvertVniToUnicode(row["UnitName"].ToString()),
-            unitPrice = row["UnitPrice"] != DBNull.Value ? Convert.ToDouble(row["UnitPrice"]) : 0,
-            quantity = row["Quantity"] != DBNull.Value ? Convert.ToDouble(row["Quantity"]) : 0,
-            itemTotalAmountWithoutVat = amount,
-            vatPercentage = vatPercentageStr,
-            vatAmount = vatAmount,
-            selection = 1,
-            itemTotalAmountWithVat = amount + vatAmount,
-        };
-    }).ToArray();
             progressPanel1.Caption = "Đang thực hiện tạo hoá đơn ...";
             Application.DoEvents();
+
             var baseUrl = "https://vinvoice.viettel.vn";
             var cookieContainer = new CookieContainer();
 
@@ -1472,14 +1486,10 @@ WHERE IdNhap IS NOT NULL
             })
             using (var client = new HttpClient(handler))
             {
-                // 1. Thêm cookies
                 var uri = new Uri(baseUrl);
-                if(useCookie.__cf_bm!=null)
-                cookieContainer.Add(uri, new Cookie("__cf_bm", useCookie.__cf_bm));
-                if(useCookie.JSESSIONID!=null)
-                cookieContainer.Add(uri, new Cookie("JSESSIONID", useCookie.JSESSIONID));
+                if (useCookie.__cf_bm != null) cookieContainer.Add(uri, new Cookie("__cf_bm", useCookie.__cf_bm));
+                if (useCookie.JSESSIONID != null) cookieContainer.Add(uri, new Cookie("JSESSIONID", useCookie.JSESSIONID));
 
-                // 2. Thêm headers
                 client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
                 client.DefaultRequestHeaders.Add("Accept", "application/json, text/plain, */*");
                 client.DefaultRequestHeaders.Add("Authorization", $"Bearer {useCookie.access_token}");
@@ -1487,33 +1497,30 @@ WHERE IdNhap IS NOT NULL
                 client.DefaultRequestHeaders.Add("Referer", "https://vinvoice.viettel.vn/invoice-management/invoice-draft");
                 client.DefaultRequestHeaders.Add("Origin", "https://vinvoice.viettel.vn");
 
-                // 3. Tạo JSON data (toàn bộ payload)
                 dynamic dataJson = new ExpandoObject();
-                dataJson.buyerTaxCode = null;   // khởi tạo sẵn
+                dataJson.buyerTaxCode = null;
 
-                //Kiểm tra xem update hay tạo mới
                 var sqlcheck = @"select * from HoaDon  WHERE MaSo =?";
                 var paramcheck = new OleDbParameter[]
-                { 
-        new OleDbParameter("?", kq2.Rows[0]["HOADON.MaSo"].ToString()),
-
+                {
+            new OleDbParameter("?", kq2.Rows[0]["HOADON.MaSo"].ToString()),
                 };
                 var checkupdate = ExecuteQuery(sqlcheck, paramcheck);
-                if (!string.IsNullOrEmpty(checkupdate.Rows[0]["IdNhap"].ToString()) && checkupdate.Rows[0]["IdNhap"].ToString()!="..." && checkupdate.Rows[0]["IdNhap"].ToString() != "0")
+
+                if (!string.IsNullOrEmpty(checkupdate.Rows[0]["IdNhap"].ToString()) && checkupdate.Rows[0]["IdNhap"].ToString() != "..." && checkupdate.Rows[0]["IdNhap"].ToString() != "0")
                 {
-                    dataJson.id= checkupdate.Rows[0]["IdNhap"].ToString();
+                    dataJson.id = checkupdate.Rows[0]["IdNhap"].ToString();
                     dataJson.transactionUuid = null;
                 }
-                //Tìm template theo mã đơn hàng
+
                 var sqlTemplate = @"select * from tbInvoiceTemplate  WHERE ID =?";
                 var paramtemplate = new OleDbParameter[]
                 {
-        new OleDbParameter("?",getsplit[3].ToString()),
-
+            new OleDbParameter("?", getsplit[3].ToString()),
                 };
                 var tbtemplate = ExecuteQuery(sqlTemplate, paramtemplate);
 
-                if(kqgphieu.Rows.Count > 0)
+                if (kqgphieu.Rows.Count > 0)
                 {
                     if (!string.IsNullOrEmpty(kqgphieu.Rows[0]["CCCD"].ToString()) && kqgphieu.Rows[0]["CCCD"].ToString() != "...")
                     {
@@ -1521,33 +1528,41 @@ WHERE IdNhap IS NOT NULL
                         dataJson.buyerIdType = 1;
                         dataJson.buyerIdTypeName = "CCCD";
                     }
-
                 }
 
                 dataJson.invoiceType = "1";
                 dataJson.templateCode = tbtemplate.Rows[0]["Code"].ToString();
                 dataJson.invoiceSeri = tbtemplate.Rows[0]["KHHD"].ToString();
+
                 if (dtKhachhang.Rows[0]["MST"] != null && dtKhachhang.Rows[0]["MST"].ToString() != "..." && dtKhachhang.Rows[0]["MST"].ToString() != "00")
                     dataJson.buyerTaxCode = dtKhachhang.Rows[0]["MST"].ToString();
-                if (kqgphieu.Rows[0]["TenNM"].ToString() != "...")
+
+                if (kqgphieu.Rows.Count > 0 && kqgphieu.Rows[0]["TenNM"].ToString() != "...")
                     dataJson.buyerName = Helpers.ConvertVniToUnicode(kqgphieu.Rows[0]["TenNM"].ToString());
+
                 if (dtKhachhang.Rows[0]["MST"].ToString() == "00")
                 {
                     if (dataJson.buyerTaxCode == null)
                         dataJson.buyerName = "Bán cho người tiêu dùng";
                 }
+
                 if (dtKhachhang.Rows[0]["DiaChi"].ToString() != "...")
                     dataJson.buyerAddress = Helpers.ConvertVniToUnicode(dtKhachhang.Rows[0]["DiaChi"].ToString());
-                //else
-                //    dataJson.buyerAddress = "...";
-                    dataJson.totalAmountWithoutVAT = kq3.AsEnumerable().Where(m => m["MaTKTCCo"].ToString() != "14038").Sum(m => Convert.ToDouble(m["SoPS"]));
-                dataJson.totalVATAmount = kq3.AsEnumerable().Where(m => m["MaTKTCCo"].ToString() == "14038").Sum(m => Convert.ToDouble(m["SoPS"]));
+
+                // ===== TÍNH TỔNG TỪ ITEMINFO ĐỂ TRÁNH SAI SỐ =====
+                decimal totalAmountWithoutVAT = itemInfo.Sum(x => x.itemTotalAmountWithoutVat);
+                decimal totalVATAmount = itemInfo.Sum(x => x.vatAmount);
+                decimal totalAmountWithVAT = totalAmountWithoutVAT + totalVATAmount;
+
+                dataJson.totalAmountWithoutVAT = totalAmountWithoutVAT;
+                dataJson.totalVATAmount = totalVATAmount;
                 dataJson.discountAmount = 0;
-                dataJson.totalAmountWithVAT = kq3.AsEnumerable().Sum(m => Convert.ToDouble(m["SoPS"]));
-                dataJson.totalAmountAfterDiscount = kq3.AsEnumerable().Where(m => m["MaTKTCCo"].ToString() != "14038").Sum(m => Convert.ToDouble(m["SoPS"]));
+                dataJson.totalAmountWithVAT = totalAmountWithVAT;
+                dataJson.totalAmountAfterDiscount = totalAmountWithoutVAT;
                 dataJson.totalServiceChargeAmount = 0;
                 dataJson.totalExciseTaxAmount = 0;
                 dataJson.currencyCode = "VND";
+
                 if (dtKhachhang.Rows[0]["MST"].ToString() != "00")
                 {
                     dataJson.buyerViewStatus = 0;
@@ -1562,28 +1577,29 @@ WHERE IdNhap IS NOT NULL
                     dataJson.buyerViewStatus = 1;
                 }
 
-                    dataJson.invoiceTemplateId = int.Parse(getsplit[3].ToString());
+                dataJson.invoiceTemplateId = int.Parse(getsplit[3].ToString());
                 dataJson.paymentMethod = 3;
-               
-            
                 dataJson.paymentMethodName = "TM/CK";
                 dataJson.domain = null;
                 dataJson.autoCreatePdfInstance = 0;
                 dataJson.invoiceTypeId = 12;
+
+                // ===== TẠO TAX BREAKDOWNS =====
+                var taxBreakdowns = itemInfo
+                    .GroupBy(x => x.vatPercentage)
+                    .Select(g => new
+                    {
+                        vatPercentage = g.Key,
+                        vatTaxableAmount = g.Sum(x => x.itemTotalAmountWithoutVat),
+                        vatTaxAmount = g.Sum(x => x.vatAmount)
+                    }).ToArray();
+
                 dataJson.listProduct = new
                 {
                     itemInfo = itemInfo,
-                    invoiceTaxBreakdowns = new object[] { }
-                    //invoiceTaxBreakdowns = new[]
-                    //{
-                    //    new
-                    //    {
-                    //        vatPercentage = kq2.Rows[0]["TyLe"].ToString(),
-                    //        vatTaxAmount = kq3.AsEnumerable().Where(m => m["MaTKTCCo"].ToString() == "14038").Sum(m => Convert.ToDouble(m["SoPS"])),
-                    //        vatTaxableAmount = kq3.AsEnumerable().Where(m => m["MaTKTCCo"].ToString() != "14038").Sum(m => Convert.ToDouble(m["SoPS"]))
-                    //    }
-                    //}
+                    invoiceTaxBreakdowns = taxBreakdowns // Bổ sung mảng tổng hợp thuế
                 };
+
                 dataJson.listInfoUpdate = new object[] { };
                 dataJson.exchangeRate = 1;
                 dataJson.listElectricityWater = new object[] { };
@@ -1595,21 +1611,17 @@ WHERE IdNhap IS NOT NULL
                 dataJson.fileSpecification = null;
                 dataJson.listFuelInfo = new object[] { };
                 dataJson.source = "WEB";
-                 
 
-                // 4. Tạo MultipartFormDataContent với field "data"
                 var formData = new MultipartFormDataContent();
                 var settings = new JsonSerializerSettings();
                 settings.FloatFormatHandling = FloatFormatHandling.DefaultValue;
 
-                var json = Newtonsoft.Json.JsonConvert.SerializeObject(dataJson,settings);
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(dataJson, settings);
                 formData.Add(new StringContent(json, System.Text.Encoding.UTF8, "application/json"), "data");
 
-                // 5. Gọi API
                 var saveUrl = "https://vinvoice.viettel.vn/api/cluster5/services/einvoiceapplication/api/invoice/draft/save";
                 var response = await client.PostAsync(saveUrl, formData);
                 var result = await response.Content.ReadAsStringAsync();
-                //XtraMessageBox.Show(result);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1617,32 +1629,26 @@ WHERE IdNhap IS NOT NULL
                     Application.DoEvents();
                     var jObj = JObject.Parse(result);
                     long invoiceId = jObj["data"]["id"].Value<long>();
+
                     var updateQr = @"UPDATE HoaDon  SET IdNhap = ?,IdTemplate =? WHERE MaSo =?";
                     var updateParameters = new OleDbParameter[]
                     {
-        new OleDbParameter("?", invoiceId.ToString()), // Cập nhật giá trị TiLe
-        new OleDbParameter("?", getsplit[3].ToString()),
-        new OleDbParameter("?", kq2.Rows[0]["HOADON.MaSo"].ToString()),
-
+                new OleDbParameter("?", invoiceId.ToString()),
+                new OleDbParameter("?", getsplit[3].ToString()),
+                new OleDbParameter("?", kq2.Rows[0]["HOADON.MaSo"].ToString()),
                     };
-                    var updateRowsAffected = ExecuteQueryResult(updateQr, updateParameters);
-                   // MessageBox.Show($"Tạo hóa đơn thành công!\n{result}");
+                    ExecuteQueryResult(updateQr, updateParameters);
 
                     var url = "https://vinvoice.viettel.vn/api/cluster5/services/einvoiceapplication/api/invoice/gen-pdf-invoice?isDraft=0";
-
                     var json2 = JsonConvert.SerializeObject(dataJson);
-
                     var content = new StringContent(json2, Encoding.UTF8, "application/json");
 
-                    // ⚠️ QUAN TRỌNG: thêm cookie/token giống browser
-                    //client.DefaultRequestHeaders.Add("Cookie", "YOUR_COOKIE_HERE");
-
                     var response2 = await client.PostAsync(url, content);
-
                     var pdfBytes = await response2.Content.ReadAsByteArrayAsync();
+
                     string path = Path.Combine(pathluu, $"{invoiceId.ToString()}.pdf");
                     File.WriteAllBytes(path, pdfBytes);
-                    // mở file
+
                     Process.Start(new ProcessStartInfo(path)
                     {
                         UseShellExecute = true
@@ -1651,20 +1657,18 @@ WHERE IdNhap IS NOT NULL
                     var upd = @"UPDATE tbResponse  SET Status = ?";
                     var paas = new OleDbParameter[]
                     {
-        new OleDbParameter("?", "1")
+                new OleDbParameter("?", "1")
                     };
-                    var rrs = ExecuteQueryResult(upd, paas);
+                    ExecuteQueryResult(upd, paas);
                     Application.Exit();
                 }
                 else
                 {
                     progressPanel1.Caption = $"Lỗi {response.StatusCode}:\n{result}";
                     Application.DoEvents();
-                   // MessageBox.Show($"Lỗi {response.StatusCode}:\n{result}");
                 }
             }
         }
-
         private async void btnGetTemplate_Click(object sender, EventArgs e)
         {
             var baseUrl = "https://vinvoice.viettel.vn";
