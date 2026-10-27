@@ -15306,8 +15306,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         {
             if (Mst == "KL")
                 Mst = "00";
-            if(!KiemTraMaSoThue(Mst))
-                Mst = "00";
+            //if(!KiemTraMaSoThue(Mst))
+            //    Mst = "00";
             if (Mst.Length < 10)
                 return lookupHoaDonCT.Any(m => RemoveLeadingZeros(m.SoHD) == RemoveLeadingZeros(SoHD) && m.KyHieu == KyHieu && m.NLap == NLap && m.Type == tpye);
             return lookupHoaDonCT.Contains((Mst, RemoveLeadingZeros(SoHD), KyHieu, NLap, tpye));
@@ -30257,7 +30257,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     SetCaption("Đang tải hoá đơn không nhận mã.xlsx");
                     await Xulyexelvao(tokken, 2);
 
-                    SetCaption("Đang tải hoá đơn máy tính tiền.xlsx");
+                    //SetCaption("Đang tải hoá đơn máy tính tiền.xlsx");
                     await XulyexelvaoMTT(tokken, 3);
 
                     SetCaption("Đang đọc dữ liệu Excel...");
@@ -34301,7 +34301,95 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
         // Khai báo field ở cấp class (ngoài hàm)
         private string _captchaKey = "";
         private string _captchaValue = "";
+        /// <summary>
+        /// Sắp xếp lại dữ liệu trong file Full theo ngày lập hóa đơn.
+        /// Header (dòng 1..MTT_HEADER_ROW) giữ nguyên, dữ liệu từ MTT_DATA_START_ROW được sort.
+        /// </summary>
+        private void SortFullByNgayLap(string fullFilePath, int colNgayLap, bool ascending = true)
+        {
+            int headerRow = MTT_HEADER_ROW;
+            int dataStartRow = MTT_DATA_START_ROW;
 
+            if (!File.Exists(fullFilePath)) return;
+
+            using (var wb = new ClosedXML.Excel.XLWorkbook(fullFilePath))
+            {
+                var ws = wb.Worksheet(1);
+                var used = ws.RangeUsed();
+                if (used == null) return;
+
+                int lastRow = used.LastRow().RowNumber();
+                int firstCol = used.FirstColumn().ColumnNumber();
+                int lastCol = used.LastColumn().ColumnNumber();
+
+                if (lastRow < dataStartRow) return;   // không có dữ liệu
+
+                // ===== BƯỚC 1: Đọc toàn bộ dòng dữ liệu vào List =====
+                var rows = new List<(DateTime Ngay, object[] Values, string[] Formats)>();
+
+                for (int r = dataStartRow; r <= lastRow; r++)
+                {
+                    var cellNgay = ws.Cell(r, colNgayLap);
+
+                    DateTime ngay;
+                    if (cellNgay.DataType == ClosedXML.Excel.XLDataType.DateTime)
+                    {
+                        ngay = cellNgay.GetDateTime();
+                    }
+                    else
+                    {
+                        string s = cellNgay.GetString().Trim();
+                        if (!DateTime.TryParseExact(s,
+                                new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd-MM-yyyy" },
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                System.Globalization.DateTimeStyles.None,
+                                out ngay))
+                        {
+                            ngay = DateTime.MinValue;
+                        }
+                    }
+
+                    var values = new object[lastCol - firstCol + 1];
+                    var formats = new string[lastCol - firstCol + 1];
+
+                    for (int c = firstCol; c <= lastCol; c++)
+                    {
+                        var cell = ws.Cell(r, c);
+                        values[c - firstCol] = cell.Value;
+                        formats[c - firstCol] = cell.Style.NumberFormat.Format ?? "";
+                    }
+
+                    rows.Add((ngay, values, formats));
+                }
+
+                // ===== BƯỚC 2: Sort theo ngày =====
+                rows = ascending
+                    ? rows.OrderBy(x => x.Ngay).ToList()
+                    : rows.OrderByDescending(x => x.Ngay).ToList();
+
+                // ===== BƯỚC 3: Xóa dữ liệu cũ và ghi lại theo thứ tự mới =====
+                ws.Range(dataStartRow, firstCol, lastRow, lastCol)
+                  .Clear(ClosedXML.Excel.XLClearOptions.Contents);
+
+                int outputRow = dataStartRow;
+                foreach (var row in rows)
+                {
+                    for (int i = 0; i < row.Values.Length; i++)
+                    {
+                        var dst = ws.Cell(outputRow, firstCol + i);
+                        dst.Value = ClosedXML.Excel.XLCellValue.FromObject(row.Values[i]);
+
+                        // Giữ format số/ngày của ô gốc
+                        if (!string.IsNullOrEmpty(row.Formats[i]))
+                            dst.Style.NumberFormat.Format = row.Formats[i];
+                    }
+                    outputRow++;
+                }
+
+                wb.Save();
+                Console.WriteLine($"[SORT] Đã sort {rows.Count} dòng theo ngày lập ({(ascending ? "tăng" : "giảm")}).");
+            }
+        }
         public async Task XulyexelvaoMTT(string token, int _type, CancellationToken cancellationToken = default)
         {
             string tenfileExcel = "";
@@ -34320,6 +34408,26 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 DateTime chunkStart = monthStart;
                 int chunkIndex = 1;
 
+                string pathYear = $"HD{dtFrom.Year}";
+                string directoryPath = Path.Combine(savedPath, pathYear, "HDVao", dtFrom.Month.ToString());
+                Directory.CreateDirectory(directoryPath);
+
+                string mergedFilePath = Path.Combine(directoryPath,
+                    $"{mstcongty}_HDDienTuMayTinhTien_FullThang{dtFrom:MMyyyy}.xlsx");
+
+                // ===== CHECK 30 PHÚT: NẾU FILE FULL MTT VỪA TẢI < 30 PHÚT THÌ BỎ QUA =====
+                if (File.Exists(mergedFilePath))
+                {
+                    var fiFull = new FileInfo(mergedFilePath);
+                    if (fiFull.Length > 2048 &&
+                        (DateTime.Now - fiFull.LastWriteTime).TotalMinutes < 30)
+                    {
+                        Console.WriteLine($"[MTT] File Full vừa tải <30 phút, bỏ qua: {mergedFilePath}");
+                        ToastMeaasge("● Thông báo", "File MTT đã tải trong 30 phút gần đây, không tải lại.");
+                        return;
+                    }
+                }
+
                 // Đếm số đoạn cần tải (11 ngày/đoạn)
                 int expectedChunks = 0;
                 DateTime temp = monthStart;
@@ -34332,10 +34440,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
 
                 var downloadedFiles = new List<string>();
-
-                string pathYear = $"HD{dtFrom.Year}";
-                string directoryPath = Path.Combine(savedPath, pathYear, "HDVao", dtFrom.Month.ToString());
-                Directory.CreateDirectory(directoryPath);
 
                 while (chunkStart <= monthEnd)
                 {
@@ -34350,8 +34454,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                     if (File.Exists(expectedFile))
                     {
-                        DateTime lw = File.GetLastWriteTime(expectedFile);
-                        if ((DateTime.Now - lw).TotalMinutes < 30)
+                        // Chỉ cần file có dữ liệu thật là dùng luôn, không tải lại
+                        var fi = new FileInfo(expectedFile);
+                        if (fi.Length > 2048)
                         {
                             Console.WriteLine($"[MTT] Đoạn {chunkIndex}/{expectedChunks} đã có, bỏ qua: {expectedFile}");
                             downloadedFiles.Add(expectedFile);
@@ -34359,6 +34464,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             chunkIndex++;
                             continue;
                         }
+                        // file rỗng/hỏng → xóa và tải lại
+                        try { File.Delete(expectedFile); } catch { }
                     }
 
                     Console.WriteLine($"[MTT] Đoạn {chunkIndex}/{expectedChunks}: {chunkStart:dd/MM/yyyy} - {chunkEnd:dd/MM/yyyy}");
@@ -34374,35 +34481,54 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     chunkIndex++;
                 }
 
-                // ================= GỘP CÁC FILE ĐÃ TẢI =================
-                if (downloadedFiles.Count > 0)
+                // ================= GỘP CÁC FILE ĐÃ TẢI (APPEND-ONLY + SORT + STT) =================
+                // Quét TOÀN BỘ file lẻ trên đĩa (không chỉ file tải trong lần này)
+                var allChunkFiles = new List<string>();
+                DateTime scanDate = monthStart;
+                while (scanDate <= monthEnd)
                 {
-                    string mergedFilePath = Path.Combine(directoryPath, $"{mstcongty}_HDDienTuMayTinhTien_FullThang{dtFrom:MMyyyy}.xlsx");
+                    DateTime e = scanDate.AddDays(10);
+                    if (e > monthEnd) e = monthEnd;
 
+                    string f = Path.Combine(directoryPath,
+                        $"{mstcongty}_HDDienTuMayTinhTien_{scanDate:ddMMyyyy}_{e:ddMMyyyy}.xlsx");
+
+                    if (File.Exists(f) && new FileInfo(f).Length > 2048)
+                        allChunkFiles.Add(f);
+
+                    scanDate = e.AddDays(1);
+                }
+
+                if (allChunkFiles.Count > 0)
+                {
                     try
                     {
                         if (serverMode == "1")
                         {
-                            progressPanel1.Caption = "Đang gộp file Excel MTT...";
+                            progressPanel1.Caption = "Đang gộp file Excel MTT (append-only)...";
                             Application.DoEvents();
                         }
 
-                        GopFileExcel(downloadedFiles, mergedFilePath);
-                        Console.WriteLine($"[MTT] Đã gộp {downloadedFiles.Count} file → {mergedFilePath}");
+                        // (1) Gộp append-only: Full cũ + tất cả file lẻ trên đĩa
+                        GopFileExcelAppendOnly(allChunkFiles, mergedFilePath);
+                        Console.WriteLine($"[MTT] Đã gộp {allChunkFiles.Count} file lẻ → {mergedFilePath}");
 
-                        // ===== SỬA DÒNG TIÊU ĐỀ KHOẢNG NGÀY CHO ĐÚNG CẢ THÁNG =====
+                        // (2) Sửa tiêu đề khoảng ngày cho đúng cả tháng
                         try
                         {
                             using (var wb = new ClosedXML.Excel.XLWorkbook(mergedFilePath))
                             {
                                 var ws = wb.Worksheet(1);
                                 var usedRange = ws.RangeUsed();
-                                foreach (var cell in usedRange.CellsUsed())
+                                if (usedRange != null)
                                 {
-                                    if (cell.GetString().StartsWith("Từ ngày", StringComparison.OrdinalIgnoreCase))
+                                    foreach (var cell in usedRange.CellsUsed())
                                     {
-                                        cell.Value = $"Từ ngày {dtFrom:dd/MM/yyyy} đến ngày {dtTo:dd/MM/yyyy}";
-                                        break;
+                                        if (cell.GetString().StartsWith("Từ ngày", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            cell.Value = $"Từ ngày {dtFrom:dd/MM/yyyy} đến ngày {dtTo:dd/MM/yyyy}";
+                                            break;
+                                        }
                                     }
                                 }
                                 wb.Save();
@@ -34413,27 +34539,41 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             Console.WriteLine($"[MTT] Không sửa được tiêu đề: {exTitle.Message}");
                         }
 
-                        // ===== CHỈ XÓA FILE LẺ KHI ĐÃ ĐỦ SỐ ĐOẠN =====
-                        if (downloadedFiles.Count == expectedChunks)
+                        // (3) Sort lại theo ngày lập (tăng dần)
+                        try
                         {
-                            foreach (string f in downloadedFiles)
+                            SortFullByNgayLap(mergedFilePath, MTT_COL_NGAY_LAP, ascending: true);
+                        }
+                        catch (Exception exSort)
+                        {
+                            Console.WriteLine($"[MTT SORT ERROR] {exSort.Message}");
+                            ToastMeaasge("● Cảnh báo", "Không sort được file Full: " + exSort.Message);
+                        }
+
+                        // (4) Đánh lại STT xuyên suốt (bỏ qua nếu MTT_COL_STT <= 0)
+                        try
+                        {
+                            RenumberSTT(mergedFilePath, MTT_COL_STT);
+                        }
+                        catch (Exception exStt)
+                        {
+                            Console.WriteLine($"[MTT STT ERROR] {exStt.Message}");
+                        }
+
+                        // (5) Chỉ xóa file lẻ khi đã đủ số đoạn
+                        if (allChunkFiles.Count == expectedChunks)
+                        {
+                            foreach (string f in allChunkFiles)
                             {
-                                try
-                                {
-                                    if (File.Exists(f)) File.Delete(f);
-                                }
-                                catch (Exception exDel)
-                                {
-                                    Console.WriteLine($"[MTT] Không xóa được file {f}: {exDel.Message}");
-                                }
+                                try { if (File.Exists(f)) File.Delete(f); } catch { }
                             }
-                            ToastMeaasge("● Thông báo", $"Đã gộp đủ {downloadedFiles.Count} file thành công.");
+                            ToastMeaasge("● Thông báo", $"Đã gộp đủ {allChunkFiles.Count} file thành công.");
                         }
                         else
                         {
                             ToastMeaasge("● Cảnh báo",
-                                $"Mới tải được {downloadedFiles.Count}/{expectedChunks} đoạn. File gộp tạm thiếu dữ liệu, chạy lại để tải bù.");
-                            Console.WriteLine($"[MTT] Giữ lại {downloadedFiles.Count} file lẻ để gộp bù lần sau.");
+                                $"Mới có {allChunkFiles.Count}/{expectedChunks} đoạn. File Full đã cập nhật (chỉ thêm), chạy lại để tải bù.");
+                            Console.WriteLine($"[MTT] Giữ {allChunkFiles.Count} file lẻ để gộp bù lần sau.");
                         }
 
                         if (serverMode == "1")
@@ -34450,7 +34590,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
                 else
                 {
-                    ToastMeaasge("● Thông báo", "Không có file nào được tải để gộp.");
+                    ToastMeaasge("● Thông báo", "Không có file nào để gộp.");
                 }
 
                 return;
@@ -34496,7 +34636,6 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             int retryDelayMs = 2500;
             bool success = false;
 
-            // SỬA LỖI: Dùng HttpClientHandler thay cho SocketsHttpHandler
             var handler = new HttpClientHandler
             {
                 AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
@@ -34671,7 +34810,224 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
             }
         }
+        // ================= HẰNG SỐ DÙNG CHUNG CHO GỘP MTT =================
+        private const int MTT_HEADER_ROW = 6;   // dòng header (1-based)
+        private const int MTT_DATA_START_ROW = 7;   // dòng dữ liệu đầu tiên
+        private const int MTT_COL_MAU_SO = 2;   // ← CHỈNH theo mẫu Excel thực tế
+        private const int MTT_COL_KY_HIEU = 3;   // ← CHỈNH
+        private const int MTT_COL_SO_HD = 4;   // ← CHỈNH
+        private const int MTT_COL_NGAY_LAP = 5;   // ← CHỈNH
+        /// <summary>
+        /// Gộp các file Excel MTT vào file Full theo kiểu APPEND-ONLY:
+        /// - Đọc Full cũ (nếu có) → giữ nguyên toàn bộ
+        /// - Hóa đơn đã có trong Full → bỏ qua (không thêm trùng)
+        /// - Hóa đơn mới → thêm vào cuối
+        /// - Không bao giờ xóa dòng khỏi Full
+        /// </summary>
+        private void GopFileExcelAppendOnly(List<string> inputFiles, string outputFile)
+        {
+            int headerRow = MTT_HEADER_ROW;
+            int dataStartRow = MTT_DATA_START_ROW;
 
+            var fullWb = new ClosedXML.Excel.XLWorkbook();
+            var fullWs = fullWb.Worksheets.Add("HoaDonMTT");
+
+            var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            int outputRow = headerRow;
+            int firstCol = 1, lastCol = 1;
+            bool headerCopied = false;
+
+            // ========== BƯỚC 1: ĐỌC FULL CŨ (NẾU CÓ) ==========
+            if (File.Exists(outputFile))
+            {
+                try
+                {
+                    using (var oldWb = new ClosedXML.Excel.XLWorkbook(outputFile))
+                    {
+                        var oldWs = oldWb.Worksheet(1);
+                        var used = oldWs.RangeUsed();
+                        if (used != null)
+                        {
+                            firstCol = used.FirstColumn().ColumnNumber();
+                            lastCol = used.LastColumn().ColumnNumber();
+                            int oldLastRow = used.LastRow().RowNumber();
+
+                            // Copy toàn bộ nội dung Full cũ sang workbook mới
+                            for (int r = 1; r <= oldLastRow; r++)
+                            {
+                                for (int c = firstCol; c <= lastCol; c++)
+                                    CopyCell(oldWs.Cell(r, c), fullWs.Cell(r, c - firstCol + 1));
+                            }
+
+                            // Copy độ rộng cột
+                            for (int c = firstCol; c <= lastCol; c++)
+                            {
+                                double w = oldWs.Column(c).Width;
+                                if (w > 0) fullWs.Column(c - firstCol + 1).Width = w;
+                            }
+
+                            // Xây tập khóa đã có
+                            for (int r = dataStartRow; r <= oldLastRow; r++)
+                            {
+                                string key = BuildInvoiceKey(oldWs, r,
+                                    MTT_COL_MAU_SO, MTT_COL_KY_HIEU,
+                                    MTT_COL_SO_HD, MTT_COL_NGAY_LAP);
+                                if (!string.IsNullOrEmpty(key))
+                                    existingKeys.Add(key);
+                            }
+
+                            outputRow = oldLastRow;
+                            headerCopied = true;
+
+                            Console.WriteLine($"[MERGE] Full cũ: {existingKeys.Count} hóa đơn, {oldLastRow} dòng.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[MERGE] Không đọc được Full cũ ({ex.Message}), bắt đầu mới.");
+                    existingKeys.Clear();
+                    outputRow = headerRow;
+                    headerCopied = false;
+                }
+            }
+
+            // ========== BƯỚC 2: DUYỆT FILE ĐẦU VÀO, THÊM DÒNG MỚI ==========
+            int addedCount = 0, skippedCount = 0;
+
+            foreach (string file in inputFiles)
+            {
+                if (!File.Exists(file)) continue;
+
+                try
+                {
+                    using (var srcWb = new ClosedXML.Excel.XLWorkbook(file))
+                    {
+                        var srcWs = srcWb.Worksheet(1);
+                        var used = srcWs.RangeUsed();
+                        if (used == null) continue;
+
+                        int lastRow = used.LastRow().RowNumber();
+                        int srcFirstCol = used.FirstColumn().ColumnNumber();
+                        int srcLastCol = used.LastColumn().ColumnNumber();
+
+                        // Nếu Full chưa có gì → copy header từ file đầu tiên
+                        if (!headerCopied)
+                        {
+                            firstCol = srcFirstCol;
+                            lastCol = srcLastCol;
+
+                            for (int r = 1; r <= headerRow; r++)
+                            {
+                                for (int c = firstCol; c <= lastCol; c++)
+                                    CopyCell(srcWs.Cell(r, c), fullWs.Cell(r, c - firstCol + 1));
+                            }
+                            for (int c = firstCol; c <= lastCol; c++)
+                            {
+                                double w = srcWs.Column(c).Width;
+                                if (w > 0) fullWs.Column(c - firstCol + 1).Width = w;
+                            }
+
+                            outputRow = headerRow;
+                            headerCopied = true;
+                        }
+
+                        // Duyệt dữ liệu
+                        for (int r = dataStartRow; r <= lastRow; r++)
+                        {
+                            string key = BuildInvoiceKey(srcWs, r,
+                                MTT_COL_MAU_SO, MTT_COL_KY_HIEU,
+                                MTT_COL_SO_HD, MTT_COL_NGAY_LAP);
+
+                            if (string.IsNullOrEmpty(key)) continue;   // dòng trống
+
+                            if (existingKeys.Contains(key))
+                            {
+                                skippedCount++;
+                                continue;   // đã có → giữ nguyên, không thêm
+                            }
+
+                            // Chưa có → thêm vào cuối
+                            outputRow++;
+                            for (int c = srcFirstCol; c <= srcLastCol; c++)
+                                CopyCell(srcWs.Cell(r, c),
+                                         fullWs.Cell(outputRow, c - srcFirstCol + 1));
+
+                            existingKeys.Add(key);
+                            addedCount++;
+                        }
+                    }
+                }
+                catch (Exception exFile)
+                {
+                    Console.WriteLine($"[MERGE] Lỗi đọc file {file}: {exFile.Message}");
+                }
+            }
+
+            // ========== BƯỚC 3: LƯU ==========
+            if (!headerCopied)
+            {
+                Console.WriteLine("[MERGE] Không có dữ liệu để gộp.");
+                return;
+            }
+
+            // Sao lưu Full cũ trước khi ghi đè
+            if (File.Exists(outputFile))
+            {
+                try
+                {
+                    string backup = outputFile + ".bak";
+                    File.Copy(outputFile, backup, overwrite: true);
+                }
+                catch (Exception exBk)
+                {
+                    Console.WriteLine($"[MERGE] Không sao lưu được: {exBk.Message}");
+                }
+            }
+
+            fullWb.SaveAs(outputFile);
+            Console.WriteLine($"[MERGE] +{addedCount} mới, bỏ qua {skippedCount} trùng. Tổng Full = {existingKeys.Count}.");
+        }
+        /// <summary>
+        /// Tạo khóa định danh duy nhất cho 1 hóa đơn MTT.
+        /// Dùng Mẫu số + Ký hiệu + Số hóa đơn + Ngày lập.
+        /// Trả về "" nếu dòng trống.
+        /// </summary>
+        private string BuildInvoiceKey(ClosedXML.Excel.IXLWorksheet ws, int row,
+                                       int colMauSo, int colKyHieu, int colSoHD, int colNgayLap)
+        {
+            string mauSo = ws.Cell(row, colMauSo).GetString().Trim();
+            string kyHieu = ws.Cell(row, colKyHieu).GetString().Trim();
+            string soHD = ws.Cell(row, colSoHD).GetString().Trim();
+
+            // Chuẩn hóa ngày: ưu tiên DateTime, fallback parse string
+            var cellNgay = ws.Cell(row, colNgayLap);
+            string ngayStr;
+            if (cellNgay.DataType == ClosedXML.Excel.XLDataType.DateTime)
+            {
+                ngayStr = cellNgay.GetDateTime().ToString("yyyyMMdd");
+            }
+            else
+            {
+                string s = cellNgay.GetString().Trim();
+                if (DateTime.TryParseExact(s,
+                        new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd-MM-yyyy" },
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
+                        out DateTime dt))
+                    ngayStr = dt.ToString("yyyyMMdd");
+                else
+                    ngayStr = s; // giữ nguyên nếu không parse được
+            }
+
+            // Cả 4 đều rỗng → dòng trống
+            if (string.IsNullOrEmpty(mauSo) && string.IsNullOrEmpty(kyHieu)
+                && string.IsNullOrEmpty(soHD) && string.IsNullOrEmpty(ngayStr))
+                return "";
+
+            return $"{mauSo}|{kyHieu}|{soHD}|{ngayStr}";
+        }
         // ================= HÀM RIÊNG CHO TỪNG ĐOẠN MTT (TRẢ VỀ ĐƯỜNG DẪN FILE) =================
         private async Task<string> TaiExcelMTTTheoDoan(string token, DateTime dtFrom, DateTime dtTo, CancellationToken cancellationToken)
         {
@@ -35413,6 +35769,37 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 DateTime chunkStart = monthStart;
                 int chunkIndex = 1;
 
+                string pathYear = $"HD{dtFrom.Year}";
+                string directoryPath = Path.Combine(savedPath, pathYear, "HDRa", dtFrom.Month.ToString());
+                Directory.CreateDirectory(directoryPath);
+
+                string mergedFilePath = Path.Combine(directoryPath,
+                    $"{mstcongty}_HDDienTuMayTinhTien_FullThang{dtFrom:MMyyyy}.xlsx");
+
+                // ===== CHECK 30 PHÚT: NẾU FILE FULL MTT BÁN RA VỪA TẢI < 30 PHÚT THÌ BỎ QUA =====
+                if (File.Exists(mergedFilePath))
+                {
+                    var fiFull = new FileInfo(mergedFilePath);
+                    if (fiFull.Length > 2048 &&
+                        (DateTime.Now - fiFull.LastWriteTime).TotalMinutes < 30)
+                    {
+                        Console.WriteLine($"[MTT-Ra] File Full vừa tải <30 phút, bỏ qua: {mergedFilePath}");
+                        ToastMeaasge("● Thông báo", "File MTT bán ra đã tải trong 30 phút gần đây, không tải lại.");
+                        return;
+                    }
+                }
+
+                // Đếm số đoạn cần tải (11 ngày/đoạn)
+                int expectedChunks = 0;
+                DateTime temp = monthStart;
+                while (temp <= monthEnd)
+                {
+                    expectedChunks++;
+                    DateTime e = temp.AddDays(10);
+                    if (e > monthEnd) e = monthEnd;
+                    temp = e.AddDays(1);
+                }
+
                 var downloadedFiles = new List<string>();
 
                 while (chunkStart <= monthEnd)
@@ -35422,7 +35809,25 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     DateTime chunkEnd = chunkStart.AddDays(10); // 11 ngày
                     if (chunkEnd > monthEnd) chunkEnd = monthEnd;
 
-                    Console.WriteLine($"[MTT-Ra] Đoạn {chunkIndex}: {chunkStart:dd/MM/yyyy} - {chunkEnd:dd/MM/yyyy}");
+                    // Kiểm tra file đoạn này đã có chưa
+                    string expectedFile = Path.Combine(directoryPath,
+                        $"{mstcongty}_HDDienTuMayTinhTien_{chunkStart:ddMMyyyy}_{chunkEnd:ddMMyyyy}.xlsx");
+
+                    if (File.Exists(expectedFile))
+                    {
+                        var fi = new FileInfo(expectedFile);
+                        if (fi.Length > 2048)
+                        {
+                            Console.WriteLine($"[MTT-Ra] Đoạn {chunkIndex}/{expectedChunks} đã có, bỏ qua: {expectedFile}");
+                            downloadedFiles.Add(expectedFile);
+                            chunkStart = chunkEnd.AddDays(1);
+                            chunkIndex++;
+                            continue;
+                        }
+                        try { File.Delete(expectedFile); } catch { }
+                    }
+
+                    Console.WriteLine($"[MTT-Ra] Đoạn {chunkIndex}/{expectedChunks}: {chunkStart:dd/MM/yyyy} - {chunkEnd:dd/MM/yyyy}");
 
                     string chunkFile = await TaiExcelMTTRaTheoDoan(token, chunkStart, chunkEnd, cancellationToken);
 
@@ -35435,37 +35840,54 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     chunkIndex++;
                 }
 
-                // ================= GỘP CÁC FILE ĐÃ TẢI =================
-                if (downloadedFiles.Count > 0)
+                // ================= GỘP CÁC FILE ĐÃ TẢI (APPEND-ONLY + SORT + STT) =================
+                // Quét TOÀN BỘ file lẻ trên đĩa (không chỉ file tải trong lần này)
+                var allChunkFiles = new List<string>();
+                DateTime scanDate = monthStart;
+                while (scanDate <= monthEnd)
                 {
-                    string pathYear = $"HD{dtFrom.Year}";
-                    string directoryPath = Path.Combine(savedPath, pathYear, "HDRa", dtFrom.Month.ToString());
-                    string mergedFilePath = Path.Combine(directoryPath, $"{mstcongty}_HDDienTuMayTinhTien_FullThang{dtFrom:MMyyyy}.xlsx");
+                    DateTime e = scanDate.AddDays(10);
+                    if (e > monthEnd) e = monthEnd;
 
+                    string f = Path.Combine(directoryPath,
+                        $"{mstcongty}_HDDienTuMayTinhTien_{scanDate:ddMMyyyy}_{e:ddMMyyyy}.xlsx");
+
+                    if (File.Exists(f) && new FileInfo(f).Length > 2048)
+                        allChunkFiles.Add(f);
+
+                    scanDate = e.AddDays(1);
+                }
+
+                if (allChunkFiles.Count > 0)
+                {
                     try
                     {
                         if (serverMode == "1")
                         {
-                            progressPanel2.Caption = "Đang gộp file Excel MTT bán ra...";
+                            progressPanel2.Caption = "Đang gộp file Excel MTT bán ra (append-only)...";
                             Application.DoEvents();
                         }
 
-                        GopFileExcel(downloadedFiles, mergedFilePath);
-                        Console.WriteLine($"[MTT-Ra] Đã gộp {downloadedFiles.Count} file → {mergedFilePath}");
+                        // (1) Gộp append-only: Full cũ + tất cả file lẻ trên đĩa
+                        GopFileExcelAppendOnly(allChunkFiles, mergedFilePath);
+                        Console.WriteLine($"[MTT-Ra] Đã gộp {allChunkFiles.Count} file lẻ → {mergedFilePath}");
 
-                        // Sửa tiêu đề
+                        // (2) Sửa tiêu đề khoảng ngày cho đúng cả tháng
                         try
                         {
                             using (var wb = new ClosedXML.Excel.XLWorkbook(mergedFilePath))
                             {
                                 var ws = wb.Worksheet(1);
                                 var usedRange = ws.RangeUsed();
-                                foreach (var cell in usedRange.CellsUsed())
+                                if (usedRange != null)
                                 {
-                                    if (cell.GetString().StartsWith("Từ ngày", StringComparison.OrdinalIgnoreCase))
+                                    foreach (var cell in usedRange.CellsUsed())
                                     {
-                                        cell.Value = $"Từ ngày {dtFrom:dd/MM/yyyy} đến ngày {dtTo:dd/MM/yyyy}";
-                                        break;
+                                        if (cell.GetString().StartsWith("Từ ngày", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            cell.Value = $"Từ ngày {dtFrom:dd/MM/yyyy} đến ngày {dtTo:dd/MM/yyyy}";
+                                            break;
+                                        }
                                     }
                                 }
                                 wb.Save();
@@ -35476,10 +35898,41 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             Console.WriteLine($"[MTT-Ra] Không sửa được tiêu đề: {exTitle.Message}");
                         }
 
-                        // Xóa file lẻ
-                        foreach (string f in downloadedFiles)
+                        // (3) Sort lại theo ngày lập (tăng dần)
+                        try
                         {
-                            try { if (File.Exists(f)) File.Delete(f); } catch { }
+                            SortFullByNgayLap(mergedFilePath, MTT_COL_NGAY_LAP, ascending: true);
+                        }
+                        catch (Exception exSort)
+                        {
+                            Console.WriteLine($"[MTT-Ra SORT ERROR] {exSort.Message}");
+                            ToastMeaasge("● Cảnh báo", "Không sort được file Full: " + exSort.Message);
+                        }
+
+                        // (4) Đánh lại STT xuyên suốt (bỏ qua nếu MTT_COL_STT <= 0)
+                        try
+                        {
+                            RenumberSTT(mergedFilePath, MTT_COL_STT);
+                        }
+                        catch (Exception exStt)
+                        {
+                            Console.WriteLine($"[MTT-Ra STT ERROR] {exStt.Message}");
+                        }
+
+                        // (5) Chỉ xóa file lẻ khi đã đủ số đoạn
+                        if (allChunkFiles.Count == expectedChunks)
+                        {
+                            foreach (string f in allChunkFiles)
+                            {
+                                try { if (File.Exists(f)) File.Delete(f); } catch { }
+                            }
+                            ToastMeaasge("● Thông báo", $"Đã gộp đủ {allChunkFiles.Count} file thành công.");
+                        }
+                        else
+                        {
+                            ToastMeaasge("● Cảnh báo",
+                                $"Mới có {allChunkFiles.Count}/{expectedChunks} đoạn. File Full đã cập nhật (chỉ thêm), chạy lại để tải bù.");
+                            Console.WriteLine($"[MTT-Ra] Giữ {allChunkFiles.Count} file lẻ để gộp bù lần sau.");
                         }
 
                         if (serverMode == "1")
@@ -35487,17 +35940,16 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             progressPanel2.Caption = $"Đã gộp xong: {Path.GetFileName(mergedFilePath)}";
                             Application.DoEvents();
                         }
-
-                        ToastMeaasge("● Thông báo", $"Đã gộp {downloadedFiles.Count} file thành công.");
                     }
                     catch (Exception exMerge)
                     {
                         ToastMeaasge("● Lỗi", "Không gộp được file: " + exMerge.Message);
+                        Console.WriteLine($"[MTT-Ra MERGE ERROR] {exMerge}");
                     }
                 }
                 else
                 {
-                    ToastMeaasge("● Thông báo", "Không có file nào được tải để gộp.");
+                    ToastMeaasge("● Thông báo", "Không có file nào để gộp.");
                 }
                 return;
             }
@@ -35615,6 +36067,40 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 Application.DoEvents();
             }
         }
+        /// <summary>
+        /// Đánh lại STT xuyên suốt từ 1 cho toàn bộ dữ liệu (từ MTT_DATA_START_ROW).
+        /// Chỉ ghi đè cột STT, giữ nguyên các cột khác.
+        /// </summary>
+        private void RenumberSTT(string fullFilePath, int colSTT)
+        {
+            if (!File.Exists(fullFilePath)) return;
+            if (colSTT <= 0) return;
+
+            using (var wb = new ClosedXML.Excel.XLWorkbook(fullFilePath))
+            {
+                var ws = wb.Worksheet(1);
+                var used = ws.RangeUsed();
+                if (used == null) return;
+
+                int lastRow = used.LastRow().RowNumber();
+                if (lastRow < MTT_DATA_START_ROW) return;
+
+                int stt = 1;
+                for (int r = MTT_DATA_START_ROW; r <= lastRow; r++)
+                {
+                    // Bỏ qua dòng trống hoàn toàn (nếu có)
+                    var usedRow = ws.Row(r).CellsUsed();
+                    if (!usedRow.Any())
+                        continue;
+
+                    ws.Cell(r, colSTT).Value = stt++;
+                }
+
+                wb.Save();
+                Console.WriteLine($"[STT] Đã đánh lại STT 1..{stt - 1} (cột {colSTT}).");
+            }
+        }
+        private const int MTT_COL_STT = 1;   // ← CHỈNH nếu STT không phải cột 1
 
         // ================= HÀM RIÊNG CHO TỪNG ĐOẠN MTT BÁN RA =================
         private async Task<string> TaiExcelMTTRaTheoDoan(string token, DateTime dtFrom, DateTime dtTo, CancellationToken cancellationToken)
@@ -35928,7 +36414,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 string khhd = row.Cell(3).GetString();
                                 string sohd = Helpers.RemoveLeadingZeros(row.Cell(4).GetString());
                                 string mstnb = row.Cell(6).GetString();
-
+                                if(sohd== "368")
+                                {
+                                    int aa = 10;
+                                }
                                 if (!DateTime.TryParse(nLapStr, out DateTime ngay)) continue;
 
                                 DateTime d = ngay.Date;
@@ -35936,15 +36425,22 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                                 if (lookupHoaDonCT.Contains((mstnb, sohd, khhd, d, 1))) continue;
                                 if (lookupTbImportCQT.Contains((mstnb, sohd, d, 1))) continue;
-
+                                int type = 1;
+                                if (ws.Name == "HoaDonMTT")
+                                {
+                                    type = 3;
+                                }
                                 tasks.Add(new InvoiceJob
                                 {
                                     Mst = mstnb,
                                     SoHD = sohd,
                                     KyHieu = khhd,
                                     Khmshdon = row.Cell(2).GetString(),
-                                    NgayLap = d
+                                    NgayLap = d,
+                                    InvoiceType= type
                                 });
+                               
+                                
                             }
                             catch (Exception ex)
                             {
