@@ -83,7 +83,7 @@ namespace SaovietTax
         string connectionString = "";
         int finalLock = 0;
         // BẮT BUỘC thêm async vào đây để dùng Task.Run
-        private async void simpleButton1_Click(object sender, EventArgs e)
+        private async void simpleButton1_Clickold(object sender, EventArgs e)
         {
             // Vô hiệu hóa nút bấm để tránh bấm 2 lần
             simpleButton1.Enabled = false;
@@ -254,6 +254,206 @@ namespace SaovietTax
             // Mở lại nút bấm và hiển thị thông báo sau khi chạy xong
             simpleButton1.Enabled = true;
             progressPanel1.Caption = "Đã tính xong!";
+            XtraMessageBox.Show("Đã tính giá vốn xong!");
+        }
+        // BẮT BUỘC thêm async để dùng Task.Run
+        private async void simpleButton1_Click(object sender, EventArgs e)
+        {
+            simpleButton1.Enabled = false;
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    // --- 1. LẤY ĐƯỜNG DẪN DB ---
+                    string appPath = Assembly.GetExecutingAssembly().Location;
+                    string directoryPath = Path.GetDirectoryName(appPath);
+                    string rootDirectory = Path.GetFullPath(Path.Combine(directoryPath, @"..\.."));
+                    string filePaths = Path.Combine(rootDirectory, "hoadon", "dpPath.txt");
+
+                    string dbPath = "";
+                    try { dbPath = File.ReadAllText(filePaths); }
+                    catch (Exception ex) { Console.WriteLine("Lỗi đọc file: " + ex.Message); return; }
+
+                    string password = "1@35^7*9)1";
+                    connectionString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={password};";
+
+                    // --- 2. LẤY THÔNG TIN KHÓA SỔ ---
+                    int finalLock = 0;
+                    string qr = "SELECT * FROM License";
+                    var tbLicense = ExecuteQuery(qr, null);
+
+                    if (tbLicense.Rows.Count > 0)
+                    {
+                        var rowLicense = tbLicense.Rows[0];
+                        for (int i = 12; i >= 1; i--)
+                        {
+                            string columnName = "Lock" + i;
+                            if (tbLicense.Columns.Contains(columnName))
+                            {
+                                if (rowLicense[columnName] != DBNull.Value && rowLicense[columnName].ToString() == "1")
+                                {
+                                    finalLock = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // --- 3. XÁC ĐỊNH NGÀY BẮT ĐẦU (ĐÃ SỬA CHUẨN) ---
+                    DateTime ngayBatDau;
+                    int namTinhToan = dtDenngay.DateTime.Year;
+
+                    if (finalLock > 0)
+                    {
+                        ngayBatDau = new DateTime(namTinhToan, finalLock + 1, 1);
+                    }
+                    else
+                    {
+                        // Chưa khóa tháng nào -> Tính từ đầu năm
+                        DateTime dauNam = new DateTime(namTinhToan, 1, 1);
+                        ngayBatDau = dtTuNgay.DateTime.Date > dauNam ? dtTuNgay.DateTime.Date : dauNam;
+                    }
+                    // --- 4. LẤY DỮ LIỆU CHỨNG TỪ ---
+                    var qrTimct = @"SELECT * FROM ChungTu 
+                            WHERE NgayCT >= @NgayBD AND NgayCT < @NgayKT_NextDay
+                            ORDER BY NgayCT ASC, MaLoai ASC, MaSo ASC";
+
+                    var parameterss = new OleDbParameter[]
+                    {
+                new OleDbParameter("@NgayBD", ngayBatDau),
+                new OleDbParameter("@NgayKT_NextDay", dtDenngay.DateTime.Date.AddDays(1))
+                    };
+
+                    var tbchungtu = ExecuteQuery(qrTimct, parameterss);
+
+                    var vattuGroupby = tbchungtu.AsEnumerable()
+                                                .GroupBy(m => m["MaVattu"].ToString())
+                                                .ToList();
+
+                    var danhSachMaVattu = vattuGroupby.Select(g => g.Key).ToList();
+
+                    // --- 5. LẤY DANH MỤC VẬT TƯ VÀ LỌC ---
+                    string qrvt = "SELECT * FROM Vattu";
+                    var tbVattu = ExecuteQuery(qrvt, null);
+
+                    var queryVattu = tbVattu.AsEnumerable()
+                        .Where(r => danhSachMaVattu.Contains(r["MaSo"].ToString()));
+
+                    string soHieuNhap = txtSoHieu.Text.Trim();
+                    if (!string.IsNullOrEmpty(soHieuNhap))
+                    {
+                        queryVattu = queryVattu.Where(r => r.Field<string>("SoHieu") != null &&
+                                                           r.Field<string>("SoHieu").ToLower().Contains(soHieuNhap.ToLower()));
+                    }
+
+                    var tbVattuFiltered = queryVattu.ToList();
+
+                    // --- 6. VÒNG LẶP TÍNH GIÁ VỐN ---
+                    foreach (DataRow row in tbVattuFiltered)
+                    {
+                        string maVatTu = row["MaSo"].ToString();
+                        string tenVT = row["TenVatTu"].ToString();
+
+                        this.Invoke((MethodInvoker)delegate
+                        {
+                            progressPanel1.Caption = $"Đang tính giá vốn: {tenVT} ({maVatTu})";
+                        });
+
+                        string qrtk = "SELECT * FROM TonKho where MaVatTu = @MaVatTu";
+                        var tbTonKho = ExecuteQuery(qrtk, new OleDbParameter("@MaVatTu", maVatTu));
+
+                        if (tbTonKho != null && tbTonKho.Rows.Count > 0)
+                        {
+                            double tienTon = Convert.ToDouble(tbTonKho.Rows[0][$"Tien_{finalLock}"]);
+                            double luongTon = Convert.ToDouble(tbTonKho.Rows[0][$"Luong_{finalLock}"]);
+
+                            var chungTuCuaVatTu = vattuGroupby.FirstOrDefault(g => g.Key == maVatTu)?.CopyToDataTable();
+                            if (chungTuCuaVatTu == null) continue;
+
+                            // BỎ QUA phiếu GV cũ để không cộng dồn 2 lần
+                            chungTuCuaVatTu = chungTuCuaVatTu.AsEnumerable()
+                                                .Where(m => !m["SoHieu"].ToString().Contains("GV"))
+                                                .CopyToDataTable();
+
+                            foreach (DataRow ctRow in chungTuCuaVatTu.Rows)
+                            {
+                                string soHieuCT = ctRow["SoHieu"].ToString();
+                                double MaLoai = Convert.ToDouble(ctRow["MaLoai"]);
+
+                                // Nhập kho
+                                if (MaLoai == 1)
+                                {
+                                    double SoPS2No = Convert.ToDouble(ctRow["SoPS2No"]);
+                                    double SoPS = Convert.ToDouble(ctRow["SoPS"]);
+                                    luongTon += SoPS2No;
+                                    tienTon += SoPS;
+                                }
+                                // Xuất kho
+                                else if (MaLoai == 8)
+                                {
+                                    if (luongTon <= 0) continue;
+
+                                    double GV = Math.Round(tienTon / luongTon);
+                                    double SoPS2Co = Convert.ToDouble(ctRow["SoPS2Co"]);
+                                    double SoPS = Math.Round(GV * SoPS2Co);
+
+                                    luongTon -= SoPS2Co;
+                                    tienTon -= SoPS;
+
+                                    // --- SỬA LẠI: DÙNG UPDATE HOẶC INSERT TÙY TRƯỜNG HỢP ---
+                                    string soHieuGV = $"{soHieuCT}GV";
+
+                                    // 1. Kiểm tra xem phiếu GV đã tồn tại chưa
+                                    string checkGVQuery = "SELECT COUNT(*) FROM ChungTu WHERE SoHieu = ?";
+                                    var checkParams = new OleDbParameter[] { new OleDbParameter("?", soHieuGV) };
+                                    var tbCheck = ExecuteQuery(checkGVQuery, checkParams);
+                                    int countGV = Convert.ToInt32(tbCheck.Rows[0][0]);
+
+                                    if (countGV > 0)
+                                    {
+                                        // 2A. Nếu đã có -> Chỉ UPDATE lại SoPS
+                                        string updateQuery = "UPDATE ChungTu SET SoPS = ? WHERE SoHieu = ?";
+                                        var updateParams = new OleDbParameter[]
+                                        {
+                                    new OleDbParameter("?", SoPS),
+                                    new OleDbParameter("?", soHieuGV)
+                                        };
+                                        ExecuteQueryResult(updateQuery, updateParams);
+                                    }
+                                    else
+                                    {
+                                        // 2B. Nếu chưa có -> INSERT dòng GV mới (Bạn cần map đủ các cột bắt buộc)
+                                        // Lưu ý: Câu INSERT này chỉ là ví dụ, bạn phải thêm các cột như NgayCT, MaVatTu, MaLoai, SoPS2Co...
+                                        string insertQuery = @"INSERT INTO ChungTu (SoHieu, NgayCT, MaVatTu, MaLoai, SoPS2Co, SoPS) 
+                                                       VALUES (?, ?, ?, ?, ?, ?)";
+                                        var insertParams = new OleDbParameter[]
+                                        {
+                                    new OleDbParameter("?", soHieuGV),
+                                    new OleDbParameter("?", ctRow["NgayCT"]),
+                                    new OleDbParameter("?", maVatTu),
+                                    new OleDbParameter("?", 8), // MaLoai = 8 (Xuất)
+                                    new OleDbParameter("?", SoPS2Co),
+                                    new OleDbParameter("?", SoPS)
+                                        };
+                                        ExecuteQueryResult(insertQuery, insertParams);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.Invoke((MethodInvoker)delegate
+                    {
+                        XtraMessageBox.Show("Có lỗi xảy ra: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    });
+                }
+            });
+
+            simpleButton1.Enabled = true;
+            progressPanel1.Caption = "Sẵn sàng";
             XtraMessageBox.Show("Đã tính giá vốn xong!");
         }
     }
