@@ -709,6 +709,12 @@
     <Compile Include="VattuControl.Designer.cs">
       <DependentUpon>VattuControl.cs</DependentUpon>
     </Compile>
+    <Compile Include="vb6TinhGiaVon.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="vb6TinhGiaVon.Designer.cs">
+      <DependentUpon>vb6TinhGiaVon.cs</DependentUpon>
+    </Compile>
     <Compile Include="vb6Xemhoadon.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -899,6 +905,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="VattuControl.resx">
       <DependentUpon>VattuControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="vb6TinhGiaVon.resx">
+      <DependentUpon>vb6TinhGiaVon.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="vb6Xemhoadon.resx">
       <DependentUpon>vb6Xemhoadon.cs</DependentUpon>

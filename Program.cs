@@ -102,6 +102,7 @@ namespace SaovietTax
                     case "14": Application.Run(CreateForm("SaovietTax.frmKiemtraUpdate")); break;
                     case "15": Application.Run(CreateForm("SaovietTax.frmTuKhoaHang")); break;
                     case "16": Application.Run(CreateForm("SaovietTax.AddThueSuat")); break;
+                    case "17": Application.Run(CreateForm("SaovietTax.vb6TinhGiaVon")); break;
                 }
             }
         }
