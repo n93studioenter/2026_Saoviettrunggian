@@ -13608,8 +13608,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             hdon = foundRow.Field<string>("hdon"),
                             Noidung = foundRow.Field<string>("Noidung"),
                             TPhi = foundRow.Field<string>("TPhi"),
-
-
+                             
                         };
                         if (modeClick == 1 && chkTaihoadongoc.Checked)
                             EnqueuePdfDownload(tbImports);
@@ -36883,61 +36882,63 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             }
 
             Debug.WriteLine($"📥 Bắt đầu tải PDF: {inv.NCC} | HĐ {inv.SHDon}");
+            string getmst = "";
             if (chkDaura.Checked)
             {
-                inv.Mst = tbRegister.Rows[0]["Username"].ToString(); 
+                //inv.Mst = tbRegister.Rows[0]["Username"].ToString(); 
+                getmst= tbRegister.Rows[0]["Username"].ToString();
             }
             try
             {
                 switch (inv.NCC)
                 {
                     case "MyInvoice":
-                        await TaiHDMYINVOICE(false, inv.Mst, inv.SHDon, "", mabimat);
+                        await TaiHDMYINVOICE(false, getmst, inv.SHDon, "", mabimat);
                         break;
                     case "Smartsign":
-                        await TaiHDSmartSign(false, inv.Mst, inv.SHDon, "", mabimat);
+                        await TaiHDSmartSign(false, getmst, inv.SHDon, "", mabimat);
                         break;
 
                     case "VinInvoice":
-                        await TaiHDVNINVOICE(false, inv.Mst, inv.SHDon, "", mabimat);
+                        await TaiHDVNINVOICE(false, getmst, inv.SHDon, "", mabimat);
                         break;
 
                     case "VIETTEL":
-                        await TraCuuNCC(false, inv.Mst, mabimat, inv.SHDon);
+                        await TraCuuNCC(false, getmst, mabimat, inv.SHDon);
                         break;
                     case "MISA":
-                        await GetHoaDonMisa(false, mabimat, inv.Mst, inv.SHDon);
+                        await GetHoaDonMisa(false, mabimat, getmst, inv.SHDon);
                         break;
                     case "BKAV":
-                        await TaiBKAV(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                        await TaiBKAV(false, getmst, inv.SHDon, inv.KHHDon, mabimat);
                         break;
                     case "MINVOICE":
-                        await TaiMINVOICE(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                        await TaiMINVOICE(false, getmst, inv.SHDon, inv.KHHDon, mabimat);
                         break;
                     case "VNPT":
                         if (IsPetrolimex(inv.Mst))
                         {
-                            TaiHDVNPTPETROLIMEX(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                            TaiHDVNPTPETROLIMEX(false, getmst, inv.SHDon, inv.KHHDon, mabimat);
                         }
                         else
                         {
-                            TaiHDVNPT(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                            TaiHDVNPT(false, getmst, inv.SHDon, inv.KHHDon, mabimat);
                         }
                         break;
                     case "FAST":
-                        await TaiFAST(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                        await TaiFAST(false, getmst, inv.SHDon, inv.KHHDon, mabimat);
                         break;
                     case "Win Tech":
-                        TaiWinTech(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                        TaiWinTech(false, getmst, inv.SHDon, inv.KHHDon, mabimat);
                         break;
                     case "Cyber":
-                        TaiCyber(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                        TaiCyber(false, getmst, inv.SHDon, inv.KHHDon, mabimat);
                         break;
                     case "Softdream":
-                        TaiSoftdream(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                        TaiSoftdream(false, getmst, inv.SHDon, inv.KHHDon, mabimat);
                         break;
                     case "Visnam":
-                        TaiVisnam(false, inv.Mst, inv.SHDon, inv.KHHDon, mabimat);
+                        TaiVisnam(false, getmst, inv.SHDon, inv.KHHDon, mabimat);
                         break;
                 }
                 Debug.WriteLine($"✅ Tải PDF xong: {inv.SHDon}");
