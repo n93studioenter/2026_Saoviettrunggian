@@ -471,49 +471,59 @@ namespace SaovietTax
                                     double SoPS = Convert.ToDouble(ctRow["SoPS"]);
                                     luongTon += SoPS2No;
                                     tienTon += SoPS;
-                                    tbrow["Luong_Nhap_" + thangct] = SoPS2No;
-                                    tbrow["Tien_Nhap_" + thangct] = SoPS;
+                                    tbrow["Luong_Nhap_" + thangct] = Convert.ToDouble(tbrow["Luong_Nhap_" + thangct] != DBNull.Value ? tbrow["Luong_Nhap_" + thangct] : 0) + SoPS2No;
+                                    tbrow["Tien_Nhap_" + thangct] = Convert.ToDouble(tbrow["Tien_Nhap_" + thangct] != DBNull.Value ? tbrow["Tien_Nhap_" + thangct] : 0) + SoPS;
                                     tbrow["Luong_" + thangct] = luongTon;
                                     tbrow["Tien_" + thangct] = tienTon;
                                 }
                                 // Xử lý Xuất kho
                                 // Xử lý Xuất kho
+                                // Xử lý Xuất kho
+                                // Xử lý Xuất kho
                                 else if (MaLoai == 8)
                                 {
-                                    if (luongTon <= 0) continue;
+                                    if (luongTon <= 0) continue; // Bỏ qua nếu kho âm hoặc bằng 0
 
-                                    double GV = Math.Round(tienTon / Math.Round(luongTon));
                                     double SoPS2Co = Convert.ToDouble(ctRow["SoPS2Co"]);
-                                    double SoPS = Math.Round(GV * SoPS2Co);
+                                    double SoPS;
 
+                                    if (SoPS2Co >= luongTon) // Nếu bán nốt số lượng cuối cùng trong kho
+                                    {
+                                        SoPS = tienTon; // Lấy toàn bộ số tiền còn lại (dù nó là 88.444 hay 88.445), không cần chia
+                                    }
+                                    else
+                                    {
+                                        SoPS = Math.Round(tienTon / luongTon * SoPS2Co, MidpointRounding.AwayFromZero);
+                                    }
+                                    // Cập nhật biến tồn kho
                                     luongTon -= SoPS2Co;
                                     tienTon -= SoPS;
-                                    tbrow["Luong_Xuat_" + thangct] = SoPS2Co;
-                                    tbrow["Tien_Xuat_" + thangct] = SoPS;
+
+                                    // Ghi vào DataRow (Dùng += để cộng dồn nếu có nhiều phiếu xuất trong tháng)
+                                    tbrow["Luong_Xuat_" + thangct] = Convert.ToDouble(tbrow["Luong_Xuat_" + thangct] != DBNull.Value ? tbrow["Luong_Xuat_" + thangct] : 0) + SoPS2Co;
+                                    tbrow["Tien_Xuat_" + thangct] = Convert.ToDouble(tbrow["Tien_Xuat_" + thangct] != DBNull.Value ? tbrow["Tien_Xuat_" + thangct] : 0) + SoPS;
                                     tbrow["Luong_" + thangct] = luongTon;
                                     tbrow["Tien_" + thangct] = tienTon;
+
                                     string soHieuGV = $"{soHieuCT}GV";
 
-                                    // 1. Kiểm tra xem phiếu GV đã tồn tại chưa
-                                    // (Thay đổi: Dùng CT_ID LIKE để đếm chính xác dòng chi tiết đó)
+                                    // Cập nhật Database
                                     string checkGVQuery = "SELECT COUNT(*) FROM ChungTu WHERE SoHieu = ? AND CT_ID LIKE ?";
                                     var tbCheck = ExecuteQuery(checkGVQuery, new OleDbParameter[]
                                     {
-        new OleDbParameter("?", soHieuGV),
-        new OleDbParameter("?", $"%{ctRow["MaSo"]}%")
+                                new OleDbParameter("?", soHieuGV),
+                                new OleDbParameter("?", $"%{ctRow["MaSo"]}%")
                                     });
                                     int countGV = Convert.ToInt32(tbCheck.Rows[0][0]);
 
                                     if (countGV > 0)
                                     {
-                                        // 2A. Đã có -> Cập nhật lại cột SoPS
-                                        // (Thay đổi: Thêm điều kiện CT_ID LIKE để update đúng dòng chi tiết)
                                         string updateQuery = "UPDATE ChungTu SET SoPS = ? WHERE SoHieu = ? AND CT_ID LIKE ?";
                                         var updateParams = new OleDbParameter[]
                                         {
-            new OleDbParameter("?", SoPS),
-            new OleDbParameter("?", soHieuGV),
-            new OleDbParameter("?", $"%{ctRow["MaSo"]}%") // Sử dụng đúng Mã số của dòng ctRow hiện tại
+                                    new OleDbParameter("?", SoPS),
+                                    new OleDbParameter("?", soHieuGV),
+                                    new OleDbParameter("?", $"%{ctRow["MaSo"]}%")
                                         };
                                         ExecuteQueryResult(updateQuery, updateParams);
                                     }
