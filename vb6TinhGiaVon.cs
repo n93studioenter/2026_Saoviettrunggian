@@ -529,7 +529,7 @@ namespace SaovietTax
                                     }
                                 }
                             } 
-                            UpdateTonkho(tbTonKho, dtTuNgay.DateTime.Month);
+                            UpdateTonkho(tbTonKho, finalLock);
                         }
                     }
 
