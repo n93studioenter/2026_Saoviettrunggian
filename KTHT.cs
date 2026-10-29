@@ -5,6 +5,7 @@ using DevExpress.XtraEditors;
 using DevExpress.XtraGrid.Views.Grid;
 using DevExpress.XtraMap.Native;
 using DevExpress.XtraWaitForm;
+using Microsoft.Toolkit.Uwp.Notifications;
 using Newtonsoft.Json;
 using SaovietTax.Database;
 using SaovietTax.DTO;
@@ -13,6 +14,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Data.OleDb;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
@@ -310,7 +312,7 @@ namespace SaovietTax
                 }
             }
         }
-        private void Taiexcelvao()
+        private async Task Taiexcelvao()
         {
             progressPanel1.Visible = true;
             progressPanel1.Caption = "Đang tải file Excel";
@@ -323,7 +325,7 @@ namespace SaovietTax
                 {
                     Xulyexel(myTokken, 1,i);
                     Xulyexel(myTokken, 2,i);
-                    Xulyexel(myTokken, 3,i);
+                    await XulyexelvaoMTT(myTokken,3,i);
                 }
             }
             else
@@ -331,13 +333,1605 @@ namespace SaovietTax
                 for (int i = tuthang; i <= denthang; i++)
                 {
                     Xulyexel2(myTokken, 1,i);
-                    Xulyexel2(myTokken, 2,i);
-                }
-                   
+                    // Xulyexel2(myTokken, 2,i);
+                    await XulyexelraMTT(tokken, 2,i);
+                } 
             }
             Dohoadon();
             // LoadDanhsachExcel();
             progressPanel1.Visible=false;
+        }
+        private async Task<string> TaiExcelMTTRaTheoDoan(string token, DateTime dtFrom, DateTime dtTo, CancellationToken cancellationToken)
+        {
+            string formattedDate1 = dtFrom.ToString("dd/MM/yyyy") + "T00:00:00";
+            string formattedDate2 = dtTo.ToString("dd/MM/yyyy") + "T23:59:59";
+
+            string url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
+            string filename = $"{mstcongty}_HDDienTuMayTinhTien_{dtFrom:ddMMyyyy}_{dtTo:ddMMyyyy}.xlsx";
+            string action = "Xuất excel (hóa đơn máy tính tiền bán ra)";
+            string endPoint = "/tra-cuu/tra-cuu-hoa-don";
+
+            string pathYear = $"HD{dtFrom.Year}";
+            string directoryPath = Path.Combine(savedPath, pathYear, "HDRa", dtFrom.Month.ToString());
+            string filePath = Path.Combine(directoryPath, filename);
+
+            Directory.CreateDirectory(directoryPath);
+
+            if (File.Exists(filePath))
+            {
+                DateTime lastWriteTime = File.GetLastWriteTime(filePath);
+                if ((DateTime.Now - lastWriteTime).TotalMinutes < 30) return filePath;
+            }
+
+            int maxRetries = 3;
+            int retryDelayMs = 2500;
+            bool success = false;
+
+            var cookieContainer = new System.Net.CookieContainer();
+            var handler = new HttpClientHandler
+            {
+                CookieContainer = cookieContainer,
+                UseCookies = true,
+                AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+            };
+
+            using (var client = new HttpClient(handler))
+            {
+                // SỬA LỖI: Tăng Timeout từ 10s lên 60s
+                client.Timeout = TimeSpan.FromSeconds(60);
+
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don");
+
+                _captchaKey = "";
+                _captchaValue = "";
+
+                string capUrl = "https://hoadondientu.gdt.gov.vn/api/captcha";
+                HttpResponseMessage resCap;
+
+                using (var capReq = new HttpRequestMessage(HttpMethod.Get, capUrl))
+                {
+                    capReq.Headers.TryAddWithoutValidation("Request-Id", Guid.NewGuid().ToString());
+                    capReq.Headers.TryAddWithoutValidation("End-Point", "/");
+                    resCap = await client.SendAsync(capReq, cancellationToken);
+                }
+
+                string capBody = await resCap.Content.ReadAsStringAsync();
+
+                if (!resCap.IsSuccessStatusCode)
+                {
+                    ToastMeaasge("● Lỗi", $"Không lấy được captcha ({(int)resCap.StatusCode})");
+                    await Task.Delay(2000, cancellationToken);
+                    return null;
+                }
+
+                MyJson capJson = JsonConvert.DeserializeObject<MyJson>(capBody);
+
+                string cvalue = "";
+                try
+                {
+                   SetCaption("Đang giải mã captcha...");
+                    cvalue = SolveCaptcha(capJson.Content);
+                    if (string.IsNullOrWhiteSpace(cvalue)) throw new Exception("Captcha giải ra rỗng");
+
+                    _captchaKey = capJson.Key ?? "";
+                    _captchaValue = cvalue.Trim();
+
+                    url += $"&ckey={Uri.EscapeDataString(_captchaKey)}&cvalue={Uri.EscapeDataString(_captchaValue)}";
+                    Console.WriteLine($"[CAPTCHA-Ra] ckey={_captchaKey} | cvalue={_captchaValue}");
+                }
+                catch (Exception ex)
+                {
+                    ToastMeaasge("● Lỗi", "Không giải mã được captcha: " + ex.Message);
+                    return null;
+                }
+
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                      
+                        SetCaption($"Đang tải MTT bán ra {dtFrom:dd/MM} - {dtTo:dd/MM} (Lần {attempt}/{maxRetries})");
+                        using (var request = new HttpRequestMessage(HttpMethod.Get, url))
+                        {
+                            request.Headers.TryAddWithoutValidation("Request-Id", Guid.NewGuid().ToString());
+                            request.Headers.TryAddWithoutValidation("End-Point", endPoint);
+                            request.Headers.TryAddWithoutValidation("Action", Uri.EscapeDataString(action));
+
+                            if (!string.IsNullOrEmpty(_captchaKey))
+                            {
+                                request.Headers.TryAddWithoutValidation("ckey", _captchaKey);
+                                request.Headers.TryAddWithoutValidation("cvalue", _captchaValue);
+                            }
+
+                            var response = await client.SendAsync(request, cancellationToken);
+
+                            if (!response.IsSuccessStatusCode)
+                            {
+                                string errBody = await response.Content.ReadAsStringAsync();
+                                Console.WriteLine($"[MTT-Ra {(int)response.StatusCode}] {errBody}");
+                            }
+
+                            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                            {
+                                if (attempt < maxRetries) { await Task.Delay(retryDelayMs * attempt, cancellationToken); continue; }
+                                else { ToastMeaasge("● Lỗi", "Bị chặn 403 khi tải excel MTT bán ra"); return null; }
+                            }
+
+                            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                            {
+                                if (attempt < maxRetries) { await Task.Delay(retryDelayMs * attempt, cancellationToken); continue; }
+                                else { ToastMeaasge("● Lỗi", "Captcha sai hoặc hết hạn (400)."); return null; }
+                            }
+
+                            if ((int)response.StatusCode == 429 || (int)response.StatusCode == 504)
+                            {
+                                if (attempt < maxRetries) { await Task.Delay(retryDelayMs * attempt * 2, cancellationToken); continue; }
+                                else { ToastMeaasge("● Lỗi", $"Máy chủ thuế trả về {(int)response.StatusCode}."); return null; }
+                            }
+
+                            response.EnsureSuccessStatusCode();
+                            byte[] fileBytes = await response.Content.ReadAsByteArrayAsync();
+
+                            if (fileBytes.Length < 2048) throw new Exception("File tải về quá nhỏ");
+                            if (!(fileBytes.Length > 4 && fileBytes[0] == 0x50 && fileBytes[1] == 0x4B)) throw new Exception("Dữ liệu không phải Excel");
+
+                            File.WriteAllBytes(filePath, fileBytes);
+                            success = true;
+                            break;
+                        }
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        ToastMeaasge("● Thông báo", "Đã hủy tải file.");
+                        return null;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // SỬA LỖI: Phân biệt Timeout (mạng chậm) và Hủy (người dùng)
+                        Console.WriteLine($"[Timeout] Tải MTT bán ra {dtFrom:dd/MM}-{dtTo:dd/MM} (Lần {attempt}/{maxRetries})");
+                        if (attempt == maxRetries)
+                        {
+                            ToastMeaasge("● Lỗi", $"Timeout tải MTT bán ra {dtFrom:dd/MM}-{dtTo:dd/MM}");
+                            return null;
+                        }
+                        await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi MTT bán ra {dtFrom:dd/MM}-{dtTo:dd/MM} (Lần {attempt}/{maxRetries}): {ex.Message}");
+
+                        if (attempt == maxRetries) { ToastMeaasge("● Lỗi", $"Không tải được MTT bán ra {dtFrom:dd/MM}-{dtTo:dd/MM}"); }
+                        else { await Task.Delay(retryDelayMs * attempt, cancellationToken); }
+                    }
+                }
+            }
+
+            if (success) return filePath;
+            return null;
+        }
+        public async Task XulyexelraMTT(string token, int _type,int thang, CancellationToken cancellationToken = default)
+        {
+            string tenfileExcel = "";
+            if (_type == 1)
+                tenfileExcel = "Hoadondientu";
+            else if (_type == 2)
+                tenfileExcel = "HDDienTuMayTinhTien";
+
+            if (mstcongty == "8046549703")
+                mstcongty = "048172000197";
+
+            DateTime dtFrom = new DateTime((int)cbbNam.EditValue, thang, 1);
+            DateTime dtTo = dtFrom.AddMonths(1).AddDays(-1);
+
+            // ================= ĐẶC BIỆT CHO HÓA ĐƠN MÁY TÍNH TIỀN BÁN RA =================
+            if (_type == 2)
+            {
+                DateTime monthStart = dtFrom;
+                DateTime monthEnd = dtTo;
+                DateTime chunkStart = monthStart;
+                int chunkIndex = 1;
+
+                string pathYear = $"HD{dtFrom.Year}";
+                string directoryPath = Path.Combine(savedPath, pathYear, "HDRa", dtFrom.Month.ToString());
+                Directory.CreateDirectory(directoryPath);
+
+                string mergedFilePath = Path.Combine(directoryPath,
+                    $"{mstcongty}_HDDienTuMayTinhTien_FullThang{dtFrom:MMyyyy}.xlsx");
+
+                // ===== CHECK 30 PHÚT: NẾU FILE FULL MTT BÁN RA VỪA TẢI < 30 PHÚT THÌ BỎ QUA =====
+                if (File.Exists(mergedFilePath))
+                {
+                    var fiFull = new FileInfo(mergedFilePath);
+                    if (fiFull.Length > 2048 &&
+                        (DateTime.Now - fiFull.LastWriteTime).TotalMinutes < 30)
+                    {
+                        Console.WriteLine($"[MTT-Ra] File Full vừa tải <30 phút, bỏ qua: {mergedFilePath}");
+                        ToastMeaasge("● Thông báo", "File MTT bán ra đã tải trong 30 phút gần đây, không tải lại.");
+                        return;
+                    }
+                }
+
+                // Đếm số đoạn cần tải (11 ngày/đoạn)
+                int expectedChunks = 0;
+                DateTime temp = monthStart;
+                while (temp <= monthEnd)
+                {
+                    expectedChunks++;
+                    DateTime e = temp.AddDays(10);
+                    if (e > monthEnd) e = monthEnd;
+                    temp = e.AddDays(1);
+                }
+
+                var downloadedFiles = new List<string>();
+
+                while (chunkStart <= monthEnd)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    DateTime chunkEnd = chunkStart.AddDays(10); // 11 ngày
+                    if (chunkEnd > monthEnd) chunkEnd = monthEnd;
+
+                    // Kiểm tra file đoạn này đã có chưa
+                    string expectedFile = Path.Combine(directoryPath,
+                        $"{mstcongty}_HDDienTuMayTinhTien_{chunkStart:ddMMyyyy}_{chunkEnd:ddMMyyyy}.xlsx");
+
+                    if (File.Exists(expectedFile))
+                    {
+                        var fi = new FileInfo(expectedFile);
+                        if (fi.Length > 2048)
+                        {
+                            Console.WriteLine($"[MTT-Ra] Đoạn {chunkIndex}/{expectedChunks} đã có, bỏ qua: {expectedFile}");
+                            downloadedFiles.Add(expectedFile);
+                            chunkStart = chunkEnd.AddDays(1);
+                            chunkIndex++;
+                            continue;
+                        }
+                        try { File.Delete(expectedFile); } catch { }
+                    }
+
+                    Console.WriteLine($"[MTT-Ra] Đoạn {chunkIndex}/{expectedChunks}: {chunkStart:dd/MM/yyyy} - {chunkEnd:dd/MM/yyyy}");
+
+                    string chunkFile = await TaiExcelMTTRaTheoDoan(token, chunkStart, chunkEnd, cancellationToken);
+
+                    if (!string.IsNullOrEmpty(chunkFile) && File.Exists(chunkFile))
+                        downloadedFiles.Add(chunkFile);
+
+                    await Task.Delay(2500, cancellationToken); // tránh 429
+
+                    chunkStart = chunkEnd.AddDays(1);
+                    chunkIndex++;
+                }
+
+                // ================= GỘP CÁC FILE ĐÃ TẢI (APPEND-ONLY + SORT + STT) =================
+                // Quét TOÀN BỘ file lẻ trên đĩa (không chỉ file tải trong lần này)
+                var allChunkFiles = new List<string>();
+                DateTime scanDate = monthStart;
+                while (scanDate <= monthEnd)
+                {
+                    DateTime e = scanDate.AddDays(10);
+                    if (e > monthEnd) e = monthEnd;
+
+                    string f = Path.Combine(directoryPath,
+                        $"{mstcongty}_HDDienTuMayTinhTien_{scanDate:ddMMyyyy}_{e:ddMMyyyy}.xlsx");
+
+                    if (File.Exists(f) && new FileInfo(f).Length > 2048)
+                        allChunkFiles.Add(f);
+
+                    scanDate = e.AddDays(1);
+                }
+
+                if (allChunkFiles.Count > 0)
+                {
+                    try
+                    {
+                       
+                        SetCaption($"Đang gộp {allChunkFiles.Count} file lẻ → {mergedFilePath}");
+                        // (1) Gộp append-only: Full cũ + tất cả file lẻ trên đĩa
+                        GopFileExcelAppendOnly(allChunkFiles, mergedFilePath);
+                        Console.WriteLine($"[MTT-Ra] Đã gộp {allChunkFiles.Count} file lẻ → {mergedFilePath}");
+
+                        // (2) Sửa tiêu đề khoảng ngày cho đúng cả tháng
+                        try
+                        {
+                            using (var wb = new ClosedXML.Excel.XLWorkbook(mergedFilePath))
+                            {
+                                var ws = wb.Worksheet(1);
+                                var usedRange = ws.RangeUsed();
+                                if (usedRange != null)
+                                {
+                                    foreach (var cell in usedRange.CellsUsed())
+                                    {
+                                        if (cell.GetString().StartsWith("Từ ngày", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            cell.Value = $"Từ ngày {dtFrom:dd/MM/yyyy} đến ngày {dtTo:dd/MM/yyyy}";
+                                            break;
+                                        }
+                                    }
+                                }
+                                wb.Save();
+                            }
+                        }
+                        catch (Exception exTitle)
+                        {
+                            Console.WriteLine($"[MTT-Ra] Không sửa được tiêu đề: {exTitle.Message}");
+                        }
+
+                        // (3) Sort lại theo ngày lập (tăng dần)
+                        try
+                        {
+                            SortFullByNgayLap(mergedFilePath, MTT_COL_NGAY_LAP, ascending: true);
+                        }
+                        catch (Exception exSort)
+                        {
+                            Console.WriteLine($"[MTT-Ra SORT ERROR] {exSort.Message}");
+                            ToastMeaasge("● Cảnh báo", "Không sort được file Full: " + exSort.Message);
+                        }
+
+                        // (4) Đánh lại STT xuyên suốt (bỏ qua nếu MTT_COL_STT <= 0)
+                        try
+                        {
+                            RenumberSTT(mergedFilePath, MTT_COL_STT);
+                        }
+                        catch (Exception exStt)
+                        {
+                            Console.WriteLine($"[MTT-Ra STT ERROR] {exStt.Message}");
+                        }
+
+                        // (5) Chỉ xóa file lẻ khi đã đủ số đoạn
+                        if (allChunkFiles.Count == expectedChunks)
+                        {
+                            foreach (string f in allChunkFiles)
+                            {
+                                try { if (File.Exists(f)) File.Delete(f); } catch { }
+                            }
+                            ToastMeaasge("● Thông báo", $"Đã gộp đủ {allChunkFiles.Count} file thành công.");
+                        }
+                        else
+                        {
+                            ToastMeaasge("● Cảnh báo",
+                                $"Mới có {allChunkFiles.Count}/{expectedChunks} đoạn. File Full đã cập nhật (chỉ thêm), chạy lại để tải bù.");
+                            Console.WriteLine($"[MTT-Ra] Giữ {allChunkFiles.Count} file lẻ để gộp bù lần sau.");
+                        }
+
+                        SetCaption($"Đã gộp xong {allChunkFiles.Count} file lẻ → {mergedFilePath}");
+                    }
+                    catch (Exception exMerge)
+                    {
+                        ToastMeaasge("● Lỗi", "Không gộp được file: " + exMerge.Message);
+                        Console.WriteLine($"[MTT-Ra MERGE ERROR] {exMerge}");
+                    }
+                }
+                else
+                {
+                    ToastMeaasge("● Thông báo", "Không có file nào để gộp.");
+                }
+                return;
+            }
+
+            // ================= LOẠI 1 (HÓA ĐƠN ĐIỆN TỬ BÁN RA) =================
+            string formattedDate1 = dtFrom.ToString("dd/MM/yyyy") + "T00:00:00";
+            string formattedDate2 = dtTo.ToString("dd/MM/yyyy") + "T23:59:59";
+
+            string url, filename;
+            string action = "";
+            string endPoint = "/tra-cuu/tra-cuu-hoa-don";
+
+            switch (_type)
+            {
+                case 1:
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2}";
+                    filename = $"{mstcongty}_Hoadondientu.xlsx";
+                    action = "Xuất excel (hóa đơn bán ra)";
+                    break;
+                default:
+                    return;
+            }
+
+            string pathYear1 = $"HD{(int)cbbNam.EditValue}";
+            string directoryPath1 = Path.Combine(savedPath, pathYear1, "HDRa",thang.ToString());
+            string filePath1 = Path.Combine(directoryPath1, filename);
+
+            Directory.CreateDirectory(directoryPath1);
+
+            if (File.Exists(filePath1))
+            {
+                DateTime lastWriteTime = File.GetLastWriteTime(filePath1);
+                if ((DateTime.Now - lastWriteTime).TotalMinutes < 30) return;
+            }
+
+            int maxRetries = 3;
+            int retryDelayMs = 2500;
+            bool success = false;
+
+            using (var client = new HttpClient())
+            {
+                client.Timeout = TimeSpan.FromSeconds(90); // 90s cho an toàn
+
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don");
+
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                       
+                        SetCaption($"Đang tải {tenfileExcel} (Lần {attempt}/{maxRetries})");
+                        using (var request = new HttpRequestMessage(HttpMethod.Get, url))
+                        {
+                            request.Headers.TryAddWithoutValidation("Request-Id", Guid.NewGuid().ToString());
+                            request.Headers.TryAddWithoutValidation("End-Point", endPoint);
+                            request.Headers.TryAddWithoutValidation("Action", Uri.EscapeDataString(action));
+
+                            var response = await client.SendAsync(request, cancellationToken);
+
+                            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                            {
+                                if (attempt < maxRetries) { await Task.Delay(retryDelayMs * attempt, cancellationToken); continue; }
+                                else { ToastMeaasge("● Lỗi", "Bị chặn 403 khi tải excel bán ra"); return; }
+                            }
+
+                            response.EnsureSuccessStatusCode();
+                            byte[] fileBytes = await response.Content.ReadAsByteArrayAsync();
+
+                            if (fileBytes.Length < 2048) throw new Exception("File tải về quá nhỏ (có thể bị chặn hoặc không có dữ liệu)");
+
+                            if (!(fileBytes.Length > 4 && fileBytes[0] == 0x50 && fileBytes[1] == 0x4B)) throw new Exception("Dữ liệu trả về không phải file Excel");
+
+                            File.WriteAllBytes(filePath1, fileBytes);
+                            success = true;
+                            break;
+                        }
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        Console.WriteLine($"Tác vụ tải {tenfileExcel} đã bị hủy bởi người dùng.");
+                        ToastMeaasge("● Thông báo", "Đã hủy tải file.");
+                        return;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Đây là lỗi Timeout (do mạng hoặc server chậm)
+                        Console.WriteLine($"Timeout tải {tenfileExcel} (Lần {attempt}/{maxRetries})");
+                        if (attempt == maxRetries) { ToastMeaasge("● Lỗi", "Timeout tải file excel bán ra"); return; }
+                        await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi khi tải {tenfileExcel} (Lần {attempt}/{maxRetries}): {ex.Message}");
+                        if (attempt == maxRetries) { ToastMeaasge("● Lỗi", "Không tải được file excel bán ra"); return; }
+                        await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                    }
+                }
+            }
+
+            SetCaption($"Đã tải xong {tenfileExcel}");
+        }
+        public void ToastMeaasge(string title, string text)
+        {
+            new ToastContentBuilder()
+                .AddText(title)
+                .AddText(text)
+                .SetToastDuration(ToastDuration.Short)
+                .Show();
+        }
+        private string _captchaKey = "";
+        private string _captchaValue = "";
+        private void SetCaption(string caption)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(caption)) return;
+                if (this.IsDisposed || this.Disposing) return;
+
+                // ✅ Case 1: Đang chạy trên UI thread → gán trực tiếp (nhanh)
+                if (!this.InvokeRequired)
+                {
+                    if (progressPanel1 != null && !progressPanel1.IsDisposed)
+                        progressPanel1.Caption = caption;
+                    return;
+                }
+
+                // ✅ Case 2: Worker thread → BeginInvoke (không chờ, không deadlock)
+                this.BeginInvoke(new Action(() =>
+                {
+                    try
+                    {
+                        if (this.IsDisposed || this.Disposing) return;
+
+                        if (progressPanel1 != null && !progressPanel1.IsDisposed)
+                            progressPanel1.Caption = caption;
+                    }
+                    catch { }
+                }));
+            }
+            catch { }
+        }
+        private string SolveCaptcha(string svgContent)
+        {
+            try
+            {
+                var solver = new SvgCaptchaSolver();
+                string result = solver.SolveCaptcha(svgContent);
+
+                // string svgPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "captcha.svg");
+                // File.WriteAllText(svgPath, svgContent);
+
+                // string base64 = SvgToBase64(svgContent);
+                // Testimg2(base64);
+
+                //var pythoncapcha= Readcapcha();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                LogToFile("SolveCaptcha", ex);
+                return null;
+            }
+        }
+        private static readonly object _logLock = new object();
+
+        private static void LogToFile(string tag, Exception ex, string extra = "")
+        {
+            try
+            {
+                if (ex == null) return;
+
+                lock (_logLock)
+                {
+                    string logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+                    Directory.CreateDirectory(logDir);
+
+                    string file = Path.Combine(logDir, $"error_{DateTime.Now:yyyyMMdd}.log");
+
+                    var sb = new StringBuilder();
+                    sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{tag}] {ex.Message}");
+
+                    if (!string.IsNullOrEmpty(extra))
+                        sb.AppendLine($"  Extra: {extra}");
+
+                    if (ex.InnerException != null)
+                        sb.AppendLine($"  Inner: {ex.InnerException.Message}");
+
+                    sb.AppendLine($"  Stack: {ex.StackTrace}");
+                    sb.AppendLine();
+
+                    File.AppendAllText(file, sb.ToString(), Encoding.UTF8);
+                }
+            }
+            catch
+            {
+                // Nuốt mọi lỗi — log không được phép làm chết app
+                Debug.WriteLine($"[LogToFile failed] {tag}: {ex?.Message}");
+            }
+        }
+
+        private async Task<string> TaiExcelMTTTheoDoan(string token, DateTime dtFrom, DateTime dtTo, CancellationToken cancellationToken)
+        {
+            string formattedDate1 = dtFrom.ToString("dd/MM/yyyy") + "T00:00:00";
+            string formattedDate2 = dtTo.ToString("dd/MM/yyyy") + "T23:59:59";
+
+            string url = $"https://hoadondientu.gdt.gov.vn/api/sco-query/invoices/export-excel-sold?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==8&type=purchase";
+            string filename = $"{mstcongty}_HDDienTuMayTinhTien_{dtFrom:ddMMyyyy}_{dtTo:ddMMyyyy}.xlsx";
+            string action = "Xuất hóa đơn (hóa đơn máy tính tiền mua vào)";
+            string endPoint = "/tra-cuu/tra-cuu-hoa-don";
+
+            string pathYear = $"HD{dtFrom.Year}";
+            string directoryPath = Path.Combine(savedPath, pathYear, "HDVao", dtFrom.Month.ToString());
+            string filePath = Path.Combine(directoryPath, filename);
+
+            Directory.CreateDirectory(directoryPath);
+
+            // Nếu file đã tồn tại và mới tải trong 30 phút → trả về luôn để gộp
+            if (File.Exists(filePath))
+            {
+                DateTime lastWriteTime = File.GetLastWriteTime(filePath);
+                if ((DateTime.Now - lastWriteTime).TotalMinutes < 30)
+                    return filePath;
+            }
+
+            int maxRetries = 3;
+            int retryDelayMs = 2500;
+            bool success = false;
+
+            var cookieContainer = new System.Net.CookieContainer();
+            var handler = new HttpClientHandler
+            {
+                CookieContainer = cookieContainer,
+                UseCookies = true,
+                AutomaticDecompression = System.Net.DecompressionMethods.GZip
+                                       | System.Net.DecompressionMethods.Deflate
+            };
+
+            using (var client = new HttpClient(handler))
+            {
+                client.Timeout = TimeSpan.FromSeconds(100);
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"156\", \"Google Chrome\";v=\"156\"");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
+
+                _captchaKey = "";
+                _captchaValue = "";
+
+                // Lấy captcha
+                string capUrl = "https://hoadondientu.gdt.gov.vn/api/captcha";
+                HttpResponseMessage resCap;
+
+                using (var capReq = new HttpRequestMessage(HttpMethod.Get, capUrl))
+                {
+                    capReq.Headers.TryAddWithoutValidation("Request-Id", Guid.NewGuid().ToString());
+                    capReq.Headers.TryAddWithoutValidation("End-Point", "/");
+                    resCap = await client.SendAsync(capReq, cancellationToken);
+                }
+
+                string capBody = await resCap.Content.ReadAsStringAsync();
+
+                if (!resCap.IsSuccessStatusCode)
+                {
+                    if (capBody.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase))
+                        ToastMeaasge("● Lỗi", "Bị WAF/403 HTML. Thử lại sau hoặc đổi IP/User-Agent");
+                    else
+                        ToastMeaasge("● Lỗi", $"Không lấy được captcha ({(int)resCap.StatusCode}), thử lại sau 2s");
+
+                    await Task.Delay(2000, cancellationToken);
+                    return null;
+                }
+
+                MyJson capJson = JsonConvert.DeserializeObject<MyJson>(capBody);
+
+                string svgPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "captcha.svg");
+                try
+                {
+                    File.WriteAllText(svgPath, capJson.Content);
+                }
+                catch (Exception exFile)
+                {
+                    ToastMeaasge("● Lỗi", "Không ghi được file captcha: " + exFile.Message);
+                    return null;
+                }
+ 
+                    SetCaption("Đang giải mã captcha");
+
+                string cvalue = "";
+                try
+                {
+                    //string svgCaptcha = File.ReadAllText(svgPath);
+                    //string base64 = SvgToBase64(svgCaptcha);
+                    //Testimg2(base64);
+                    //cvalue = Readcapcha();
+                    SetCaption("Đang giải mã captcha...");
+                    cvalue = SolveCaptcha(capJson.Content);
+                    if (string.IsNullOrWhiteSpace(cvalue))
+                        throw new Exception("Captcha giải ra rỗng");
+
+                    _captchaKey = capJson.Key ?? "";
+                    _captchaValue = cvalue.Trim();
+
+                    url += $"&ckey={Uri.EscapeDataString(_captchaKey)}&cvalue={Uri.EscapeDataString(_captchaValue)}";
+
+                    Console.WriteLine($"[CAPTCHA] ckey={_captchaKey} | cvalue={_captchaValue}");
+                }
+                catch (Exception ex)
+                {
+                    ToastMeaasge("● Lỗi", "Không giải mã được captcha: " + ex.Message);
+                    return null;
+                }
+
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                       
+
+                        using (var request = new HttpRequestMessage(HttpMethod.Get, url))
+                        {
+                            request.Headers.TryAddWithoutValidation("Request-Id", Guid.NewGuid().ToString());
+                            request.Headers.TryAddWithoutValidation("End-Point", endPoint);
+                            request.Headers.TryAddWithoutValidation("Action", Uri.EscapeDataString(action));
+
+                            if (!string.IsNullOrEmpty(_captchaKey))
+                            {
+                                request.Headers.TryAddWithoutValidation("ckey", _captchaKey);
+                                request.Headers.TryAddWithoutValidation("cvalue", _captchaValue);
+                            }
+
+                            var response = await client.SendAsync(request, cancellationToken);
+
+                            if (!response.IsSuccessStatusCode)
+                            {
+                                string errBody = await response.Content.ReadAsStringAsync();
+                                Console.WriteLine($"[MTT {(int)response.StatusCode}] {errBody}");
+                            }
+
+                            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                            {
+                                if (attempt < maxRetries)
+                                {
+                                    await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                                    continue;
+                                }
+                                else
+                                {
+                                    ToastMeaasge("● Lỗi", "Bị chặn 403 khi tải excel MTT");
+                                    return null;
+                                }
+                            }
+
+                            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                            {
+                                if (attempt < maxRetries)
+                                {
+                                    await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                                    continue;
+                                }
+                                else
+                                {
+                                    ToastMeaasge("● Lỗi", "Captcha sai hoặc hết hạn (400).");
+                                    return null;
+                                }
+                            }
+
+                            if ((int)response.StatusCode == 429 || (int)response.StatusCode == 504)
+                            {
+                                if (attempt < maxRetries)
+                                {
+                                    await Task.Delay(retryDelayMs * attempt * 2, cancellationToken);
+                                    continue;
+                                }
+                                else
+                                {
+                                    ToastMeaasge("● Lỗi", $"Máy chủ thuế trả về {(int)response.StatusCode}.");
+                                    return null;
+                                }
+                            }
+
+                            response.EnsureSuccessStatusCode();
+                            byte[] fileBytes = await response.Content.ReadAsByteArrayAsync();
+
+                            if (fileBytes.Length < 2048)
+                            {
+                                string errorContent = Encoding.UTF8.GetString(fileBytes);
+                                throw new Exception("File tải về quá nhỏ: " + errorContent);
+                            }
+
+                            if (fileBytes.Length > 4 && fileBytes[0] == 0x50 && fileBytes[1] == 0x4B)
+                            {
+                                File.WriteAllBytes(filePath, fileBytes);
+                                success = true;
+                                break;
+                            }
+                            else
+                            {
+                                string preview = Encoding.UTF8.GetString(fileBytes, 0, Math.Min(300, fileBytes.Length));
+                                throw new Exception("Dữ liệu trả về không phải file Excel: " + preview);
+                            }
+                        }
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        // Kiểm tra xem có phải người dùng chủ động hủy không
+                        bool isCancelledByUser = cancellationToken.IsCancellationRequested;
+
+                        // Kiểm tra xem có phải timeout của HttpClient không (inner là TimeoutException)
+                        bool isTimeout = ex.InnerException is TimeoutException;
+
+                        Console.WriteLine($"[TaskCanceled] isCancelledByUser={isCancelledByUser}, isTimeout={isTimeout}, Type={ex.GetType().Name}");
+
+                        if (isCancelledByUser)
+                        {
+                            // Người dùng chủ động hủy → thoát ngay, không retry
+                            ToastMeaasge("● Thông báo", "Đã hủy tải file.");
+                            return null;
+                        }
+
+                        if (isTimeout)
+                        {
+                            // Timeout do server chậm → coi như lỗi tạm thời, thử lại
+                            Console.WriteLine($"[Timeout] Tải MTT {dtFrom:dd/MM}-{dtTo:dd/MM} quá thời gian (Lần {attempt}/{maxRetries})");
+
+                            if (attempt == maxRetries)
+                            {
+                                ToastMeaasge("● Lỗi", $"Timeout tải MTT {dtFrom:dd/MM}-{dtTo:dd/MM} sau {maxRetries} lần");
+                                return null;
+                            }
+
+                            await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                            continue;
+                        }
+
+                        // Các trường hợp OperationCanceledException khác (hiếm)
+                        ToastMeaasge("● Thông báo", "Tác vụ bị hủy: " + ex.Message);
+                        return null;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi MTT {dtFrom:dd/MM}-{dtTo:dd/MM} (Lần {attempt}/{maxRetries}): {ex.Message}");
+
+                        if (attempt == maxRetries)
+                        {
+                            ToastMeaasge("● Lỗi", $"Không tải được MTT {dtFrom:dd/MM}-{dtTo:dd/MM}");
+                        }
+                        else
+                        {
+                            await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                        }
+                    }
+                }
+            }
+
+            if (success)
+            {
+                Console.WriteLine($"Tải thành công MTT: {filePath}");
+                return filePath;  // TRẢ VỀ ĐƯỜNG DẪN FILE
+            }
+
+            return null;
+        }
+        private void RenumberSTT(string fullFilePath, int colSTT)
+        {
+            if (!File.Exists(fullFilePath)) return;
+            if (colSTT <= 0) return;
+
+            using (var wb = new ClosedXML.Excel.XLWorkbook(fullFilePath))
+            {
+                var ws = wb.Worksheet(1);
+                var used = ws.RangeUsed();
+                if (used == null) return;
+
+                int lastRow = used.LastRow().RowNumber();
+                if (lastRow < MTT_DATA_START_ROW) return;
+
+                int stt = 1;
+                for (int r = MTT_DATA_START_ROW; r <= lastRow; r++)
+                {
+                    // Bỏ qua dòng trống hoàn toàn (nếu có)
+                    var usedRow = ws.Row(r).CellsUsed();
+                    if (!usedRow.Any())
+                        continue;
+
+                    ws.Cell(r, colSTT).Value = stt++;
+                }
+
+                wb.Save();
+                Console.WriteLine($"[STT] Đã đánh lại STT 1..{stt - 1} (cột {colSTT}).");
+            }
+        }
+        private const int MTT_COL_STT = 1;   // ← CHỈNH nếu STT không phải cột 1
+        private string BuildInvoiceKey(ClosedXML.Excel.IXLWorksheet ws, int row,
+                                       int colMauSo, int colKyHieu, int colSoHD, int colNgayLap)
+        {
+            string mauSo = ws.Cell(row, colMauSo).GetString().Trim();
+            string kyHieu = ws.Cell(row, colKyHieu).GetString().Trim();
+            string soHD = ws.Cell(row, colSoHD).GetString().Trim();
+
+            // Chuẩn hóa ngày: ưu tiên DateTime, fallback parse string
+            var cellNgay = ws.Cell(row, colNgayLap);
+            string ngayStr;
+            if (cellNgay.DataType == ClosedXML.Excel.XLDataType.DateTime)
+            {
+                ngayStr = cellNgay.GetDateTime().ToString("yyyyMMdd");
+            }
+            else
+            {
+                string s = cellNgay.GetString().Trim();
+                if (DateTime.TryParseExact(s,
+                        new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd-MM-yyyy" },
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
+                        out DateTime dt))
+                    ngayStr = dt.ToString("yyyyMMdd");
+                else
+                    ngayStr = s; // giữ nguyên nếu không parse được
+            }
+
+            // Cả 4 đều rỗng → dòng trống
+            if (string.IsNullOrEmpty(mauSo) && string.IsNullOrEmpty(kyHieu)
+                && string.IsNullOrEmpty(soHD) && string.IsNullOrEmpty(ngayStr))
+                return "";
+
+            return $"{mauSo}|{kyHieu}|{soHD}|{ngayStr}";
+        }
+        private void GopFileExcelAppendOnly(List<string> inputFiles, string outputFile)
+        {
+            int headerRow = MTT_HEADER_ROW;
+            int dataStartRow = MTT_DATA_START_ROW;
+
+            var fullWb = new ClosedXML.Excel.XLWorkbook();
+            var fullWs = fullWb.Worksheets.Add("HoaDonMTT");
+
+            var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            int outputRow = headerRow;
+            int firstCol = 1, lastCol = 1;
+            bool headerCopied = false;
+
+            // ========== BƯỚC 1: ĐỌC FULL CŨ (NẾU CÓ) ==========
+            if (File.Exists(outputFile))
+            {
+                try
+                {
+                    using (var oldWb = new ClosedXML.Excel.XLWorkbook(outputFile))
+                    {
+                        var oldWs = oldWb.Worksheet(1);
+                        var used = oldWs.RangeUsed();
+                        if (used != null)
+                        {
+                            firstCol = used.FirstColumn().ColumnNumber();
+                            lastCol = used.LastColumn().ColumnNumber();
+                            int oldLastRow = used.LastRow().RowNumber();
+
+                            // Copy toàn bộ nội dung Full cũ sang workbook mới
+                            for (int r = 1; r <= oldLastRow; r++)
+                            {
+                                for (int c = firstCol; c <= lastCol; c++)
+                                    CopyCell(oldWs.Cell(r, c), fullWs.Cell(r, c - firstCol + 1));
+                            }
+
+                            // Copy độ rộng cột
+                            for (int c = firstCol; c <= lastCol; c++)
+                            {
+                                double w = oldWs.Column(c).Width;
+                                if (w > 0) fullWs.Column(c - firstCol + 1).Width = w;
+                            }
+
+                            // Xây tập khóa đã có
+                            for (int r = dataStartRow; r <= oldLastRow; r++)
+                            {
+                                string key = BuildInvoiceKey(oldWs, r,
+                                    MTT_COL_MAU_SO, MTT_COL_KY_HIEU,
+                                    MTT_COL_SO_HD, MTT_COL_NGAY_LAP);
+                                if (!string.IsNullOrEmpty(key))
+                                    existingKeys.Add(key);
+                            }
+
+                            outputRow = oldLastRow;
+                            headerCopied = true;
+
+                            Console.WriteLine($"[MERGE] Full cũ: {existingKeys.Count} hóa đơn, {oldLastRow} dòng.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[MERGE] Không đọc được Full cũ ({ex.Message}), bắt đầu mới.");
+                    existingKeys.Clear();
+                    outputRow = headerRow;
+                    headerCopied = false;
+                }
+            }
+
+            // ========== BƯỚC 2: DUYỆT FILE ĐẦU VÀO, THÊM DÒNG MỚI ==========
+            int addedCount = 0, skippedCount = 0;
+
+            foreach (string file in inputFiles)
+            {
+                if (!File.Exists(file)) continue;
+
+                try
+                {
+                    using (var srcWb = new ClosedXML.Excel.XLWorkbook(file))
+                    {
+                        var srcWs = srcWb.Worksheet(1);
+                        var used = srcWs.RangeUsed();
+                        if (used == null) continue;
+
+                        int lastRow = used.LastRow().RowNumber();
+                        int srcFirstCol = used.FirstColumn().ColumnNumber();
+                        int srcLastCol = used.LastColumn().ColumnNumber();
+
+                        // Nếu Full chưa có gì → copy header từ file đầu tiên
+                        if (!headerCopied)
+                        {
+                            firstCol = srcFirstCol;
+                            lastCol = srcLastCol;
+
+                            for (int r = 1; r <= headerRow; r++)
+                            {
+                                for (int c = firstCol; c <= lastCol; c++)
+                                    CopyCell(srcWs.Cell(r, c), fullWs.Cell(r, c - firstCol + 1));
+                            }
+                            for (int c = firstCol; c <= lastCol; c++)
+                            {
+                                double w = srcWs.Column(c).Width;
+                                if (w > 0) fullWs.Column(c - firstCol + 1).Width = w;
+                            }
+
+                            outputRow = headerRow;
+                            headerCopied = true;
+                        }
+
+                        // Duyệt dữ liệu
+                        for (int r = dataStartRow; r <= lastRow; r++)
+                        {
+                            string key = BuildInvoiceKey(srcWs, r,
+                                MTT_COL_MAU_SO, MTT_COL_KY_HIEU,
+                                MTT_COL_SO_HD, MTT_COL_NGAY_LAP);
+
+                            if (string.IsNullOrEmpty(key)) continue;   // dòng trống
+
+                            if (existingKeys.Contains(key))
+                            {
+                                skippedCount++;
+                                continue;   // đã có → giữ nguyên, không thêm
+                            }
+
+                            // Chưa có → thêm vào cuối
+                            outputRow++;
+                            for (int c = srcFirstCol; c <= srcLastCol; c++)
+                                CopyCell(srcWs.Cell(r, c),
+                                         fullWs.Cell(outputRow, c - srcFirstCol + 1));
+
+                            existingKeys.Add(key);
+                            addedCount++;
+                        }
+                    }
+                }
+                catch (Exception exFile)
+                {
+                    Console.WriteLine($"[MERGE] Lỗi đọc file {file}: {exFile.Message}");
+                }
+            }
+
+            // ========== BƯỚC 3: LƯU ==========
+            if (!headerCopied)
+            {
+                Console.WriteLine("[MERGE] Không có dữ liệu để gộp.");
+                return;
+            }
+
+            // Sao lưu Full cũ trước khi ghi đè
+            if (File.Exists(outputFile))
+            {
+                try
+                {
+                    string backup = outputFile + ".bak";
+                    File.Copy(outputFile, backup, overwrite: true);
+                }
+                catch (Exception exBk)
+                {
+                    Console.WriteLine($"[MERGE] Không sao lưu được: {exBk.Message}");
+                }
+            }
+
+            fullWb.SaveAs(outputFile);
+            Console.WriteLine($"[MERGE] +{addedCount} mới, bỏ qua {skippedCount} trùng. Tổng Full = {existingKeys.Count}.");
+        }
+        private void CopyCell(ClosedXML.Excel.IXLCell src, ClosedXML.Excel.IXLCell dst)
+        {
+            // Copy style (màu nền, font, border, căn lề)
+            dst.Style.Fill = src.Style.Fill;
+            dst.Style.Font = src.Style.Font;
+            dst.Style.Border = src.Style.Border;
+            dst.Style.Alignment = src.Style.Alignment;
+            dst.Style.NumberFormat = src.Style.NumberFormat;
+
+            // Copy giá trị
+            if (src.DataType == ClosedXML.Excel.XLDataType.Text) dst.Value = src.GetString();
+            else if (src.DataType == ClosedXML.Excel.XLDataType.Number) dst.Value = src.GetDouble();
+            else if (src.DataType == ClosedXML.Excel.XLDataType.DateTime) dst.Value = src.GetDateTime();
+            else if (src.DataType == ClosedXML.Excel.XLDataType.Boolean) dst.Value = src.GetBoolean();
+            else dst.Value = src.GetFormattedString();
+        }
+        public async Task XulyexelvaoMTT(string token, int _type, int thang, CancellationToken cancellationToken = default)
+        {
+            string tenfileExcel = "";
+            if (_type == 1) tenfileExcel = "File excel hoá đơn nhận mã";
+            else if (_type == 2) tenfileExcel = "File excel hoá đơn không nhận mã";
+            else if (_type == 3) tenfileExcel = "File Excel hoá đơn máy tính tiền";
+
+            DateTime dtFrom = new DateTime((int)cbbNam.EditValue, thang, 1);
+            DateTime dtTo = dtFrom.AddMonths(1).AddDays(-1);
+
+            // ================= ĐẶC BIỆT CHO HÓA ĐƠN MÁY TÍNH TIỀN: CHIA ĐOẠN ≤ 11 NGÀY =================
+            if (_type == 3)
+            {
+                DateTime monthStart = dtFrom;
+                DateTime monthEnd = dtTo;
+                DateTime chunkStart = monthStart;
+                int chunkIndex = 1;
+
+                string pathYear = $"HD{dtFrom.Year}";
+                string directoryPath = Path.Combine(savedPath, pathYear, "HDVao", dtFrom.Month.ToString());
+                Directory.CreateDirectory(directoryPath);
+
+                string mergedFilePath = Path.Combine(directoryPath,
+                    $"{mstcongty}_HDDienTuMayTinhTien_FullThang{dtFrom:MMyyyy}.xlsx");
+
+                // ===== CHECK 30 PHÚT: NẾU FILE FULL MTT VỪA TẢI < 30 PHÚT THÌ BỎ QUA =====
+                if (File.Exists(mergedFilePath))
+                {
+                    var fiFull = new FileInfo(mergedFilePath);
+                    if (fiFull.Length > 2048 &&
+                        (DateTime.Now - fiFull.LastWriteTime).TotalMinutes < 30)
+                    {
+                        Console.WriteLine($"[MTT] File Full vừa tải <30 phút, bỏ qua: {mergedFilePath}");
+                        ToastMeaasge("● Thông báo", "File MTT đã tải trong 30 phút gần đây, không tải lại.");
+                        return;
+                    }
+                }
+
+                // Đếm số đoạn cần tải (11 ngày/đoạn)
+                int expectedChunks = 0;
+                DateTime temp = monthStart;
+                while (temp <= monthEnd)
+                {
+                    expectedChunks++;
+                    DateTime e = temp.AddDays(10); // 11 ngày
+                    if (e > monthEnd) e = monthEnd;
+                    temp = e.AddDays(1);
+                }
+
+                var downloadedFiles = new List<string>();
+
+                while (chunkStart <= monthEnd)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    DateTime chunkEnd = chunkStart.AddDays(10); // 11 ngày
+                    if (chunkEnd > monthEnd) chunkEnd = monthEnd;
+
+                    // Kiểm tra file đoạn này đã có chưa
+                    string expectedFile = Path.Combine(directoryPath,
+                        $"{mstcongty}_HDDienTuMayTinhTien_{chunkStart:ddMMyyyy}_{chunkEnd:ddMMyyyy}.xlsx");
+
+                    if (File.Exists(expectedFile))
+                    {
+                        // Chỉ cần file có dữ liệu thật là dùng luôn, không tải lại
+                        var fi = new FileInfo(expectedFile);
+                        if (fi.Length > 2048)
+                        {
+                            Console.WriteLine($"[MTT] Đoạn {chunkIndex}/{expectedChunks} đã có, bỏ qua: {expectedFile}");
+                            downloadedFiles.Add(expectedFile);
+                            chunkStart = chunkEnd.AddDays(1);
+                            chunkIndex++;
+                            continue;
+                        }
+                        // file rỗng/hỏng → xóa và tải lại
+                        try { File.Delete(expectedFile); } catch { }
+                    }
+
+                    Console.WriteLine($"[MTT] Đoạn {chunkIndex}/{expectedChunks}: {chunkStart:dd/MM/yyyy} - {chunkEnd:dd/MM/yyyy}");
+
+                    string chunkFile = await TaiExcelMTTTheoDoan(token, chunkStart, chunkEnd, cancellationToken);
+
+                    if (!string.IsNullOrEmpty(chunkFile) && File.Exists(chunkFile))
+                        downloadedFiles.Add(chunkFile);
+
+                    await Task.Delay(2500, cancellationToken); // tránh 429
+
+                    chunkStart = chunkEnd.AddDays(1);
+                    chunkIndex++;
+                }
+
+                // ================= GỘP CÁC FILE ĐÃ TẢI (APPEND-ONLY + SORT + STT) =================
+                // Quét TOÀN BỘ file lẻ trên đĩa (không chỉ file tải trong lần này)
+                var allChunkFiles = new List<string>();
+                DateTime scanDate = monthStart;
+                while (scanDate <= monthEnd)
+                {
+                    DateTime e = scanDate.AddDays(10);
+                    if (e > monthEnd) e = monthEnd;
+
+                    string f = Path.Combine(directoryPath,
+                        $"{mstcongty}_HDDienTuMayTinhTien_{scanDate:ddMMyyyy}_{e:ddMMyyyy}.xlsx");
+
+                    if (File.Exists(f) && new FileInfo(f).Length > 2048)
+                        allChunkFiles.Add(f);
+
+                    scanDate = e.AddDays(1);
+                }
+
+                if (allChunkFiles.Count > 0)
+                {
+                    try
+                    {
+                        SetCaption("Đang gộp file Excel MTT (append-only)...");
+
+                        // (1) Gộp append-only: Full cũ + tất cả file lẻ trên đĩa
+                        GopFileExcelAppendOnly(allChunkFiles, mergedFilePath);
+                        Console.WriteLine($"[MTT] Đã gộp {allChunkFiles.Count} file lẻ → {mergedFilePath}");
+
+                        // (2) Sửa tiêu đề khoảng ngày cho đúng cả tháng
+                        try
+                        {
+                            using (var wb = new ClosedXML.Excel.XLWorkbook(mergedFilePath))
+                            {
+                                var ws = wb.Worksheet(1);
+                                var usedRange = ws.RangeUsed();
+                                if (usedRange != null)
+                                {
+                                    foreach (var cell in usedRange.CellsUsed())
+                                    {
+                                        if (cell.GetString().StartsWith("Từ ngày", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            cell.Value = $"Từ ngày {dtFrom:dd/MM/yyyy} đến ngày {dtTo:dd/MM/yyyy}";
+                                            break;
+                                        }
+                                    }
+                                }
+                                wb.Save();
+                            }
+                        }
+                        catch (Exception exTitle)
+                        {
+                            Console.WriteLine($"[MTT] Không sửa được tiêu đề: {exTitle.Message}");
+                        }
+
+                        // (3) Sort lại theo ngày lập (tăng dần)
+                        try
+                        {
+                            SortFullByNgayLap(mergedFilePath, MTT_COL_NGAY_LAP, ascending: true);
+                        }
+                        catch (Exception exSort)
+                        {
+                            Console.WriteLine($"[MTT SORT ERROR] {exSort.Message}");
+                            ToastMeaasge("● Cảnh báo", "Không sort được file Full: " + exSort.Message);
+                        }
+
+                        // (4) Đánh lại STT xuyên suốt (bỏ qua nếu MTT_COL_STT <= 0)
+                        try
+                        {
+                            RenumberSTT(mergedFilePath, MTT_COL_STT);
+                        }
+                        catch (Exception exStt)
+                        {
+                            Console.WriteLine($"[MTT STT ERROR] {exStt.Message}");
+                        }
+
+                        // (5) Chỉ xóa file lẻ khi đã đủ số đoạn
+                        if (allChunkFiles.Count == expectedChunks)
+                        {
+                            foreach (string f in allChunkFiles)
+                            {
+                                try { if (File.Exists(f)) File.Delete(f); } catch { }
+                            }
+                            ToastMeaasge("● Thông báo", $"Đã gộp đủ {allChunkFiles.Count} file thành công.");
+                        }
+                        else
+                        {
+                            ToastMeaasge("● Cảnh báo",
+                                $"Mới có {allChunkFiles.Count}/{expectedChunks} đoạn. File Full đã cập nhật (chỉ thêm), chạy lại để tải bù.");
+                            Console.WriteLine($"[MTT] Giữ {allChunkFiles.Count} file lẻ để gộp bù lần sau.");
+                        }
+
+                        SetCaption($"Đã gộp xong: {Path.GetFileName(mergedFilePath)}");
+                    }
+                    catch (Exception exMerge)
+                    {
+                        ToastMeaasge("● Lỗi", "Không gộp được file: " + exMerge.Message);
+                        Console.WriteLine($"[MTT MERGE ERROR] {exMerge}");
+                    }
+                }
+                else
+                {
+                    ToastMeaasge("● Thông báo", "Không có file nào để gộp.");
+                }
+
+                return;
+            }
+
+            // ================= CÁC LOẠI 1, 2 GIỮ NGUYÊN LOGIC CŨ =================
+            string formattedDate1 = dtFrom.ToString("dd/MM/yyyy") + "T00:00:00";
+            string formattedDate2 = dtTo.ToString("dd/MM/yyyy") + "T23:59:59";
+
+            string url, filename;
+            string action = "";
+            string endPoint = "/tra-cuu/tra-cuu-hoa-don";
+
+            switch (_type)
+            {
+                case 1:
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel-sold?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==5&type=purchase";
+                    filename = $"{mstcongty}_HDDienTuDaCapMa.xlsx";
+                    action = "Xuất excel (hóa đơn mua vào)";
+                    break;
+                case 2:
+                    url = $"https://hoadondientu.gdt.gov.vn/api/query/invoices/export-excel-sold?sort=tdlap:desc&search=tdlap=ge={formattedDate1};tdlap=le={formattedDate2};ttxly==6&type=purchase";
+                    filename = $"{mstcongty}_HDDienTuKhongMa.xlsx";
+                    action = "Xuất excel (hóa đơn mua vào)";
+                    break;
+                default:
+                    return;
+            }
+
+            string pathYear1 = $"HD{(int)cbbNam.EditValue}";
+            string directoryPath1 = Path.Combine(savedPath, pathYear1, "HDVao", thang.ToString());
+            string filePath1 = Path.Combine(directoryPath1, filename);
+
+            Directory.CreateDirectory(directoryPath1);
+
+            if (File.Exists(filePath1))
+            {
+                DateTime lastWriteTime = File.GetLastWriteTime(filePath1);
+                if ((DateTime.Now - lastWriteTime).TotalMinutes < 30) return;
+            }
+
+            int maxRetries = 3;
+            int retryDelayMs = 2500;
+            bool success = false;
+
+            var handler = new HttpClientHandler
+            {
+                AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+            };
+
+            using (var client = new HttpClient(handler))
+            {
+                client.Timeout = TimeSpan.FromSeconds(60);
+
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"156\", \"Google Chrome\";v=\"156\"");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
+
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    try
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        SetCaption($"Đang tải {tenfileExcel} (Lần {attempt}/{maxRetries})");
+
+                        using (var request = new HttpRequestMessage(HttpMethod.Get, url))
+                        {
+                            request.Headers.TryAddWithoutValidation("Request-Id", Guid.NewGuid().ToString());
+                            request.Headers.TryAddWithoutValidation("End-Point", endPoint);
+                            request.Headers.TryAddWithoutValidation("Action", Uri.EscapeDataString(action));
+
+                            var response = await client.SendAsync(request, cancellationToken);
+                            sw.Stop();
+
+                            if (!response.IsSuccessStatusCode)
+                            {
+                                string errBody = await response.Content.ReadAsStringAsync();
+                                Console.WriteLine($"[{(int)response.StatusCode}] {errBody}");
+                            }
+
+                            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                            {
+                                if (attempt < maxRetries)
+                                {
+                                    await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                                    continue;
+                                }
+                                else
+                                {
+                                    ToastMeaasge("● Lỗi", "Bị chặn 403 khi tải excel (có thể do WAF)");
+                                    return;
+                                }
+                            }
+
+                            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                            {
+                                if (attempt < maxRetries)
+                                {
+                                    await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                                    continue;
+                                }
+                                else
+                                {
+                                    ToastMeaasge("● Lỗi", "Yêu cầu không hợp lệ (400).");
+                                    return;
+                                }
+                            }
+
+                            if ((int)response.StatusCode == 429 || (int)response.StatusCode == 504)
+                            {
+                                if (attempt < maxRetries)
+                                {
+                                    await Task.Delay(retryDelayMs * attempt * 2, cancellationToken);
+                                    continue;
+                                }
+                                else
+                                {
+                                    ToastMeaasge("● Lỗi", $"Máy chủ thuế trả về {(int)response.StatusCode}. Thử lại sau.");
+                                    return;
+                                }
+                            }
+
+                            response.EnsureSuccessStatusCode();
+                            byte[] fileBytes = await response.Content.ReadAsByteArrayAsync();
+
+                            if (fileBytes.Length < 2048)
+                            {
+                                string errorContent = Encoding.UTF8.GetString(fileBytes);
+                                throw new Exception("File tải về quá nhỏ: " + errorContent);
+                            }
+
+                            if (fileBytes.Length > 4 && fileBytes[0] == 0x50 && fileBytes[1] == 0x4B)
+                            {
+                                File.WriteAllBytes(filePath1, fileBytes);
+                                success = true;
+                                break;
+                            }
+                            else
+                            {
+                                string preview = Encoding.UTF8.GetString(fileBytes, 0, Math.Min(300, fileBytes.Length));
+                                throw new Exception("Dữ liệu trả về không phải file Excel: " + preview);
+                            }
+                        }
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        sw.Stop();
+                        long elapsedMs = sw.ElapsedMilliseconds;
+                        bool isCancelledByUser = cancellationToken.IsCancellationRequested;
+                        bool isTimeout = !isCancelledByUser && elapsedMs >= (client.Timeout.TotalMilliseconds - 3000);
+
+                        Console.WriteLine($"[TaskCanceled] elapsed={elapsedMs}ms | isCancelledByUser={isCancelledByUser} | isTimeout={isTimeout}");
+
+                        if (isCancelledByUser)
+                        {
+                            ToastMeaasge("● Thông báo", "Đã hủy tải file.");
+                            return;
+                        }
+
+                        if (isTimeout)
+                        {
+                            if (attempt == maxRetries)
+                            {
+                                ToastMeaasge("● Lỗi", $"Timeout tải {tenfileExcel} sau {maxRetries} lần");
+                                return;
+                            }
+                            await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                            continue;
+                        }
+
+                        ToastMeaasge("● Thông báo", $"Tác vụ bị hủy không rõ nguyên nhân (sau {elapsedMs}ms)");
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        sw.Stop();
+                        Console.WriteLine($"Lỗi khi tải {tenfileExcel} (Lần {attempt}/{maxRetries}): {ex.Message}");
+
+                        if (attempt == maxRetries)
+                        {
+                            ToastMeaasge("● Lỗi", "Không tải được file excel, sẽ thử lại sau 3s");
+                            await Task.Delay(3000, cancellationToken);
+                            if (this.InvokeRequired) this.Invoke(new Action(() => simpleButton3.PerformClick()));
+                            else simpleButton3.PerformClick();
+                        }
+                        else
+                        {
+                            await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                        }
+                    }
+                }
+            }
+
+            if (success)
+            {
+                Console.WriteLine($"Tải thành công: {filePath1}");
+                SetCaption($"Đã tải xong {tenfileExcel}");
+            }
+        }
+        private const int MTT_HEADER_ROW = 6;   // dòng header (1-based)
+        private const int MTT_DATA_START_ROW = 7;   // dòng dữ liệu đầu tiên
+        private const int MTT_COL_MAU_SO = 2;   // ← CHỈNH theo mẫu Excel thực tế
+        private const int MTT_COL_KY_HIEU = 3;   // ← CHỈNH
+        private const int MTT_COL_SO_HD = 4;   // ← CHỈNH
+        private const int MTT_COL_NGAY_LAP = 5;   // ← CHỈNH
+        private void SortFullByNgayLap(string fullFilePath, int colNgayLap, bool ascending = true)
+        {
+            int headerRow = MTT_HEADER_ROW;
+            int dataStartRow = MTT_DATA_START_ROW;
+
+            if (!File.Exists(fullFilePath)) return;
+
+            using (var wb = new ClosedXML.Excel.XLWorkbook(fullFilePath))
+            {
+                var ws = wb.Worksheet(1);
+                var used = ws.RangeUsed();
+                if (used == null) return;
+
+                int lastRow = used.LastRow().RowNumber();
+                int firstCol = used.FirstColumn().ColumnNumber();
+                int lastCol = used.LastColumn().ColumnNumber();
+
+                if (lastRow < dataStartRow) return;   // không có dữ liệu
+
+                // ===== BƯỚC 1: Đọc toàn bộ dòng dữ liệu vào List =====
+                var rows = new List<(DateTime Ngay, object[] Values, string[] Formats)>();
+
+                for (int r = dataStartRow; r <= lastRow; r++)
+                {
+                    var cellNgay = ws.Cell(r, colNgayLap);
+
+                    DateTime ngay;
+                    if (cellNgay.DataType == ClosedXML.Excel.XLDataType.DateTime)
+                    {
+                        ngay = cellNgay.GetDateTime();
+                    }
+                    else
+                    {
+                        string s = cellNgay.GetString().Trim();
+                        if (!DateTime.TryParseExact(s,
+                                new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd-MM-yyyy" },
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                System.Globalization.DateTimeStyles.None,
+                                out ngay))
+                        {
+                            ngay = DateTime.MinValue;
+                        }
+                    }
+
+                    var values = new object[lastCol - firstCol + 1];
+                    var formats = new string[lastCol - firstCol + 1];
+
+                    for (int c = firstCol; c <= lastCol; c++)
+                    {
+                        var cell = ws.Cell(r, c);
+                        values[c - firstCol] = cell.Value;
+                        formats[c - firstCol] = cell.Style.NumberFormat.Format ?? "";
+                    }
+
+                    rows.Add((ngay, values, formats));
+                }
+
+                // ===== BƯỚC 2: Sort theo ngày =====
+                rows = ascending
+                    ? rows.OrderBy(x => x.Ngay).ToList()
+                    : rows.OrderByDescending(x => x.Ngay).ToList();
+
+                // ===== BƯỚC 3: Xóa dữ liệu cũ và ghi lại theo thứ tự mới =====
+                ws.Range(dataStartRow, firstCol, lastRow, lastCol)
+                  .Clear(ClosedXML.Excel.XLClearOptions.Contents);
+
+                int outputRow = dataStartRow;
+                foreach (var row in rows)
+                {
+                    for (int i = 0; i < row.Values.Length; i++)
+                    {
+                        var dst = ws.Cell(outputRow, firstCol + i);
+                        dst.Value = ClosedXML.Excel.XLCellValue.FromObject(row.Values[i]);
+
+                        // Giữ format số/ngày của ô gốc
+                        if (!string.IsNullOrEmpty(row.Formats[i]))
+                            dst.Style.NumberFormat.Format = row.Formats[i];
+                    }
+                    outputRow++;
+                }
+
+                wb.Save();
+                Console.WriteLine($"[SORT] Đã sort {rows.Count} dòng theo ngày lập ({(ascending ? "tăng" : "giảm")}).");
+            }
         }
         double TongTienExcel = 0;
         double TongTienTrcthueExcel = 0;
@@ -1415,9 +3009,12 @@ namespace SaovietTax
                             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36");
                         client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
                         client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7");
+                        // ⚠ BỎ "br" vì .NET Framework không auto-decompress Brotli
+                        client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Encoding", "gzip, deflate");
                         client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://hoadondientu.gdt.gov.vn");
                         client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://hoadondientu.gdt.gov.vn/");
-                        client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Google Chrome\";v=\"140\", \"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\"");
+                        client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua",
+                            "\"Google Chrome\";v=\"140\", \"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\"");
                         client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
                         client.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
                         client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
@@ -1465,24 +3062,23 @@ namespace SaovietTax
                             return;
                         }
 
-                        string svgPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "captcha.svg");
+                        string svgPath = Path.Combine(Path.GetTempPath(), "captcha_selenium.svg");
                         File.WriteAllText(svgPath, capJson.Content);
 
                         // Lấy XSRF-TOKEN nếu có
-                        var cookies = cookieContainer.GetCookies(new Uri("https://hoadondientu.gdt.gov.vn"));
-                        string xsrfToken = cookies["XSRF-TOKEN"]?.Value;
-                        if (!string.IsNullOrEmpty(xsrfToken))
-                        {
-                            client.DefaultRequestHeaders.Remove("X-XSRF-TOKEN");
-                            client.DefaultRequestHeaders.TryAddWithoutValidation("X-XSRF-TOKEN", xsrfToken);
-                        }
+                        //var cookies = cookieContainer.GetCookies(new Uri("https://hoadondientu.gdt.gov.vn"));
+                        //string xsrfToken = cookies["XSRF-TOKEN"]?.Value;
+                        //if (!string.IsNullOrEmpty(xsrfToken))
+                        //{
+                        //    client.DefaultRequestHeaders.Remove("X-XSRF-TOKEN");
+                        //    client.DefaultRequestHeaders.TryAddWithoutValidation("X-XSRF-TOKEN", xsrfToken);
+                        //}
 
                         // ================= STEP 2: SOLVE CAPTCHA =================
                         progressPanel1.Caption = "Đang giải captcha...";
                         Application.DoEvents();
 
-                        SvgCaptchaSolver solver = new SvgCaptchaSolver();
-                        string cvalue = solver.SolveCaptcha(svgPath)?.Trim() ?? "";
+                        string cvalue = SolveCaptcha(capJson.Content);
                         if (cvalue.Length <= 5)
                         {
                             if (trylogin > 1)
@@ -1660,9 +3256,7 @@ namespace SaovietTax
         }
         private void simpleButton1_Click(object sender, EventArgs e)
         {
-            Getttoken();
-           
-
+            Getttoken(); 
         }
 
         private void btnExportExcelVao_Click(object sender, EventArgs e)

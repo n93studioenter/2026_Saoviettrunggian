@@ -113,7 +113,7 @@
             this.progressPanel1.Appearance.Options.UseBackColor = true;
             this.progressPanel1.Location = new System.Drawing.Point(30, 54);
             this.progressPanel1.Name = "progressPanel1";
-            this.progressPanel1.Size = new System.Drawing.Size(701, 69);
+            this.progressPanel1.Size = new System.Drawing.Size(701, 45);
             this.progressPanel1.TabIndex = 7;
             this.progressPanel1.Text = "progressPanel1";
             // 
@@ -121,7 +121,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(774, 147);
+            this.ClientSize = new System.Drawing.Size(770, 113);
             this.Controls.Add(this.progressPanel1);
             this.Controls.Add(this.simpleButton1);
             this.Controls.Add(this.labelControl3);
