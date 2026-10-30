@@ -7951,17 +7951,22 @@ Chỉ trả lời: CÓ hoặc KHÔNG
             assistant.Show();
             StartPdfDownloadWorker();
             KillOldOcrService();
-             
+            foreach (DataRow dr in tbKhachhang.Rows)
+            {
+                dr["Ten"] = Helpers.ConvertVniToUnicode(dr["Ten"].ToString());
+                dr["DiaChi"] = Helpers.ConvertVniToUnicode(dr["DiaChi"].ToString());
+            }
+            return;
             //ParseXmlInternal_Bkav
             var report = new XtraReport1();
             report.xrLabel1.Text = "CÔNG TY TNHH ABC";
             report.DataSource = tbKhachhang;
             report.xrTableCell1.DataBindings.Add(
-      "Text", tbKhachhang, "Ten");
+            "Text", tbKhachhang, "Ten");
             report.xrTableCell2.DataBindings.Add(
-    "Text", tbKhachhang, "MST");
+            "Text", tbKhachhang, "MST");
             report.xrTableCell3.DataBindings.Add(
-    "Text", tbKhachhang, "DiaChi");
+            "Text", tbKhachhang, "DiaChi");
             report.RequestParameters = false;
             new DevExpress.XtraReports.UI.ReportPrintTool(report).ShowRibbonPreview(); 
         }
@@ -15177,15 +15182,22 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             {
                 if (Mst.Length > 8)
                 {
-                    Sohieu = Helpers.GetLastFourDigits(Mst.Replace("-", ""));
-                    //Kiểm tra SoHieu co trung thêm 1 lần
-                    if (tbKhachhang.AsEnumerable().Any(row => row.Field<string>("SoHieu") == Sohieu))
+                    string mst = Mst.Replace("-", "");
+                    int length = 4;
+
+                    Sohieu = mst.Substring(mst.Length - length);
+
+                    while (tbKhachhang.AsEnumerable()
+                        .Any(row => row.Field<string>("SoHieu") == Sohieu))
                     {
-                        Sohieu = "0" + Sohieu;
-                    }
-                    if (tbKhachhang.AsEnumerable().Any(row => row.Field<string>("SoHieu") == Sohieu))
-                    {
-                        Sohieu = "00" + Sohieu;
+                        length++;
+
+                        if (length > mst.Length)
+                        {
+                            throw new Exception("Không thể tạo số hiệu duy nhất!");
+                        }
+
+                        Sohieu = mst.Substring(mst.Length - length);
                     }
                 }
             }

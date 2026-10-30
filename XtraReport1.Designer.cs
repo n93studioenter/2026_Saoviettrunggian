@@ -32,19 +32,19 @@
             this.TopMargin = new DevExpress.XtraReports.UI.TopMarginBand();
             this.BottomMargin = new DevExpress.XtraReports.UI.BottomMarginBand();
             this.Detail = new DevExpress.XtraReports.UI.DetailBand();
+            this.xrTable1 = new DevExpress.XtraReports.UI.XRTable();
+            this.xrTableRow1 = new DevExpress.XtraReports.UI.XRTableRow();
+            this.xrTableCell1 = new DevExpress.XtraReports.UI.XRTableCell();
+            this.xrTableCell2 = new DevExpress.XtraReports.UI.XRTableCell();
+            this.xrTableCell3 = new DevExpress.XtraReports.UI.XRTableCell();
             this.ReportHeader = new DevExpress.XtraReports.UI.ReportHeaderBand();
             this.xrLabel1 = new DevExpress.XtraReports.UI.XRLabel();
             this.ReportFooter = new DevExpress.XtraReports.UI.ReportFooterBand();
             this.parameter1 = new DevExpress.XtraReports.Parameters.Parameter();
             this.MaSo = new DevExpress.XtraReports.Parameters.Parameter();
             this.xtraTabbedMdiManager1 = new DevExpress.XtraTabbedMdi.XtraTabbedMdiManager(this.components);
-            this.xrTable1 = new DevExpress.XtraReports.UI.XRTable();
-            this.xrTableRow1 = new DevExpress.XtraReports.UI.XRTableRow();
-            this.xrTableCell1 = new DevExpress.XtraReports.UI.XRTableCell();
-            this.xrTableCell2 = new DevExpress.XtraReports.UI.XRTableCell();
-            this.xrTableCell3 = new DevExpress.XtraReports.UI.XRTableCell();
-            ((System.ComponentModel.ISupportInitialize)(this.xtraTabbedMdiManager1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.xrTable1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.xtraTabbedMdiManager1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this)).BeginInit();
             // 
             // TopMargin
@@ -57,44 +57,13 @@
             // 
             // Detail
             // 
+            this.Detail.Borders = ((DevExpress.XtraPrinting.BorderSide)((((DevExpress.XtraPrinting.BorderSide.Left | DevExpress.XtraPrinting.BorderSide.Top) 
+            | DevExpress.XtraPrinting.BorderSide.Right) 
+            | DevExpress.XtraPrinting.BorderSide.Bottom)));
             this.Detail.Controls.AddRange(new DevExpress.XtraReports.UI.XRControl[] {
             this.xrTable1});
             this.Detail.Name = "Detail";
-            // 
-            // ReportHeader
-            // 
-            this.ReportHeader.Controls.AddRange(new DevExpress.XtraReports.UI.XRControl[] {
-            this.xrLabel1});
-            this.ReportHeader.Name = "ReportHeader";
-            // 
-            // xrLabel1
-            // 
-            this.xrLabel1.LocationFloat = new DevExpress.Utils.PointFloat(25F, 0F);
-            this.xrLabel1.Multiline = true;
-            this.xrLabel1.Name = "xrLabel1";
-            this.xrLabel1.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 0, 0, 100F);
-            this.xrLabel1.SizeF = new System.Drawing.SizeF(100F, 23F);
-            this.xrLabel1.Text = "xrLabel1";
-            // 
-            // ReportFooter
-            // 
-            this.ReportFooter.Name = "ReportFooter";
-            // 
-            // parameter1
-            // 
-            this.parameter1.Description = "Parameter1";
-            this.parameter1.Name = "parameter1";
-            // 
-            // MaSo
-            // 
-            this.MaSo.Description = "MaSo";
-            this.MaSo.Name = "MaSo";
-            this.MaSo.Type = typeof(int);
-            this.MaSo.ValueInfo = "0";
-            // 
-            // xtraTabbedMdiManager1
-            // 
-            this.xtraTabbedMdiManager1.MdiParent = null;
+            this.Detail.StylePriority.UseBorders = false;
             // 
             // xrTable1
             // 
@@ -135,6 +104,41 @@
             this.xrTableCell3.Text = "xrTableCell3";
             this.xrTableCell3.Weight = 1D;
             // 
+            // ReportHeader
+            // 
+            this.ReportHeader.Controls.AddRange(new DevExpress.XtraReports.UI.XRControl[] {
+            this.xrLabel1});
+            this.ReportHeader.Name = "ReportHeader";
+            // 
+            // xrLabel1
+            // 
+            this.xrLabel1.LocationFloat = new DevExpress.Utils.PointFloat(25F, 0F);
+            this.xrLabel1.Multiline = true;
+            this.xrLabel1.Name = "xrLabel1";
+            this.xrLabel1.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 0, 0, 100F);
+            this.xrLabel1.SizeF = new System.Drawing.SizeF(100F, 23F);
+            this.xrLabel1.Text = "xrLabel1";
+            // 
+            // ReportFooter
+            // 
+            this.ReportFooter.Name = "ReportFooter";
+            // 
+            // parameter1
+            // 
+            this.parameter1.Description = "Parameter1";
+            this.parameter1.Name = "parameter1";
+            // 
+            // MaSo
+            // 
+            this.MaSo.Description = "MaSo";
+            this.MaSo.Name = "MaSo";
+            this.MaSo.Type = typeof(int);
+            this.MaSo.ValueInfo = "0";
+            // 
+            // xtraTabbedMdiManager1
+            // 
+            this.xtraTabbedMdiManager1.MdiParent = null;
+            // 
             // XtraReport1
             // 
             this.Bands.AddRange(new DevExpress.XtraReports.UI.Band[] {
@@ -148,8 +152,8 @@
             this.parameter1,
             this.MaSo});
             this.Version = "22.1";
-            ((System.ComponentModel.ISupportInitialize)(this.xtraTabbedMdiManager1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.xrTable1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.xtraTabbedMdiManager1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this)).EndInit();
 
         }
