@@ -517,8 +517,7 @@ namespace SaovietTax
 
                     string password = "1@35^7*9)1";
                     connectionString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={password};";
-                    if (checkEdit1.Checked)
-                        TinhGVBHBQ(dtTuNgay.DateTime.Month, dtDenngay.DateTime.Month, 6, 0, 2);
+                  
 
                     // --- 2. LẤY THÔNG TIN KHÓA SỔ (LICENSE) ---
                     int finalLock = 0;
@@ -541,7 +540,8 @@ namespace SaovietTax
                             }
                         }
                     }
-
+                    if (checkEdit1.Checked)
+                        TinhGVBHBQ(finalLock, dtDenngay.DateTime.Month, 6, 0, 2);
                     // --- 3. XÁC ĐỊNH NGÀY BẮT ĐẦU ĐỂ TÍNH GIÁ VỐN (TỪ ĐẦU) ---
                     DateTime ngayBatDauTinhToan;
                     int namTinhToan = dtDenngay.DateTime.Year;
