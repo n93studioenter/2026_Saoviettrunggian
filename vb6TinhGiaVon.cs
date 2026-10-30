@@ -83,12 +83,12 @@ namespace SaovietTax
         string dbPath = "";
         string connectionString = "";
         int finalLock = 0;
-        public void ResetTonkho(DataTable tbTonKho,int finalLock)
+        public void ResetTonkho(DataTable tbTonKho, int finalLock)
         {
             if (tbTonKho != null && tbTonKho.Rows.Count > 0)
             {
                 DataRow row = tbTonKho.Rows[0];
-                for (int i = finalLock+1; i <= 12; i++)
+                for (int i = finalLock + 1; i <= 12; i++)
                 {
                     string tiennhapColumn = $"Tien_Nhap_{i}";
                     string luongnhapColumn = $"Luong_Nhap_{i}";
@@ -326,496 +326,22 @@ namespace SaovietTax
             return result;
         }
         public const int TKDT_ID = 5000;
-        public void TinhGVBHBQ(int tdau, int tcuoi, int tl, long mvt, int loai)
+        // =====================================================================
+        // HÀM PHỤ TRỢ 1: CỘNG DỒN AN TOÀN
+        // =====================================================================
+        private static void AddTo(DataRow r, string col, double v)
         {
-            int OutCost = 0;
-
-            if (OutCost == 0)
-            {
-                // =========================================================
-                // BƯỚC 1: XÓA DỮ LIỆU CŨ (Tránh bị nhân đôi dòng GV)
-                // =========================================================
-                string deleteQuery1 = @"DELETE FROM ChungTu 
-                                WHERE MaLoai = 2 AND SoHieu LIKE '%GV' 
-                                AND ThangCT >= ? AND ThangCT <= ?";
-                if (mvt > 0) deleteQuery1 += " AND MaVattu = ?";
-
-                List<OleDbParameter> paramsDelete1 = new List<OleDbParameter>
-        {
-            new OleDbParameter("?", tdau),
-            new OleDbParameter("?", tcuoi)
-        };
-                if (mvt > 0) paramsDelete1.Add(new OleDbParameter("?", mvt));
-
-                ExecuteQueryResult(deleteQuery1, paramsDelete1.ToArray());
-
-
-                // =========================================================
-                // BƯỚC 2: LẤY TÀI KHOẢN MẶC ĐỊNH
-                // =========================================================
-                long m1 = 151; // ID tài khoản Nợ mặc định
-                string m1_Text = "151"; // Số hiệu tài khoản Nợ mặc định
-
-                long n1 = 39;  // ID tài khoản Có mặc định
-                string n1_Text = "156"; // Số hiệu tài khoản Có mặc định
-
-                // Lấy tài khoản 632
-                string sqlM1 = "SELECT TOP 1 MaSo, SoHieu FROM HethongTK WHERE SoHieu LIKE ? AND TKCon = 0 ORDER BY SoHieu";
-                var tbM1 = ExecuteQuery(sqlM1, new OleDbParameter[] { new OleDbParameter("?", "632%") });
-                if (tbM1 != null && tbM1.Rows.Count > 0)
-                {
-                    m1 = Convert.ToInt64(tbM1.Rows[0]["MaSo"]);
-                    m1_Text = tbM1.Rows[0]["SoHieu"].ToString();
-                }
-
-                // Lấy tài khoản 156
-                string sqlN1 = "SELECT TOP 1 MaSo, SoHieu FROM HethongTK WHERE SoHieu LIKE ? AND TKCon = 0 ORDER BY SoHieu";
-                var tbN1 = ExecuteQuery(sqlN1, new OleDbParameter[] { new OleDbParameter("?", "156%") });
-                if (tbN1 != null && tbN1.Rows.Count > 0)
-                {
-                    n1 = Convert.ToInt64(tbN1.Rows[0]["MaSo"]);
-                    n1_Text = tbN1.Rows[0]["SoHieu"].ToString();
-                }
-
-
-                // =========================================================
-                // BƯỚC 3: LẤY DANH SÁCH CHỨNG TỪ CẦN TẠO DÒNG GIÁ VỐN
-                // =========================================================
-                string sqlSelect = @"
-            SELECT ChungTu.MaCT, ChungTu.MaSo, ChungTu.SoHieu, ChungTu.ThangCT, ChungTu.NgayCT, ChungTu.NgayGS, 
-                   ChungTu.MaNguon, ChungTu.MaKho, ChungTu.DienGiai, 
-                   KhoHang.MaTKGV, PhanLoaiVattu.MaTK,
-                   ChungTu.SoPS, ChungTu.SoPS2No, ChungTu.SoPS2Co, ChungTu.MaVattu, ChungTu.GhiChu, 
-                   ChungTu.MaDT, ChungTu.MaDT1, ChungTu.MaDT2, ChungTu.MaDT3, ChungTu.MaKH, 
-                   ChungTu.CTGS, ChungTu.MaKHC, ChungTu.MaTP, ChungTu.DVT, ChungTu.User_ID, 
-                   ChungTu.MaNV, ChungTu.HanTT, ChungTu.SH1, ChungTu.T1, ChungTu.TLCK, ChungTu.CK
-            FROM (((" + ChungTu2TKNC(1) + @") 
-            INNER JOIN KhoHang ON ChungTu.MaKho = KhoHang.MaSo) 
-            INNER JOIN Vattu ON ChungTu.MaVattu = Vattu.MaSo) 
-            INNER JOIN PhanLoaiVattu ON Vattu.MaPhanLoai = PhanLoaiVattu.MaSo
-            WHERE ChungTu.MaLoai = 8 AND ChungTu.MaVattu > 0 AND TK_ID = ? 
-              AND (Not HethongTK.SoHieu LIKE '5113%') 
-              AND ChungTu.ThangCT >= ? AND ChungTu.ThangCT <= ?";
-
-                if (mvt > 0) sqlSelect += " AND ChungTu.MaVattu = ?";
-                sqlSelect += " ORDER BY ChungTu.NgayCT, ChungTu.MaCT";
-
-                List<OleDbParameter> paramsSelect = new List<OleDbParameter>
-        {
-            new OleDbParameter("?", TKDT_ID),
-            new OleDbParameter("?", tdau),
-            new OleDbParameter("?", tcuoi)
-        };
-                if (mvt > 0) paramsSelect.Add(new OleDbParameter("?", mvt));
-
-                var tbCanTaoGV = ExecuteQuery(sqlSelect, paramsSelect.ToArray());
-
-
-                // =========================================================
-                // BƯỚC 4: DUYỆT VÀ INSERT TỪNG DÒNG
-                // =========================================================
-                if (tbCanTaoGV != null && tbCanTaoGV.Rows.Count > 0)
-                {
-                    foreach (DataRow row in tbCanTaoGV.Rows)
-                    {
-                        // Xử lý IIF cho MaTKGV (Nếu = 0 thì lấy m1)
-                        long maTKGV = (row["MaTKGV"] != DBNull.Value && Convert.ToInt64(row["MaTKGV"]) != 0)
-                                      ? Convert.ToInt64(row["MaTKGV"]) : m1;
-                        string maTKGV_Text = (maTKGV == m1) ? m1_Text : "632";
-
-                        // Xử lý IIF cho MaTK (Nếu = 0 thì lấy n1)
-                        long maTKPL = (row["MaTK"] != DBNull.Value && Convert.ToInt64(row["MaTK"]) != 0)
-                                      ? Convert.ToInt64(row["MaTK"]) : n1;
-                        string maTKPL_Text = (maTKPL == n1) ? n1_Text : "156";
-
-                        // Lấy MaSo gốc an toàn
-                        long maSoGoc = row["MaSo"] != DBNull.Value ? Convert.ToInt64(row["MaSo"]) : 0;
-
-                        // SỬA LẠI TÊN CỘT CHO ĐÚNG VỚI DATABASE: MaTKTCNo và MaTKTCCo
-                        string sqlInsert = @"
-                    INSERT INTO ChungTu (MaCT, MaLoai, SoHieu, ThangCT, NgayCT, NgayGS, MaNguon, MaKho, DienGiai, 
-                                         MaTkNo, MaTkCo, MaTKTCNo, MaTKTCCo, SoPS, SoPS2No, SoPS2Co, MaVattu, GhiChu, CT_ID, 
-                                         MaDT, MaDT1, MaDT2, MaDT3, MaKH, CTGS, MaKHC, MaTP, DVT, User_ID, 
-                                         MaNV, HanTT, SH1, T1, TLCK, CK) 
-                    VALUES (?, 2, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-                        // Ép kiểu cẩn thận sang Int32 và Double để tránh lỗi "Multiple-step OLE DB"
-                        List<OleDbParameter> insertParams = new List<OleDbParameter>
-                {
-                    new OleDbParameter("?", Convert.ToInt32(1000000 + Convert.ToInt64(row["MaCT"].ToString()))),
-                    new OleDbParameter("?", row["SoHieu"].ToString() + "GV"),
-                    new OleDbParameter("?", Convert.ToInt32(row["ThangCT"])),
-                    new OleDbParameter("?", row["NgayCT"] != DBNull.Value ? row["NgayCT"] : DBNull.Value),
-                    new OleDbParameter("?", row["NgayGS"] != DBNull.Value ? row["NgayGS"] : DBNull.Value),
-                    new OleDbParameter("?", row["MaNguon"] != DBNull.Value ? row["MaNguon"] : DBNull.Value),
-                    new OleDbParameter("?", row["MaKho"] != DBNull.Value ? row["MaKho"] : DBNull.Value),
-                    new OleDbParameter("?", row["DienGiai"] != DBNull.Value ? row["DienGiai"] : DBNull.Value),
-                    new OleDbParameter("?", Convert.ToInt32(maTKGV)), // MaTkNo
-                    new OleDbParameter("?", Convert.ToInt32(maTKPL)), // MaTkCo
-                    
-                    // 2 THAM SỐ MỚI CHO MaTKTCNo VÀ MaTKTCCo
-                    new OleDbParameter("?", maTKGV_Text), // MaTKTCNo
-                    new OleDbParameter("?", maTKPL_Text), // MaTKTCCo
-
-                    new OleDbParameter("?", Convert.ToDouble(row["SoPS"])),
-                    new OleDbParameter("?", Convert.ToDouble(row["SoPS2No"])),
-                    new OleDbParameter("?", Convert.ToDouble(row["SoPS2Co"])),
-                    new OleDbParameter("?", row["MaVattu"] != DBNull.Value ? row["MaVattu"] : DBNull.Value),
-                    new OleDbParameter("?", row["GhiChu"] != DBNull.Value ? row["GhiChu"] : DBNull.Value),
-                    new OleDbParameter("?", Convert.ToInt32(maSoGoc + 500000000)), // CT_ID
-                    new OleDbParameter("?", row["MaDT"] != DBNull.Value ? row["MaDT"] : DBNull.Value),
-                    new OleDbParameter("?", row["MaDT1"] != DBNull.Value ? row["MaDT1"] : DBNull.Value),
-                    new OleDbParameter("?", row["MaDT2"] != DBNull.Value ? row["MaDT2"] : DBNull.Value),
-                    new OleDbParameter("?", row["MaDT3"] != DBNull.Value ? row["MaDT3"] : DBNull.Value),
-                    new OleDbParameter("?", row["MaKH"] != DBNull.Value ? row["MaKH"] : DBNull.Value),
-                    new OleDbParameter("?", row["CTGS"] != DBNull.Value ? row["CTGS"] : DBNull.Value),
-                    new OleDbParameter("?", row["MaKHC"] != DBNull.Value ? row["MaKHC"] : DBNull.Value),
-                    new OleDbParameter("?", row["MaTP"] != DBNull.Value ? row["MaTP"] : DBNull.Value),
-                    new OleDbParameter("?", row["DVT"] != DBNull.Value ? row["DVT"] : DBNull.Value),
-                    new OleDbParameter("?", row["User_ID"] != DBNull.Value ? row["User_ID"] : DBNull.Value),
-                    new OleDbParameter("?", row["MaNV"] != DBNull.Value ? row["MaNV"] : DBNull.Value),
-                    new OleDbParameter("?", row["HanTT"] != DBNull.Value ? row["HanTT"] : DBNull.Value),
-                    new OleDbParameter("?", row["SH1"] != DBNull.Value ? row["SH1"] : DBNull.Value),
-                    new OleDbParameter("?", row["T1"] != DBNull.Value ? row["T1"] : DBNull.Value),
-                    new OleDbParameter("?", row["TLCK"] != DBNull.Value ? row["TLCK"] : DBNull.Value),
-                    new OleDbParameter("?", row["CK"] != DBNull.Value ? row["CK"] : DBNull.Value)
-                };
-
-                        ExecuteQueryResult(sqlInsert, insertParams.ToArray());
-                    }
-                }
-            }
-        }
-        private async void simpleButton1_Click(object sender, EventArgs e)
-        {
-           
-            // Vô hiệu hóa nút bấm để tránh bấm 2 lần
-            simpleButton1.Enabled = false;
-            progressPanel1.Visible = true;  
-            progressPanel1.Caption = "Đang chuẩn bị...";
-
-            await Task.Run(() =>
-            {
-                try
-                {
-                    // --- 1. LẤY ĐƯỜNG DẪN DB ---
-                    string appPath = Assembly.GetExecutingAssembly().Location;
-                    string directoryPath = Path.GetDirectoryName(appPath);
-                    string rootDirectory = Path.GetFullPath(Path.Combine(directoryPath, @"..\.."));
-                    string filePaths = Path.Combine(rootDirectory, "hoadon", "dpPath.txt");
-
-                    string dbPath = "";
-                    try
-                    {
-                        dbPath = File.ReadAllText(filePaths);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Lỗi khi đọc file: " + ex.Message);
-                        return;
-                    }
-
-                    string password = "1@35^7*9)1";
-                    connectionString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={password};";
-                  
-
-                    // --- 2. LẤY THÔNG TIN KHÓA SỔ (LICENSE) ---
-                    int finalLock = 0;
-                    string qr = "SELECT * FROM License";
-                    var tbLicense = ExecuteQuery(qr, null);
-
-                    if (tbLicense.Rows.Count > 0)
-                    {
-                        var rowLicense = tbLicense.Rows[0];
-                        for (int i = 12; i >= 1; i--)
-                        {
-                            string columnName = "Lock" + i;
-                            if (tbLicense.Columns.Contains(columnName))
-                            {
-                                if (rowLicense[columnName] != DBNull.Value && rowLicense[columnName].ToString() == "1")
-                                {
-                                    finalLock = i;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (checkEdit1.Checked)
-                        TinhGVBHBQ(finalLock, dtDenngay.DateTime.Month, 6, 0, 2);
-                    // --- 3. XÁC ĐỊNH NGÀY BẮT ĐẦU ĐỂ TÍNH GIÁ VỐN (TỪ ĐẦU) ---
-                    DateTime ngayBatDauTinhToan;
-                    int namTinhToan = dtDenngay.DateTime.Year;
-
-                    if (finalLock > 0)
-                    {
-                        if (finalLock == 12)
-                        {
-                            ngayBatDauTinhToan = new DateTime(namTinhToan, 1, 1);
-                        }
-                        else
-                        {
-                            ngayBatDauTinhToan = new DateTime(namTinhToan, finalLock + 1, 1);
-                        }
-                    }
-                    else
-                    {
-                        ngayBatDauTinhToan = new DateTime(namTinhToan, 1, 1);
-                    }
-
-                    // --- 4. LỌC DANH SÁCH VẬT TƯ CẦN TÍNH ---
-                    var qrLocVatTu = @"SELECT DISTINCT MaVattu FROM ChungTu 
-                   WHERE NgayCT >= @NgayBD_Loc AND NgayCT < @NgayKT_Loc and MaVattu <>0 ";
-                    var paramsLoc = new OleDbParameter[]
-                    {
-                new OleDbParameter("@NgayBD_Loc", dtTuNgay.DateTime.Date),
-                new OleDbParameter("@NgayKT_Loc", dtDenngay.DateTime.Date.AddDays(1))
-                    };
-                    var tbLocVatTu = ExecuteQuery(qrLocVatTu, paramsLoc);
-
-                    var danhSachMaVattuCanTinh = tbLocVatTu.AsEnumerable()
-                                                .Select(r => r["MaVattu"].ToString())
-                                                .ToList();
-
-                    if (!danhSachMaVattuCanTinh.Any())
-                    {
-                        this.Invoke((MethodInvoker)delegate
-                        {
-                            XtraMessageBox.Show("Không có vật tư nào phát sinh trong khoảng thời gian này!");
-                        });
-                        return;
-                    }
-
-                    // --- 5. LẤY TOÀN BỘ CHỨNG TỪ TỪ ĐẦU ĐẾN CUỐI ĐỂ TÍNH TOÁN ---
-                    var qrTimct = @"SELECT * FROM ChungTu 
-                WHERE NgayCT >= @NgayBD_Tinh AND NgayCT < @NgayKT_NextDay and MaVattu <> 0
-                ORDER BY NgayCT ASC, MaLoai ASC, MaSo ASC";
-                    var paramsTinh = new OleDbParameter[]
-                    {
-                new OleDbParameter("@NgayBD_Tinh", ngayBatDauTinhToan),
-                new OleDbParameter("@NgayKT_NextDay", dtDenngay.DateTime.Date.AddDays(1))
-                    };
-                    var tbchungtu = ExecuteQuery(qrTimct, paramsTinh);
-
-                    //Lay dnah sach chung tu theo ma vat tu
-                    var vattuGroupby = tbchungtu.AsEnumerable()
-                                                .GroupBy(m => m["MaVattu"].ToString())
-                                                .ToList();
-
-                    // --- 6. LẤY DANH MỤC VẬT TƯ VÀ LỌC THEO TEXTBOX ---
-                    string qrvt = "SELECT * FROM Vattu";
-                    var tbVattu = ExecuteQuery(qrvt, null);
-
-                    var queryVattu = tbVattu.AsEnumerable()
-                        .Where(r => danhSachMaVattuCanTinh.Contains(r["MaSo"].ToString()));
-
-                    string soHieuNhap = txtSoHieu.Text.Trim();
-                    if (!string.IsNullOrEmpty(soHieuNhap))
-                    {
-                        queryVattu = queryVattu.Where(r => r.Field<string>("SoHieu") != null &&
-                                                           r.Field<string>("SoHieu").ToLower().Contains(soHieuNhap.ToLower()));
-                    }
-
-                    var tbVattuFiltered = queryVattu.ToList();
-
-                    // --- TÍNH TOÁN TỔNG SỐ CHỨNG TỪ ĐỂ CHIA % ---
-                    int totalChungTu = 0;
-                    foreach (DataRow row in tbVattuFiltered)
-                    {
-                        string maVT = row["MaSo"].ToString();
-                        var tempChungTu = vattuGroupby.FirstOrDefault(g => g.Key == maVT)?.ToList();
-                        if (tempChungTu != null)
-                        {
-                            // Chỉ đếm những chứng từ không chứa chữ "GV"
-                            totalChungTu += tempChungTu.Count(m => !m["SoHieu"].ToString().Contains("GV"));
-                        }
-                    }
-
-                    int currentChungTuCount = 0;
-
-                    // --- 7. VÒNG LẶP TÍNH GIÁ VỐN ---
-                    foreach (DataRow row in tbVattuFiltered)
-                    {
-                        string maVatTu = row["MaSo"].ToString();
-                        string tenVT = row["TenVatTu"].ToString();
-
-                        // Lấy tồn kho gốc
-                        string qrtk = "SELECT * FROM TonKho where MaVatTu = @MaVatTu";
-                        var tbTonKho = ExecuteQuery(qrtk, new OleDbParameter("@MaVatTu", maVatTu));
-                        ResetTonkho(tbTonKho, finalLock);
-                        if (tbTonKho != null && tbTonKho.Rows.Count > 0)
-                        {
-                            double tienTon = Convert.ToDouble(tbTonKho.Rows[0][$"Tien_{finalLock}"]);
-                            double luongTon = Convert.ToDouble(tbTonKho.Rows[0][$"Luong_{finalLock}"]);
-
-                            var chungTuCuaVatTu = vattuGroupby.FirstOrDefault(g => g.Key == maVatTu)?.CopyToDataTable();
-                            if (chungTuCuaVatTu == null) continue;
-
-                            // Bỏ qua phiếu GV cũ
-                            chungTuCuaVatTu = chungTuCuaVatTu.AsEnumerable()
-                                                .Where(m => !m["SoHieu"].ToString().Contains("GV"))
-                                                .CopyToDataTable();
-
-                            DataRow tbrow = tbTonKho.Rows[0];
-                            foreach (DataRow ctRow in chungTuCuaVatTu.Rows)
-                            {
-                                // --- CẬP NHẬT TIẾN TRÌNH THEO TỪNG CHỨNG TỪ ---
-                                currentChungTuCount++;
-                                int progressPercent = (int)((double)currentChungTuCount / totalChungTu * 90);
-
-                                // Cứ 20 chứng từ cập nhật UI 1 lần để không làm chậm vòng lặp
-                                if (currentChungTuCount % 20 == 0 || currentChungTuCount == totalChungTu)
-                                {
-                                    this.Invoke((MethodInvoker)delegate
-                                    {
-                                        progressPanel1.Caption = $"Đang tính ({progressPercent}%) - Chứng từ {currentChungTuCount}/{totalChungTu}: {Helpers.ConvertVniToUnicode(tenVT)} ({maVatTu})";
-                                    });
-                                }
-                                // ------------------------------------------------
-
-                                int thangct = ctRow["ThangCT"] != DBNull.Value ? Convert.ToInt32(ctRow["ThangCT"]) : 0;
-                                string soHieuCT = ctRow["SoHieu"].ToString();
-                                double MaLoai = Convert.ToDouble(ctRow["MaLoai"]);
-
-                                // Xử lý Nhập kho
-                                if (MaLoai == 1)
-                                {
-                                    double SoPS2No = Convert.ToDouble(ctRow["SoPS2No"]);
-                                    double SoPS = Convert.ToDouble(ctRow["SoPS"]);
-                                    luongTon += SoPS2No;
-                                    tienTon += SoPS;
-                                    tbrow["Luong_Nhap_" + thangct] = Convert.ToDouble(tbrow["Luong_Nhap_" + thangct] != DBNull.Value ? tbrow["Luong_Nhap_" + thangct] : 0) + SoPS2No;
-                                    tbrow["Tien_Nhap_" + thangct] = Convert.ToDouble(tbrow["Tien_Nhap_" + thangct] != DBNull.Value ? tbrow["Tien_Nhap_" + thangct] : 0) + SoPS;
-                                    tbrow["Luong_" + thangct] = luongTon;
-                                    tbrow["Tien_" + thangct] = tienTon;
-                                }
-                                // Xử lý Xuất kho
-                                else if (MaLoai == 8)
-                                {
-                                    if (luongTon <= 0) continue;
-
-                                    double SoPS2Co = Convert.ToDouble(ctRow["SoPS2Co"]);
-                                    double SoPS;
-
-                                    if (SoPS2Co >= luongTon) // Nếu bán nốt số lượng cuối cùng trong kho
-                                    {
-                                        SoPS = tienTon; // Lấy toàn bộ số tiền còn lại
-                                    }
-                                    else
-                                    {
-                                        SoPS = Math.Round(tienTon / luongTon * SoPS2Co, MidpointRounding.AwayFromZero);
-                                    }
-
-                                    luongTon -= SoPS2Co;
-                                    tienTon -= SoPS;
-
-                                    tbrow["Luong_Xuat_" + thangct] = Convert.ToDouble(tbrow["Luong_Xuat_" + thangct] != DBNull.Value ? tbrow["Luong_Xuat_" + thangct] : 0) + SoPS2Co;
-                                    tbrow["Tien_Xuat_" + thangct] = Convert.ToDouble(tbrow["Tien_Xuat_" + thangct] != DBNull.Value ? tbrow["Tien_Xuat_" + thangct] : 0) + SoPS;
-                                    tbrow["Luong_" + thangct] = luongTon;
-                                    tbrow["Tien_" + thangct] = tienTon;
-
-                                    string soHieuGV = $"{soHieuCT}GV";
-
-                                    string checkGVQuery = "SELECT COUNT(*) FROM ChungTu WHERE SoHieu = ? AND CT_ID LIKE ?";
-                                    var tbCheck = ExecuteQuery(checkGVQuery, new OleDbParameter[]
-                                    {
-                                new OleDbParameter("?", soHieuGV),
-                                new OleDbParameter("?", $"%{ctRow["MaSo"]}%")
-                                    });
-                                    int countGV = Convert.ToInt32(tbCheck.Rows[0][0]);
-
-                                    if (countGV > 0)
-                                    {
-                                        string updateQuery = "UPDATE ChungTu SET SoPS = ? WHERE SoHieu = ? AND CT_ID LIKE ?";
-                                        var updateParams = new OleDbParameter[]
-                                        {
-                                    new OleDbParameter("?", SoPS),
-                                    new OleDbParameter("?", soHieuGV),
-                                    new OleDbParameter("?", $"%{ctRow["MaSo"]}%")
-                                        };
-                                        ExecuteQueryResult(updateQuery, updateParams);
-                                    }
-                                }
-                            }
-                            UpdateTonkho(tbTonKho, finalLock);
-                        }
-                    }
-
-                    // Hiển thị 100% khi hoàn tất vòng lặp tính toán
-                    this.Invoke((MethodInvoker)delegate
-                    {
-                        progressPanel1.Caption = "Hoàn tất tính toán (100%)";
-                    });
-                }
-                catch (Exception ex)
-                {
-                    this.Invoke((MethodInvoker)delegate
-                    {
-                        XtraMessageBox.Show("Có lỗi xảy ra trong quá trình tính giá vốn:\n" + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    });
-                }
-            }); // Kết thúc Task.Run
-
-            // Mở lại nút bấm và thông báo
-            simpleButton1.Enabled = true;
-            progressPanel1.Caption = "Sẵn sàng";
-
-            XtraMessageBox.Show("Đã tính giá vốn xong!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            this.Close();
+            r[col] = (r[col] == DBNull.Value ? 0d : Convert.ToDouble(r[col])) + v;
         }
 
-        public void UpdateTonkho(DataTable tbTonkho, int currentMonth)
+        // =====================================================================
+        // HÀM PHỤ TRỢ 2: TẠO CÂU LỆNH UPDATE TỒN KHO (Dùng cho Transaction)
+        // =====================================================================
+        public string BuildUpdateTonKhoQuery(DataRow row)
         {
-            if (tbTonkho == null || tbTonkho.Rows.Count == 0) return;
-
-            DataRow row = tbTonkho.Rows[0];
-
-            // Lấy số dư của tháng hiện tại (tháng đang tính)
-            double luongTonHienTai = row[$"Luong_{currentMonth}"] != DBNull.Value ? Convert.ToDouble(row[$"Luong_{currentMonth}"]) : 0;
-            double tienTonHienTai = row[$"Tien_{currentMonth}"] != DBNull.Value ? Convert.ToDouble(row[$"Tien_{currentMonth}"]) : 0;
-
-            // --- BƯỚC 1: LAN TRUYỀN SỐ DƯ SANG CÁC THÁNG SAU ---
-            for (int i = currentMonth + 1; i <= 12; i++)
-            {
-                string colLuongNhap = $"Luong_Nhap_{i}";
-                string colLuongXuat = $"Luong_Xuat_{i}";
-                string colLuongTon = $"Luong_{i}";
-                string colTienTon = $"Tien_{i}";
-
-                if (tbTonkho.Columns.Contains(colLuongNhap))
-                {
-                    double nhap = row[colLuongNhap] != DBNull.Value ? Convert.ToDouble(row[colLuongNhap]) : 0;
-                    double xuat = row[colLuongXuat] != DBNull.Value ? Convert.ToDouble(row[colLuongXuat]) : 0;
-
-                    if (nhap == 0 && xuat == 0)
-                    {
-                        // Nếu tháng sau KHÔNG có phát sinh -> Chỉ copy Tồn (Lượng và Tiền)
-                        row[colLuongTon] = luongTonHienTai;
-                        row[colTienTon] = tienTonHienTai;
-
-                        // Không đụng chạm gì đến Luong_Nhap, Tien_Nhap, Luong_Xuat, Tien_Xuat của tháng đó
-                    }
-                    else
-                    {
-                        // Nếu tháng sau CÓ phát sinh (tính lùi ngày) -> Phải tính dây chuyền tiếp
-                        double tienNhap = row[$"Tien_Nhap_{i}"] != DBNull.Value ? Convert.ToDouble(row[$"Tien_Nhap_{i}"]) : 0;
-                        double tienXuat = row[$"Tien_Xuat_{i}"] != DBNull.Value ? Convert.ToDouble(row[$"Tien_Xuat_{i}"]) : 0;
-
-                        luongTonHienTai = luongTonHienTai + nhap - xuat;
-                        tienTonHienTai = tienTonHienTai + tienNhap - tienXuat;
-
-                        row[colLuongTon] = luongTonHienTai;
-                        row[colTienTon] = tienTonHienTai;
-                    }
-                }
-            }
-
-            // --- BƯỚC 2: LƯU XUỐNG DATABASE ---
             List<string> setClauses = new List<string>();
-            List<OleDbParameter> updateParams = new List<OleDbParameter>();
-
             for (int i = 1; i <= 12; i++)
             {
-                // Chỉ lấy đúng các cột cần thiết để Update (bao gồm cả Nhập, Xuất, và Tồn)
                 string colTienNhap = $"Tien_Nhap_{i}";
                 string colLuongNhap = $"Luong_Nhap_{i}";
                 string colTienXuat = $"Tien_Xuat_{i}";
@@ -823,28 +349,349 @@ namespace SaovietTax
                 string colLuongTon = $"Luong_{i}";
                 string colTienTon = $"Tien_{i}";
 
-                if (tbTonkho.Columns.Contains(colTienNhap))
+                if (row.Table.Columns.Contains(colTienNhap))
                 {
-                    setClauses.Add($"{colTienNhap} = ?, {colLuongNhap} = ?, {colTienXuat} = ?, {colLuongXuat} = ?, {colLuongTon} = ?, {colTienTon} = ?");
-
-                    updateParams.Add(new OleDbParameter("?", row[colTienNhap] != DBNull.Value ? row[colTienNhap].ToString() : "0"));
-                    updateParams.Add(new OleDbParameter("?", row[colLuongNhap] != DBNull.Value ? row[colLuongNhap].ToString() : "0"));
-                    updateParams.Add(new OleDbParameter("?", row[colTienXuat] != DBNull.Value ? row[colTienXuat].ToString() : "0"));
-                    updateParams.Add(new OleDbParameter("?", row[colLuongXuat] != DBNull.Value ? row[colLuongXuat].ToString() : "0"));
-                    updateParams.Add(new OleDbParameter("?", row[colLuongTon] != DBNull.Value ? row[colLuongTon].ToString() : "0"));
-                    updateParams.Add(new OleDbParameter("?", row[colTienTon] != DBNull.Value ? row[colTienTon].ToString() : "0"));
+                    setClauses.Add($"{colTienNhap} = {GetVal(row[colTienNhap])}, {colLuongNhap} = {GetVal(row[colLuongNhap])}, {colTienXuat} = {GetVal(row[colTienXuat])}, {colLuongXuat} = {GetVal(row[colLuongXuat])}, {colLuongTon} = {GetVal(row[colLuongTon])}, {colTienTon} = {GetVal(row[colTienTon])}");
                 }
             }
+            return $"UPDATE TonKho SET {string.Join(", ", setClauses)} WHERE MaSo = '{row["MaSo"]}'";
+        }
 
-            // Ghép câu lệnh: UPDATE TonKho SET [các cụm] WHERE MaSo = ?
-            // Đã sửa lỗi: Nối chuỗi trực tiếp không dùng dấu phẩy trước WHERE
-            string updateQuery = "UPDATE TonKho SET " + string.Join(", ", setClauses) + " WHERE MaSo = ?";
+        private string GetVal(object val)
+        {
+            return val != DBNull.Value ? Convert.ToDouble(val).ToString() : "0";
+        }
 
-            // Thêm tham số cho WHERE
-            updateParams.Add(new OleDbParameter("?", row["MaSo"].ToString()));
+        // =====================================================================
+        // HÀM CHÍNH 1: TÍNH GIÁ VỐN BÌNH QUÂN LIÊN HOÀN
+        // =====================================================================
+        public void TinhGVBHBQ(int tdau, int tcuoi, int tl, long mvt, int loai, Action<int> progressCallback = null)
+        {
+            progressCallback?.Invoke(0);
 
-            // Thực thi
-            ExecuteQueryResult(updateQuery, updateParams.ToArray());
+            // ===== BƯỚC 1: XÓA DỮ LIỆU CŨ =====
+            string deleteQuery = @"DELETE FROM ChungTu 
+                           WHERE MaLoai = 2 AND SoHieu LIKE '%GV' 
+                           AND ThangCT >= ? AND ThangCT <= ?";
+            var pDel = new List<OleDbParameter>
+    {
+        new OleDbParameter("?", tdau),
+        new OleDbParameter("?", tcuoi)
+    };
+            if (mvt > 0)
+            {
+                deleteQuery += " AND MaVattu = ?";
+                pDel.Add(new OleDbParameter("?", mvt));
+            }
+            ExecuteQueryResult(deleteQuery, pDel.ToArray());
+            progressCallback?.Invoke(20);
+
+            // ===== BƯỚC 2: LẤY TÀI KHOẢN MẶC ĐỊNH =====
+            (long id, string text) GetDefaultTK(string prefix, long defId, string defText)
+            {
+                var tb = ExecuteQuery(
+                    "SELECT TOP 1 MaSo, SoHieu FROM HethongTK WHERE SoHieu LIKE ? AND TKCon = 0 ORDER BY SoHieu",
+                    new[] { new OleDbParameter("?", prefix + "%") });
+                return (tb != null && tb.Rows.Count > 0)
+                    ? (Convert.ToInt64(tb.Rows[0]["MaSo"]), tb.Rows[0]["SoHieu"].ToString())
+                    : (defId, defText);
+            }
+
+            var (m1, m1_Text) = GetDefaultTK("632", 151, "151");
+            var (n1, n1_Text) = GetDefaultTK("156", 39, "156");
+            progressCallback?.Invoke(40);
+
+            // ===== BƯỚC 3: INSERT ... SELECT (TỐI ƯU TỐC ĐỘ) =====
+            string m1Lit = m1_Text.Replace("'", "''");
+            string n1Lit = n1_Text.Replace("'", "''");
+
+            string tkNo = $"IIf(IsNull(KhoHang.MaTKGV) OR KhoHang.MaTKGV = 0, {m1}, KhoHang.MaTKGV)";
+            string tkCo = $"IIf(IsNull(PhanLoaiVattu.MaTK) OR PhanLoaiVattu.MaTK = 0, {n1}, PhanLoaiVattu.MaTK)";
+
+            string sql = $@"
+INSERT INTO ChungTu (MaCT, MaLoai, SoHieu, ThangCT, NgayCT, NgayGS, MaNguon, MaKho, DienGiai,
+                     MaTkNo, MaTkCo, MaTKTCNo, MaTKTCCo, SoPS, SoPS2No, SoPS2Co, MaVattu, GhiChu, CT_ID,
+                     MaDT, MaDT1, MaDT2, MaDT3, MaKH, CTGS, MaKHC, MaTP, DVT, User_ID,
+                     MaNV, HanTT, SH1, T1, TLCK, CK)
+SELECT 1000000 + ChungTu.MaCT, 2, ChungTu.SoHieu & 'GV', ChungTu.ThangCT, ChungTu.NgayCT, ChungTu.NgayGS,
+       ChungTu.MaNguon, ChungTu.MaKho, ChungTu.DienGiai,
+       {tkNo}, {tkCo},
+       IIf(({tkNo}) = {m1}, '{m1Lit}', '632'),
+       IIf(({tkCo}) = {n1}, '{n1Lit}', '156'),
+       ChungTu.SoPS, ChungTu.SoPS2No, ChungTu.SoPS2Co, ChungTu.MaVattu, ChungTu.GhiChu,
+       ChungTu.MaSo + 500000000,
+       ChungTu.MaDT, ChungTu.MaDT1, ChungTu.MaDT2, ChungTu.MaDT3, ChungTu.MaKH, ChungTu.CTGS,
+       ChungTu.MaKHC, ChungTu.MaTP, ChungTu.DVT, ChungTu.User_ID,
+       ChungTu.MaNV, ChungTu.HanTT, ChungTu.SH1, ChungTu.T1, ChungTu.TLCK, ChungTu.CK
+FROM (((" + ChungTu2TKNC(1) + $@") 
+INNER JOIN KhoHang ON ChungTu.MaKho = KhoHang.MaSo) 
+INNER JOIN Vattu ON ChungTu.MaVattu = Vattu.MaSo) 
+INNER JOIN PhanLoaiVattu ON Vattu.MaPhanLoai = PhanLoaiVattu.MaSo
+WHERE ChungTu.MaLoai = 8 AND ChungTu.MaVattu > 0 AND TK_ID = ? 
+  AND (Not HethongTK.SoHieu LIKE '5113%') 
+  AND ChungTu.ThangCT >= ? AND ChungTu.ThangCT <= ?";
+
+            var pIns = new List<OleDbParameter>
+    {
+        new OleDbParameter("?", TKDT_ID),
+        new OleDbParameter("?", tdau),
+        new OleDbParameter("?", tcuoi)
+    };
+            if (mvt > 0)
+            {
+                sql += " AND ChungTu.MaVattu = ?";
+                pIns.Add(new OleDbParameter("?", mvt));
+            }
+
+            ExecuteQueryResult(sql, pIns.ToArray());
+            progressCallback?.Invoke(100);
+        }
+
+        // =====================================================================
+        // HÀM CHÍNH 2: SỰ KIỆN CLICK NÚT TÍNH GIÁ VỐN
+        // =====================================================================
+        private async void simpleButton1_Click(object sender, EventArgs e)
+        {
+            simpleButton1.Enabled = false;
+            progressPanel1.Visible = true;
+            progressPanel1.Caption = "Đang chuẩn bị...";
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    string appPath = Assembly.GetExecutingAssembly().Location;
+                    string directoryPath = Path.GetDirectoryName(appPath);
+                    string rootDirectory = Path.GetFullPath(Path.Combine(directoryPath, @"..\.."));
+                    string filePaths = Path.Combine(rootDirectory, "hoadon", "dpPath.txt");
+
+                    string dbPath = "";
+                    try { dbPath = File.ReadAllText(filePaths); }
+                    catch (Exception ex) { Console.WriteLine("Lỗi khi đọc file: " + ex.Message); return; }
+
+                    string password = "1@35^7*9)1";
+                    connectionString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={password};";
+
+                    // --- 2. LẤY THÔNG TIN KHÓA SỔ (LICENSE) ---
+                    int finalLock = 0;
+                    var tbLicense = ExecuteQuery("SELECT * FROM License", null);
+                    if (tbLicense.Rows.Count > 0)
+                    {
+                        var rowLicense = tbLicense.Rows[0];
+                        for (int i = 12; i >= 1; i--)
+                        {
+                            string columnName = "Lock" + i;
+                            if (tbLicense.Columns.Contains(columnName) && rowLicense[columnName] != DBNull.Value && rowLicense[columnName].ToString() == "1")
+                            {
+                                finalLock = i; break;
+                            }
+                        }
+                    }
+
+                    if (checkEdit1.Checked)
+                    {
+                        TinhGVBHBQ(finalLock, dtDenngay.DateTime.Month, 6, 0, 2, (percent) =>
+                        {
+                            this.BeginInvoke((MethodInvoker)(() => progressPanel1.Caption = $"Đang lập lại chứng từ giá vốn: {percent}%"));
+                        });
+                    }
+
+                    // --- 3. XÁC ĐỊNH NGÀY BẮT ĐẦU ---
+                    DateTime ngayBatDauTinhToan;
+                    int namTinhToan = dtDenngay.DateTime.Year;
+                    if (finalLock > 0 && finalLock < 12)
+                        ngayBatDauTinhToan = new DateTime(namTinhToan, finalLock + 1, 1);
+                    else
+                        ngayBatDauTinhToan = new DateTime(namTinhToan, 1, 1);
+
+                    // --- 4. LỌC DANH SÁCH VẬT TƯ CẦN TÍNH ---
+                    var qrLocVatTu = @"SELECT DISTINCT MaVattu FROM ChungTu WHERE NgayCT >= @NgayBD_Loc AND NgayCT < @NgayKT_Loc and MaVattu <>0 ";
+                    var paramsLoc = new OleDbParameter[] { new OleDbParameter("@NgayBD_Loc", dtTuNgay.DateTime.Date), new OleDbParameter("@NgayKT_Loc", dtDenngay.DateTime.Date.AddDays(1)) };
+                    var tbLocVatTu = ExecuteQuery(qrLocVatTu, paramsLoc);
+
+                    var danhSachMaVattuCanTinh = new HashSet<string>(tbLocVatTu.AsEnumerable().Select(r => r["MaVattu"].ToString()));
+                    if (danhSachMaVattuCanTinh.Count == 0)
+                    {
+                        this.Invoke((MethodInvoker)delegate { XtraMessageBox.Show("Không có vật tư nào phát sinh!"); });
+                        return;
+                    }
+
+                    // --- 5. LẤY CHỨNG TỪ (ĐÃ KHÔI PHỤC ORDER BY CHUẨN) ---
+                    var qrTimct = @"SELECT MaSo, MaVattu, ThangCT, SoHieu, MaLoai, SoPS, SoPS2No, SoPS2Co 
+                            FROM ChungTu 
+                            WHERE NgayCT >= @NgayBD_Tinh AND NgayCT < @NgayKT_NextDay and MaVattu <> 0
+                            ORDER BY NgayCT ASC, MaLoai ASC, MaSo ASC"; // <-- Khôi phục đúng logic gốc
+
+                    var paramsTinh = new OleDbParameter[] { new OleDbParameter("@NgayBD_Tinh", ngayBatDauTinhToan), new OleDbParameter("@NgayKT_NextDay", dtDenngay.DateTime.Date.AddDays(1)) };
+                    var tbchungtu = ExecuteQuery(qrTimct, paramsTinh);
+
+                    var ctByVt = tbchungtu.AsEnumerable()
+                                          .Where(m => !m["SoHieu"].ToString().Contains("GV"))
+                                          .ToLookup(m => m["MaVattu"].ToString());
+
+                    // --- 6. LẤY DANH MỤC VẬT TƯ VÀ LỌC ---
+                    var tbVattu = ExecuteQuery("SELECT MaSo, SoHieu, TenVatTu FROM Vattu", null);
+                    var queryVattu = tbVattu.AsEnumerable().Where(r => danhSachMaVattuCanTinh.Contains(r["MaSo"].ToString()));
+
+                    string soHieuNhap = txtSoHieu.Text.Trim();
+                    if (!string.IsNullOrEmpty(soHieuNhap))
+                        queryVattu = queryVattu.Where(r => r.Field<string>("SoHieu") != null && r.Field<string>("SoHieu").ToLower().Contains(soHieuNhap.ToLower()));
+
+                    var tbVattuFiltered = queryVattu.ToList();
+
+                    int totalChungTu = tbVattuFiltered.Sum(row => ctByVt[row["MaSo"].ToString()].Count());
+                    int currentChungTuCount = 0;
+
+                    var gvUpdates = new List<Tuple<double, string, long>>();
+                    var tonKhoUpdates = new List<DataRow>();
+
+                    // --- 7. VÒNG LẶP TÍNH TOÁN ---
+                    foreach (DataRow row in tbVattuFiltered)
+                    {
+                        string maVatTu = row["MaSo"].ToString();
+                        string tenVT = row["TenVatTu"].ToString();
+
+                        var tbTonKho = ExecuteQuery("SELECT * FROM TonKho where MaVatTu = @MaVatTu", new OleDbParameter("@MaVatTu", maVatTu));
+                        ResetTonkho(tbTonKho, finalLock);
+                        if (tbTonKho == null || tbTonKho.Rows.Count == 0) continue;
+
+                        double tienTon = Convert.ToDouble(tbTonKho.Rows[0][$"Tien_{finalLock}"]);
+                        double luongTon = Convert.ToDouble(tbTonKho.Rows[0][$"Luong_{finalLock}"]);
+
+                        if (!ctByVt.Contains(maVatTu)) continue;
+
+                        DataRow tbrow = tbTonKho.Rows[0];
+                        foreach (DataRow ctRow in ctByVt[maVatTu])
+                        {
+                            currentChungTuCount++;
+                            if (currentChungTuCount % 100 == 0 || currentChungTuCount == totalChungTu)
+                            {
+                                int progressPercent = (int)((double)currentChungTuCount / totalChungTu * 90);
+                                string cap = $"Đang tính ({progressPercent}%) - {Helpers.ConvertVniToUnicode(tenVT)} ({maVatTu})";
+                                this.BeginInvoke((MethodInvoker)(() => progressPanel1.Caption = cap));
+                            }
+
+                            int thangct = ctRow["ThangCT"] != DBNull.Value ? Convert.ToInt32(ctRow["ThangCT"]) : 0;
+                            double MaLoai = Convert.ToDouble(ctRow["MaLoai"]);
+
+                            if (MaLoai == 1)
+                            {
+                                double SoPS2No = Convert.ToDouble(ctRow["SoPS2No"]);
+                                double SoPS = Convert.ToDouble(ctRow["SoPS"]);
+                                luongTon += SoPS2No; tienTon += SoPS;
+                                AddTo(tbrow, "Luong_Nhap_" + thangct, SoPS2No);
+                                AddTo(tbrow, "Tien_Nhap_" + thangct, SoPS);
+                                tbrow["Luong_" + thangct] = luongTon; tbrow["Tien_" + thangct] = tienTon;
+                            }
+                            else if (MaLoai == 8)
+                            {
+                                if (luongTon <= 0) continue;
+
+                                double SoPS2Co = Convert.ToDouble(ctRow["SoPS2Co"]);
+                                double SoPS = (SoPS2Co >= luongTon) ? tienTon : Math.Round(tienTon / luongTon * SoPS2Co, MidpointRounding.AwayFromZero);
+
+                                luongTon -= SoPS2Co; tienTon -= SoPS;
+                                AddTo(tbrow, "Luong_Xuat_" + thangct, SoPS2Co);
+                                AddTo(tbrow, "Tien_Xuat_" + thangct, SoPS);
+                                tbrow["Luong_" + thangct] = luongTon; tbrow["Tien_" + thangct] = tienTon;
+
+                                gvUpdates.Add(Tuple.Create(SoPS, $"{ctRow["SoHieu"]}GV", Convert.ToInt64(ctRow["MaSo"])));
+                            }
+                        }
+                        tonKhoUpdates.Add(tbrow);
+                    }
+
+                    // --- 8. LƯU TOÀN BỘ XUỐNG DATABASE BẰNG TRANSACTION (CÓ BÁO % CHI TIẾT) ---
+                    this.BeginInvoke((MethodInvoker)(() => progressPanel1.Caption = "Đang cập nhật Database (90%)..."));
+
+                    using (var conn = new OleDbConnection(connectionString))
+                    {
+                        conn.Open();
+                        using (var tran = conn.BeginTransaction())
+                        {
+                            try
+                            {
+                                // Tổng số công việc cần làm ở bước 8 (số dòng GV + số dòng Tồn Kho)
+                                int totalDbTasks = gvUpdates.Count + tonKhoUpdates.Count;
+                                int currentDbTask = 0;
+
+                                // 8.1 Cập nhật bảng ChungTu (Giá vốn)
+                                if (gvUpdates.Count > 0)
+                                {
+                                    using (var cmd = new OleDbCommand("UPDATE ChungTu SET SoPS = ? WHERE SoHieu = ? AND CT_ID LIKE ?", conn, tran))
+                                    {
+                                        cmd.Parameters.Add(new OleDbParameter("?", OleDbType.Double));
+                                        cmd.Parameters.Add(new OleDbParameter("?", OleDbType.VarWChar, 255));
+                                        cmd.Parameters.Add(new OleDbParameter("?", OleDbType.VarWChar, 255));
+
+                                        foreach (var u in gvUpdates)
+                                        {
+                                            cmd.Parameters[0].Value = u.Item1;
+                                            cmd.Parameters[1].Value = u.Item2;
+                                            cmd.Parameters[2].Value = $"%{u.Item3}%";
+                                            cmd.ExecuteNonQuery();
+
+                                            currentDbTask++;
+                                            // Cứ 100 dòng cập nhật UI 1 lần để không làm chậm vòng lặp
+                                            if (currentDbTask % 100 == 0 || currentDbTask == totalDbTasks)
+                                            {
+                                                int percent = 90 + (int)((double)currentDbTask / totalDbTasks * 10);
+                                                this.BeginInvoke((MethodInvoker)(() => progressPanel1.Caption = $"Đang cập nhật chứng từ giá vốn: {percent}%"));
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 8.2 Cập nhật bảng TonKho (Sử dụng DataAdapter)
+                                if (tonKhoUpdates.Count > 0)
+                                {
+                                    using (var da = new OleDbDataAdapter("SELECT * FROM TonKho WHERE 1=0", conn))
+                                    {
+                                        da.SelectCommand.Transaction = tran;
+                                        using (var cb = new OleDbCommandBuilder(da))
+                                        {
+                                            cb.QuotePrefix = "[";
+                                            cb.QuoteSuffix = "]";
+
+                                            DataTable dtUpdate = tonKhoUpdates[0].Table.Clone();
+                                            foreach (var dr in tonKhoUpdates)
+                                            {
+                                                dtUpdate.ImportRow(dr);
+                                            }
+
+                                            // Cập nhật (DataAdapter sẽ tự động chạy ngầm nhiều lệnh UPDATE)
+                                            da.Update(dtUpdate);
+
+                                            // Cập nhật UI cho phần Tồn Kho
+                                            currentDbTask += tonKhoUpdates.Count;
+                                            int percent = 90 + (int)((double)currentDbTask / totalDbTasks * 10);
+                                            this.BeginInvoke((MethodInvoker)(() => progressPanel1.Caption = $"Đang cập nhật tồn kho: {percent}%"));
+                                        }
+                                    }
+                                }
+
+                                tran.Commit();
+                            }
+                            catch (Exception ex)
+                            {
+                                tran.Rollback();
+                                throw new Exception("Lỗi khi ghi dữ liệu xuống Database: " + ex.Message);
+                            }
+                        }
+                    }
+
+                    this.Invoke((MethodInvoker)delegate { progressPanel1.Caption = "Hoàn tất 100%"; });
+                }
+                catch (Exception ex)
+                {
+                    this.Invoke((MethodInvoker)delegate { XtraMessageBox.Show("Lỗi: " + ex.Message); });
+                }
+            });
+
+            simpleButton1.Enabled = true;
+            progressPanel1.Caption = "Sẵn sàng";
+            XtraMessageBox.Show("Đã tính giá vốn xong!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            this.Close();
         }
     }
 }

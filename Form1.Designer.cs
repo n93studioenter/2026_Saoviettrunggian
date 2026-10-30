@@ -572,7 +572,7 @@
             this.gridControl4.MainView = this.gridView6;
             this.gridControl4.Margin = new System.Windows.Forms.Padding(2);
             this.gridControl4.Name = "gridControl4";
-            this.gridControl4.Size = new System.Drawing.Size(1297, 180);
+            this.gridControl4.Size = new System.Drawing.Size(1250, 180);
             this.gridControl4.TabIndex = 29;
             this.gridControl4.ViewCollection.AddRange(new DevExpress.XtraGrid.Views.Base.BaseView[] {
             this.gridView6,
@@ -1827,7 +1827,7 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 38.1016F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 323F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 119F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 86F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 87F));
             this.tableLayoutPanel1.Controls.Add(this.panelControl12, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl11, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.panelControl10, 0, 0);
@@ -1855,7 +1855,7 @@
             this.panelControl12.Controls.Add(this.radVbDauvao1);
             this.panelControl12.Controls.Add(this.btnClearNganhang);
             this.panelControl12.Controls.Add(this.btnLocdulieuNganhang);
-            this.panelControl12.Location = new System.Drawing.Point(747, 2);
+            this.panelControl12.Location = new System.Drawing.Point(746, 2);
             this.panelControl12.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl12.Name = "panelControl12";
             this.panelControl12.Size = new System.Drawing.Size(316, 138);
@@ -2007,7 +2007,7 @@
             this.panelControl11.Location = new System.Drawing.Point(463, 2);
             this.panelControl11.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl11.Name = "panelControl11";
-            this.panelControl11.Size = new System.Drawing.Size(280, 138);
+            this.panelControl11.Size = new System.Drawing.Size(279, 138);
             this.panelControl11.TabIndex = 4;
             // 
             // simpleButton5
@@ -2055,7 +2055,7 @@
             this.panelControl8.Location = new System.Drawing.Point(4, 73);
             this.panelControl8.Margin = new System.Windows.Forms.Padding(2);
             this.panelControl8.Name = "panelControl8";
-            this.panelControl8.Size = new System.Drawing.Size(272, 34);
+            this.panelControl8.Size = new System.Drawing.Size(271, 34);
             this.panelControl8.TabIndex = 35;
             // 
             // lblImporttdra
@@ -2448,7 +2448,7 @@
             // 
             this.pictureEdit2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureEdit2.EditValue = ((object)(resources.GetObject("pictureEdit2.EditValue")));
-            this.pictureEdit2.Location = new System.Drawing.Point(1070, 2);
+            this.pictureEdit2.Location = new System.Drawing.Point(1069, 2);
             this.pictureEdit2.Margin = new System.Windows.Forms.Padding(2);
             this.pictureEdit2.Name = "pictureEdit2";
             this.pictureEdit2.Properties.ShowCameraMenuItem = DevExpress.XtraEditors.Controls.CameraMenuItemVisibility.Auto;
@@ -3295,7 +3295,7 @@
             this.progressPanel3.LookAndFeel.UseDefaultLookAndFeel = false;
             this.progressPanel3.Margin = new System.Windows.Forms.Padding(2);
             this.progressPanel3.Name = "progressPanel3";
-            this.progressPanel3.Size = new System.Drawing.Size(88, 23);
+            this.progressPanel3.Size = new System.Drawing.Size(46, 23);
             this.progressPanel3.TabIndex = 33;
             this.progressPanel3.Text = "progressPanel3";
             this.progressPanel3.ToolTipIconType = DevExpress.Utils.ToolTipIconType.Application;
@@ -3531,7 +3531,7 @@
             new DevExpress.XtraEditors.Controls.EditorButton(DevExpress.XtraEditors.Controls.ButtonPredefines.Combo)});
             this.ngaylapNhapNL.Properties.CalendarTimeProperties.Buttons.AddRange(new DevExpress.XtraEditors.Controls.EditorButton[] {
             new DevExpress.XtraEditors.Controls.EditorButton(DevExpress.XtraEditors.Controls.ButtonPredefines.Combo)});
-            this.ngaylapNhapNL.Size = new System.Drawing.Size(206, 20);
+            this.ngaylapNhapNL.Size = new System.Drawing.Size(174, 20);
             this.ngaylapNhapNL.TabIndex = 37;
             // 
             // labelControl10

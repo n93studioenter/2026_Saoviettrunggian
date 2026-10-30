@@ -7951,10 +7951,19 @@ Chỉ trả lời: CÓ hoặc KHÔNG
             assistant.Show();
             StartPdfDownloadWorker();
             KillOldOcrService();
-
-
+             
             //ParseXmlInternal_Bkav
-           
+            var report = new XtraReport1();
+            report.xrLabel1.Text = "CÔNG TY TNHH ABC";
+            report.DataSource = tbKhachhang;
+            report.xrTableCell1.DataBindings.Add(
+      "Text", tbKhachhang, "Ten");
+            report.xrTableCell2.DataBindings.Add(
+    "Text", tbKhachhang, "MST");
+            report.xrTableCell3.DataBindings.Add(
+    "Text", tbKhachhang, "DiaChi");
+            report.RequestParameters = false;
+            new DevExpress.XtraReports.UI.ReportPrintTool(report).ShowRibbonPreview(); 
         }
         private void KillOldOcrService()
         {
