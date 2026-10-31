@@ -7951,24 +7951,36 @@ Chỉ trả lời: CÓ hoặc KHÔNG
             assistant.Show();
             StartPdfDownloadWorker();
             KillOldOcrService();
-            foreach (DataRow dr in tbKhachhang.Rows)
+
+            string querys = @"
+    SELECT Vattu.MaSo AS MaVatTu, 
+           Vattu.SoHieu, 
+           Vattu.TenVatTu, 
+           Vattu.MaPhanLoai,
+           PhanLoaiVattu.TenPhanLoai AS TenPhanLoai 
+    FROM Vattu 
+    INNER JOIN PhanLoaiVattu ON Vattu.MaPhanLoai = PhanLoaiVattu.MaSo";
+            var tbVattu = await Task.Run(() => ExecuteQuery(querys));
+            foreach (DataRow dr in tbVattu.Rows)
             {
-                dr["Ten"] = Helpers.ConvertVniToUnicode(dr["Ten"].ToString());
-                dr["DiaChi"] = Helpers.ConvertVniToUnicode(dr["DiaChi"].ToString());
+                dr["TenVatTu"] = Helpers.ConvertVniToUnicode(dr["TenVatTu"].ToString());
+                dr["TenPhanLoai"] = Helpers.ConvertVniToUnicode(dr["TenPhanLoai"].ToString());
             }
-            return;
             //ParseXmlInternal_Bkav
+            return;
             var report = new XtraReport1();
-            report.xrLabel1.Text = "CÔNG TY TNHH ABC";
-            report.DataSource = tbKhachhang;
+              
+            report.DataSource = tbVattu;
             report.xrTableCell1.DataBindings.Add(
-            "Text", tbKhachhang, "Ten");
+            "Text", tbVattu, "TenVatTu");
             report.xrTableCell2.DataBindings.Add(
-            "Text", tbKhachhang, "MST");
+            "Text", tbVattu, "SoHieu");
             report.xrTableCell3.DataBindings.Add(
-            "Text", tbKhachhang, "DiaChi");
+            "Text", tbVattu, "SoHieu");
             report.RequestParameters = false;
-            new DevExpress.XtraReports.UI.ReportPrintTool(report).ShowRibbonPreview(); 
+            ReportPrintTool printTool = new ReportPrintTool(report);
+            printTool.AutoShowParametersPanel = false; // Tắt bảng Parameter
+            new DevExpress.XtraReports.UI.ReportPrintTool(report).ShowRibbonPreview();
         }
         private void KillOldOcrService()
         {
