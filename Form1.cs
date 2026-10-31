@@ -8006,9 +8006,26 @@ Chỉ trả lời: CÓ hoặc KHÔNG
         {
             var report = new XtraReport2();
 
+            foreach(DataRow row in tb.Rows)
+            {
+                row["Ten"]=Helpers.ConvertVniToUnicode(row["Ten"].ToString());
+                row["MatHang"] = Helpers.ConvertVniToUnicode(row["MatHang"].ToString()); 
+            }
+
             report.DataSource = tb;
-            report.xrTableCell4.DataBindings.Add(
+            report.xrKHHD.DataBindings.Add(
             "Text", tb, "KyHieu");
+            report.xrSoHD.DataBindings.Add(
+            "Text", tb, "SoHD");
+            report.xrNgayPH.DataBindings.Add(
+            "Text", tb, "NgayCT");
+            report.xrTenNB.DataBindings.Add(
+            "Text", tb, "Ten");
+            report.xrMST.DataBindings.Add(
+             "Text", tb, "MST");
+            report.xrMathang.DataBindings.Add(
+            "Text", tb, "MatHang");
+            report.xrLabel8.Text="BẢNG KÊ HOÁ ĐƠN ĐẦU VÀO THÁNG " + tb.Rows[0]["NgayPH"].ToString();
             //report.xrTableCell2.DataBindings.Add(
             //"Text", tbVattu, "SoHieu");
             //report.xrTableCell3.DataBindings.Add(

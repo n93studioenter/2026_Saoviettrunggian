@@ -13,5 +13,9 @@ namespace SaovietTax
             InitializeComponent();
         }
 
+        private void XtraReport2_BeforePrint(object sender, System.Drawing.Printing.PrintEventArgs e)
+        {
+
+        }
     }
 }
