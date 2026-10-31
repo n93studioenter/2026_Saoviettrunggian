@@ -7967,9 +7967,61 @@ Chỉ trả lời: CÓ hoặc KHÔNG
                 dr["TenPhanLoai"] = Helpers.ConvertVniToUnicode(dr["TenPhanLoai"].ToString());
             }
             //ParseXmlInternal_Bkav
-            return;
+            var getdata = GetDanhSachHoaDon(1, 10);
+            loadbangkevao(getdata);
+
+        }
+        public DataTable GetDanhSachHoaDon(int thangBD, int thangKT)
+        {
+            // 1. Câu lệnh SQL đã được rút gọn logic và sử dụng Parameter (?)
+            string sql = @"
+        SELECT DISTINCTROW 
+            HoaDon.KyHieu, HoaDon.SoHD, ChungTu.NgayCT AS NgayPH, 
+            HoaDon.MatHang, HoaDon.SoLuong, HoaDon.ThanhTien, 
+            KhachHang.Ten, KhachHang.MST, ChungTu.SoHieu, 
+            ChungTu.SoPS, KhachHang.DiaChi, HoaDon.TyLe, 
+            HoaDon.HTTT, HoaDon.MauSo, ChungTu.MaCT, 
+            HoaDon.MaSo, HoaDon.KCT
+        FROM (HoaDon 
+        INNER JOIN ChungTu ON HoaDon.MaSo = ChungTu.MaSo) 
+        LEFT JOIN KhachHang ON HoaDon.MaKhachHang = KhachHang.MaSo
+        WHERE HoaDon.[Loai] = -1 
+          AND HoaDon.[HD] = 1 
+          AND HoaDon.DC = 0 
+          AND ChungTu.[ThangCT] >= ? 
+          AND ChungTu.[ThangCT] <= ?
+        ORDER BY HoaDon.NgayPH, ChungTu.MaCT";
+
+            // 2. Tạo mảng tham số (Truyền theo đúng thứ tự các dấu ? trong SQL)
+            OleDbParameter[] parameters = new OleDbParameter[]
+            {
+        new OleDbParameter("?", thangBD),
+        new OleDbParameter("?", thangKT)
+            };
+
+            // 3. Gọi hàm ExecuteQuery của bạn
+            return ExecuteQuery(sql, parameters);
+        }
+        private void loadbangkevao(DataTable tb)
+        {
+            var report = new XtraReport2();
+
+            report.DataSource = tb;
+            report.xrTableCell4.DataBindings.Add(
+            "Text", tb, "KyHieu");
+            //report.xrTableCell2.DataBindings.Add(
+            //"Text", tbVattu, "SoHieu");
+            //report.xrTableCell3.DataBindings.Add(
+            //"Text", tbVattu, "SoHieu");
+            report.RequestParameters = false;
+            ReportPrintTool printTool = new ReportPrintTool(report);
+            printTool.AutoShowParametersPanel = false; // Tắt bảng Parameter
+            new DevExpress.XtraReports.UI.ReportPrintTool(report).ShowRibbonPreview();
+        }
+        private void loadreport1(DataTable tbVattu)
+        {
             var report = new XtraReport1();
-              
+
             report.DataSource = tbVattu;
             report.xrTableCell1.DataBindings.Add(
             "Text", tbVattu, "TenVatTu");
