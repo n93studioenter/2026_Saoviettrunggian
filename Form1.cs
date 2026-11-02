@@ -98,6 +98,7 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Interactions;
 using OpenQA.Selenium.Support.UI;
+using Org.BouncyCastle.Utilities.Collections;
 using PdfSharp.Internal.Png.BigGustave;
 using PdfSharp.Pdf.IO;
 using QRCoder;
@@ -7968,7 +7969,7 @@ Chỉ trả lời: CÓ hoặc KHÔNG
             }
             //ParseXmlInternal_Bkav
             var getdata = GetDanhSachHoaDon(1, 10);
-            loadbangkevao(getdata);
+           // loadbangkevao(getdata);
 
         }
         public DataTable GetDanhSachHoaDon(int thangBD, int thangKT)
@@ -42735,10 +42736,209 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 // gridControl1.DataSource = lstFileImporthd;
             }
         }
+        public static class StringHelper
+        {
+            public static string RemoveDiacritics(string text)
+            {
+                if (string.IsNullOrWhiteSpace(text))
+                    return text;
+
+                // Chuẩn hóa chuỗi Unicode
+                var normalizedString = text.Normalize(NormalizationForm.FormD);
+                var stringBuilder = new StringBuilder();
+
+                foreach (var c in normalizedString)
+                {
+                    var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+                    // Bỏ qua các dấu (accents)
+                    if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                    {
+                        stringBuilder.Append(c);
+                    }
+                }
+
+                // Đưa về dạng chuẩn và xử lý riêng chữ Đ/đ (vì Unicode không tách được)
+                var result = stringBuilder.ToString().Normalize(NormalizationForm.FormC);
+                return result.Replace('đ', 'd').Replace('Đ', 'D');
+            }
+        }
+        public static string PhanLoaiTaiKhoan(string tenVatTu)
+        {
+            if (string.IsNullOrWhiteSpace(tenVatTu)) return "1522";
+
+            // 1. Chuyển về không dấu, chữ thường
+            string tenKhongDau = StringHelper.RemoveDiacritics(tenVatTu).ToLower();
+
+            // 2. Ưu tiên check DỊCH VỤ trước (Dịch vụ kiểm tra, thử áp lực...)
+            if (tenKhongDau.Contains("dich vu") || tenKhongDau.Contains("kiem tra") || tenKhongDau.Contains("thu ap luc"))
+            {
+                return "5221";
+            }
+
+            // 3. Check các từ khóa NGUYÊN VẬT LIỆU CHÍNH (1521)
+            string[] tuKhoa1521 = { "thep", "nhom", "dong", "inox" };
+            foreach (var tk in tuKhoa1521)
+            {
+                if (tenKhongDau.Contains(tk))
+                    return "1521";
+            }
+
+            // 4. Tất cả những thứ còn lại (Mũi khoan, Giẻ lau, Mũ bảo vệ...) mặc định là 1522
+            return "1522";
+        }
         private async void simpleButton5_Click(object sender, EventArgs e)
         {
             if (isdesign)
                 return;
+            if (chkDaura.Checked)
+            {
+                List<FileImport2> lstFileimport = new List<FileImport2>();
+                using (var ofd = new OpenFileDialog())
+                {
+                    ofd.Title = "Chọn file Bảng kê Excel";
+                    ofd.Filter = "Excel Files|*.xlsx;*.xlsm;*.xls|All Files|*.*";
+
+                    if (ofd.ShowDialog() != DialogResult.OK) return;
+
+                    try
+                    {
+                        var dsHoaDon = await Task.Run(() => ExcelHelper.Docbangkera(ofd.FileName));
+
+                        if (dsHoaDon == null || dsHoaDon.Count == 0)
+                        {
+                            MessageBox.Show("Không có dữ liệu!", "Thông báo");
+                            return;
+                        }
+
+                        // In thử ra màn hình kiểm tra (Bạn có thể đổi thành gridControl1.DataSource = dsHoaDon)
+                        var sb = new System.Text.StringBuilder();
+                        int stt = 1;
+                        foreach (var hd in dsHoaDon)
+                        {
+                            sb.AppendLine($"ĐH: {hd.DH} | Ngày: {hd.Date:dd/MM/yyyy}");
+                            sb.AppendLine($" - Giá trị HĐ: {hd.GiaTriHopDong:N0}");
+                            sb.AppendLine($" - Tổng vật tư: {hd.TongChiPhiVatTu:N0}");
+                            sb.AppendLine($" - Tỷ lệ: {hd.TyLe:P2}"); // P2 là định dạng phần trăm
+                            sb.AppendLine("-----------------------------");
+                            FileImport2 FileImport2 = new FileImport2();
+                            FileImport2.SHDon= hd.MaPhieuXuat;
+                            FileImport2.KHHDon = "";
+                            FileImport2.NLap= hd.Date.Value;
+                            FileImport2.Noidung= "Xuất vật tư Gia công chế tạo theo DH 616-26/PVDT-TC";
+                            FileImport2.Ten = "";
+                            FileImport2.TongTien= double.Parse(hd.GiaTriHopDong.ToString());
+                            FileImport2.Mst = "00";
+                            FileImport2.TKCo= "1522";
+                            FileImport2.TKNo="1541";
+                            FileImport2.ID = stt;
+                            FileImport2.Type = 2;
+                            FileImport2.Path = "";
+                            FileImport2.isAcess= true;  
+                            FileImport2.fileImportDetails = new List<FileImportDetail2>();
+                            stt++;
+                            foreach (var ct in hd.ChiTiets)
+                            {
+                                var findsohieu= lstvt.Where(m => m.TenVattu.ToLower().Contains(Helpers.ConvertVniToUnicode(ct.NoiDung.ToLower()))).FirstOrDefault();
+                               
+                                FileImportDetail2 detail = new FileImportDetail2
+                                {
+                                    Ten = findsohieu != null ? Helpers.ConvertUnicodeToVni(findsohieu.TenVattu) : "",
+                                    DVT= findsohieu != null ? Helpers.ConvertUnicodeToVni(findsohieu.DonVi) : "",
+                                    Soluong = double.Parse(ct.SoLuong.ToString()),
+                                    Dongia = double.Parse(ct.DonGia.ToString()),
+                                    TTien = double.Parse(ct.ThanhTien.ToString()),
+                                    TKNo = "1541",
+                                    TKCo = "1522",
+                                    ParentId=FileImport2.ID,
+                                    SoHieu=findsohieu != null ? findsohieu.SoHieu : ""
+                                };
+                               
+                                FileImport2.fileImportDetails.Add(detail);
+                            }
+                            lstFileimport.Add(FileImport2);
+                        } 
+                       
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Lỗi đọc file:\n" + ex.Message, "Lỗi");
+                    }
+                }
+
+                //Thực hiện insert vào tbimport và tbimportdetail
+                foreach(var fileip2 in lstFileimport)
+                {
+                    string sql = "INSERT INTO tbImport (SHDon, KHHDon, NLap, Ten, Noidung, TKCo, TKNo, TkThue, Mst, Status,Type, Ngaytao, TongTien, Vat, SohieuTP,TPhi,TgTCThue,TgTThue,Path,IsImport) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?,?,?,?,?,?)";
+                    OleDbParameter[] parameters = new OleDbParameter[]
+                                                        {
+                                new OleDbParameter("?", fileip2.SHDon),
+                                new OleDbParameter("?", fileip2.KHHDon),
+                                new OleDbParameter("?", fileip2.NLap),
+                                new OleDbParameter("?", fileip2.Ten),
+                                new OleDbParameter("?", fileip2.Noidung),
+                                new OleDbParameter("?", fileip2.TKCo),
+                                new OleDbParameter("?", fileip2.TKNo),
+                                new OleDbParameter("?", fileip2.TkThue.ToString()),
+                                new OleDbParameter("?", fileip2.Mst),
+                                new OleDbParameter("?", "0"),
+                                  new OleDbParameter("?", fileip2.Type.ToString()),
+                                new OleDbParameter("?", DateTime.Now.ToShortDateString()),
+                                new OleDbParameter("?", fileip2.TongTien.ToString()),
+                                new OleDbParameter("?", fileip2.Vat.ToString()),
+                                new OleDbParameter("?", ""),
+                                new OleDbParameter("?", fileip2.TPhi.ToString()),
+                                new OleDbParameter("?", fileip2.TgTCThue.ToString()),
+                                new OleDbParameter("?", fileip2.TgTThue.ToString()),
+                                new OleDbParameter("?", fileip2.Path.ToString()),
+                                new OleDbParameter("?",1)
+                                    };
+
+                    try
+                    {
+                        //Kiểm tra đã có trong hoa đơn chưa
+
+                        int a = ExecuteQueryResult(sql, parameters);
+                    }
+                    catch (Exception ex)
+                    {
+                        XtraMessageBox.Show(ex.Message);
+
+                    }
+
+                    string gettopquery = "SELECT TOP 1 ID FROM tbimport ORDER BY ID DESC";
+
+                    var resutls = ExecuteQuery(gettopquery, null);
+                    // Insert dEtail
+   foreach (var it in fileip2.fileImportDetails)
+                    {
+                       string  queryde = "INSERT INTO tbimportdetail(ParentId, SoHieu, SoLuong, DonGia, DVT, Ten, MaCT, TKNo, TKCo, TTien,[Percent],IsMacdinh)  VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)";
+                        parameters = new OleDbParameter[]
+                       {
+    new OleDbParameter("?",resutls.Rows[0]["ID"].ToString()),
+    new OleDbParameter("?", it.SoHieu),
+    new OleDbParameter("?", it.Soluong.ToString()),
+    new OleDbParameter("?",it.Dongia.ToString()),
+    new OleDbParameter("?", it.DVT),
+    new OleDbParameter("?",it.Ten),
+    new OleDbParameter("?", ""),
+    new OleDbParameter("?",fileip2.TKNo),
+    new OleDbParameter("?", fileip2.TKCo),
+    new OleDbParameter("?", it.TTien),
+     new OleDbParameter("?", "100"),
+     new OleDbParameter("?",1),
+                       };
+                        try
+                        {
+                            ExecuteQueryResult(queryde, parameters);
+                        }
+                        catch (Exception ex)
+                        {
+                            XtraMessageBox.Show("Insert detail error" + "   " + ex.Message);
+                        }
+                    } 
+                }
+            }
+            return;
             string queryct = "SELECT * FROM ChungTu"; // Giả sử bạn muốn lấy tất cả dữ liệu từ bảng KhachHang
             existingTbChungtu = ExecuteQuery(queryct);
             _chungtuLookup = existingTbChungtu.AsEnumerable()

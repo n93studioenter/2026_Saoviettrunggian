@@ -370,6 +370,7 @@
     </Compile>
     <Compile Include="DTO\BankStatementReader.cs" />
     <Compile Include="DTO\Daura_maytinhtien.cs" />
+    <Compile Include="DTO\ExcelReader.cs" />
     <Compile Include="DTO\FuzzySharpSimilarity.cs" />
     <Compile Include="DTO\ImagePreprocessor.cs" />
     <Compile Include="DTO\Kiemtravattu.cs" />
@@ -691,6 +692,12 @@
     <Compile Include="Tests.Designer.cs">
       <DependentUpon>Tests.cs</DependentUpon>
     </Compile>
+    <Compile Include="Thietlapbangke.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Thietlapbangke.Designer.cs">
+      <DependentUpon>Thietlapbangke.cs</DependentUpon>
+    </Compile>
     <Compile Include="Updater.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -908,6 +915,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Tests.resx">
       <DependentUpon>Tests.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Thietlapbangke.resx">
+      <DependentUpon>Thietlapbangke.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Updater.resx">
       <DependentUpon>Updater.cs</DependentUpon>

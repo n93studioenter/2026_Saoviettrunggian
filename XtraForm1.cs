@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Windows.Media.Protection.PlayReady;
 using static SaovietTax.frmMain;
+using HoaDon = SaovietTax.DTO.HoaDon;
 using Keys = OpenQA.Selenium.Keys;
 namespace SaovietTax
 {
