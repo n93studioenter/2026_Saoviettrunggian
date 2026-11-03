@@ -42763,29 +42763,47 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 return result.Replace('đ', 'd').Replace('Đ', 'D');
             }
         }
-        public static string PhanLoaiTaiKhoan(string tenVatTu)
+        public string PhanLoaiTaiKhoan(string maVatTu)
         {
-            if (string.IsNullOrWhiteSpace(tenVatTu)) return "1522";
-
-            // 1. Chuyển về không dấu, chữ thường
-            string tenKhongDau = StringHelper.RemoveDiacritics(tenVatTu).ToLower();
-
-            // 2. Ưu tiên check DỊCH VỤ trước (Dịch vụ kiểm tra, thử áp lực...)
-            if (tenKhongDau.Contains("dich vu") || tenKhongDau.Contains("kiem tra") || tenKhongDau.Contains("thu ap luc"))
+            try
             {
-                return "5221";
-            }
+                if(maVatTu== "MK-TH9")
+                {
+                    int test = 10;
+                }
+                string querycheckpl = @"SELECT MaPhanLoai FROM Vattu where SoHieu=? ";
+                OleDbParameter[] pr = new OleDbParameter[]
+                    {
+                    new OleDbParameter("?",maVatTu)
+                    };
+                DataTable tbvattu = ExecuteQuery(querycheckpl, pr);
 
-            // 3. Check các từ khóa NGUYÊN VẬT LIỆU CHÍNH (1521)
-            string[] tuKhoa1521 = { "thep", "nhom", "dong", "inox" };
-            foreach (var tk in tuKhoa1521)
+                if (tbvattu.Rows[0]["MaPhanLoai"].ToString() != "0")
+                {
+                    querycheckpl = @"SELECT MaTK FROM PhanLoaiVattu where MaSo=? ";
+                    pr = new OleDbParameter[]
+                       {
+                    new OleDbParameter("?",tbvattu.Rows[0]["MaPhanLoai"].ToString())
+                       };
+                    DataTable tbphanloaivt = ExecuteQuery(querycheckpl, pr);
+
+                    querycheckpl = @"SELECT SoHieu FROM HeThongTK where MaSo=? ";
+
+                    pr = new OleDbParameter[]
+                      {
+                    new OleDbParameter("?",tbphanloaivt.Rows[0]["MaTK"].ToString())
+                      };
+                    DataTable tbhttk = ExecuteQuery(querycheckpl, pr);
+                    string sotk = tbhttk.Rows[0]["SoHieu"].ToString();
+                    return sotk;
+                }
+                return "1522";
+            }
+            catch(Exception ex)
             {
-                if (tenKhongDau.Contains(tk))
-                    return "1521";
+                XtraMessageBox.Show(ex.Message + maVatTu);
             }
-
-            // 4. Tất cả những thứ còn lại (Mũi khoan, Giẻ lau, Mũ bảo vệ...) mặc định là 1522
-            return "1522";
+            return "";
         }
         private string TruyXuatChungtu(string sohd,DateTime ngayct)
         {
@@ -42832,17 +42850,18 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             {
                 // 1. Sửa lại câu lệnh SQL: Thêm GhiChu vào VALUES và dùng dấu ? (chuẩn OleDb)
                 string insertTP154 = @"
-                INSERT INTO TP154 (SoHieu, MaPhanLoai, Ten, DonVi, GhiChu)
-                VALUES (?, ?, ?, ?, ?)";
+                INSERT INTO TP154 (SoHieu, MaPhanLoai, TenVattu, DonVi, GhiChu,MaTK)
+                VALUES (?, ?, ?, ?, ?,?)";
 
                             // 2. Khai báo mảng parameter tương ứng 1-1 với các cột
                             OleDbParameter[] parameters2 = new OleDbParameter[]
                             {
-                                new OleDbParameter("?", "NHT"),          // SoHieu
+                                new OleDbParameter("?", sohd),          // SoHieu
                                 new OleDbParameter("?", getmasopl), // MaPhanLoai (tránh null)
                                 new OleDbParameter("?", tenct154),  // Ten (tránh null)
                                 new OleDbParameter("?", "lot"),           // DonVi
-                                new OleDbParameter("?", "ccc")            // GhiChu (Đã thêm vào)
+                                new OleDbParameter("?", "ccc"),            // GhiChu (Đã thêm vào)
+                                new OleDbParameter("?", 14055)            // MaTK (Đã thêm vào)
                             };
 
                 try
@@ -42863,6 +42882,17 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 }
             }
             return sohd; 
+        }
+        private bool KiemtraCtXuat(string sohd, DateTime ngayct)
+        {
+            string queryct = "SELECT * FROM ChungTu"; // Giả sử bạn muốn lấy tất cả dữ liệu từ bảng KhachHang
+           var tbct = ExecuteQuery(queryct);
+            var getct = tbct.AsEnumerable().Where(m => m.Field<string>("SoHieu").ToLower().Contains(sohd.ToLower()) ).FirstOrDefault();
+            if (getct != null)
+            {
+                return true;
+            }
+            return  false; 
         }
         private async void simpleButton5_Click(object sender, EventArgs e)
         {
@@ -42893,6 +42923,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         int stt = 1;
                         foreach (var hd in dsHoaDon)
                         {
+                          
                             sb.AppendLine($"ĐH: {hd.DH} | Ngày: {hd.NgayHoaDon:dd/MM/yyyy}");
                             sb.AppendLine($" - Giá trị HĐ: {hd.GiaTriHopDong:N0}");
                             sb.AppendLine($" - Tổng vật tư: {hd.TongChiPhiVatTu:N0}");
@@ -42903,8 +42934,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             FileImport2.KHHDon = "";
                             FileImport2.NLap= hd.NgayXuatKho.Value;
                             FileImport2.NgayCT= hd.NgayHoaDon.Value;
+                            if (KiemtraCtXuat(FileImport2.SHDon, FileImport2.NgayCT))
+                                continue;
                             FileImport2.Noidung= Helpers.ConvertUnicodeToVni("Xuất vật tư") +" "+ TruyXuatChungtu(FileImport2.SHDon, FileImport2.NgayCT);
                             FileImport2.Ten = "";
+
                             FileImport2.TongTien= double.Parse(hd.TongChiPhiVatTu.ToString());
                             FileImport2.Mst = "00";
                             FileImport2.TKCo= "1522";
@@ -42928,9 +42962,9 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                     Dongia = double.Parse(ct.DonGia.ToString()),
                                     TTien = double.Parse(ct.ThanhTien.ToString()),
                                     TKNo = FileImport2.TKNo,
-                                    TKCo = PhanLoaiTaiKhoan(findsohieu.TenVattu),
+                                    TKCo = PhanLoaiTaiKhoan(ct.Ma),
                                     ParentId=FileImport2.ID,
-                                    SoHieu=findsohieu != null ? findsohieu.SoHieu : ""
+                                    SoHieu=ct.Ma
                                 };
                                
                                 FileImport2.fileImportDetails.Add(detail);
