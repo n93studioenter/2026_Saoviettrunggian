@@ -42900,6 +42900,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 return;
             if (chkDauvao.Checked)
             {
+                progressPanel1.Visible = true;
+                progressPanel1.Caption="Đang đọc dữ liệu từ file Excel...";
+                Application.DoEvents();
+
                 List<FileImport2> lstFileimport = new List<FileImport2>();
                 using (var ofd = new OpenFileDialog())
                 {
@@ -43011,8 +43015,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
 
                     try
                     {
-                        //Kiểm tra đã có trong hoa đơn chưa
-
+                        //Kiểm tra đã có trong hoa đơn chưa 
                         int a = ExecuteQueryResult(sql, parameters);
                       
                     }
@@ -43055,10 +43058,10 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                     } 
                 }
                 XtraMessageBox.Show("Insert thành công ");
+                progressPanel1.Visible = false;
                 return;
             }
-
-
+             
             return;
             string queryct = "SELECT * FROM ChungTu"; // Giả sử bạn muốn lấy tất cả dữ liệu từ bảng KhachHang
             existingTbChungtu = ExecuteQuery(queryct);
