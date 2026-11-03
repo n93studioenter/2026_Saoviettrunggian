@@ -6,7 +6,6 @@ using System.Linq;
 
 namespace SaovietTax.DTO
 {
-
     public class ChiTietHoaDon
     {
         public string NoiDung { get; set; }
@@ -19,10 +18,16 @@ namespace SaovietTax.DTO
 
     public class HoaDon
     {
-        public string MaPhieuXuat { get; set; } // Thêm dòng này (VD: XVT162-1)
+        public string MaPhieuXuat { get; set; }
         public string DH { get; set; }
         public string Invoice { get; set; }
-        public DateTime? Date { get; set; }
+
+        // 2 NGÀY CỦA DÒNG CHA: 
+        // Ngày 1: Ngày lập Hóa đơn (Ngày bôi đậm)
+        public DateTime? NgayHoaDon { get; set; }
+
+        // Ngày 2: Ngày xuất kho (Ngày thực tế của dòng con, 21/07 hoặc 28/07)
+        public DateTime? NgayXuatKho { get; set; }
 
         public decimal GiaTriHopDong { get; set; }
         public decimal TongChiPhiVatTu => ChiTiets.Sum(x => x.ThanhTien);
@@ -40,6 +45,11 @@ namespace SaovietTax.DTO
             string currentMaDH = null;
             string currentInvoice = null;
             decimal currentGiaTriHD = 0;
+
+            // Lưu ngày bôi đậm (Ngày lập HĐ: 01/08)
+            DateTime? currentNgayHoaDon = null;
+
+            // Lưu ngày của dòng con trước đó (để xử lý gộp ô: 21/07 hoặc 28/07)
             string currentDateStr = null;
             HoaDon currentHD = null;
 
@@ -51,7 +61,6 @@ namespace SaovietTax.DTO
 
                 var lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
 
-                // BƯỚC 1: Đọc toàn bộ dữ liệu thô
                 for (int r = 2; r <= lastRow; r++)
                 {
                     var row = ws.Row(r);
@@ -67,16 +76,22 @@ namespace SaovietTax.DTO
                     decimal donGia = GetDecimal(row.Cell(8));
                     decimal thanhTien = GetDecimal(row.Cell(9));
 
+                    // 1. DÒNG HEADER (Dòng cha)
                     if (!string.IsNullOrWhiteSpace(dh) || !string.IsNullOrWhiteSpace(invoice))
                     {
                         currentMaDH = dh;
                         currentInvoice = invoice;
                         currentGiaTriHD = Math.Round(thanhTien, 0);
+
+                        // Lấy ngày bôi đậm (01/08)
+                        currentNgayHoaDon = ParseDate(dateStr);
+
                         currentDateStr = null;
                         currentHD = null;
                         continue;
                     }
 
+                    // 2. Ngắt nhóm
                     if (!string.IsNullOrWhiteSpace(noiDung) && noiDung.Trim().Equals("Chi phí sản xuất chung", StringComparison.OrdinalIgnoreCase))
                     {
                         currentMaDH = null;
@@ -84,30 +99,37 @@ namespace SaovietTax.DTO
                         continue;
                     }
 
+                    // 3. Dòng chi tiết (Dòng con)
                     if (currentMaDH != null && !string.IsNullOrWhiteSpace(noiDung))
                     {
+                        // Xử lý gộp ô: Nếu ô ngày trống, lấy ngày của dòng trước
                         if (string.IsNullOrWhiteSpace(dateStr) && currentDateStr != null)
                         {
                             dateStr = currentDateStr;
                         }
-                        else
+                        else if (!string.IsNullOrWhiteSpace(dateStr))
                         {
                             currentDateStr = dateStr;
                         }
 
-                        // Nếu chưa có Hóa đơn, hoặc Ngày bị thay đổi -> Tạo Hóa đơn mới
-                        if (currentHD == null || dateStr != currentHD.Date?.ToString("dd/MM/yyyy"))
+                        DateTime? ngayXuatKhoCon = ParseDate(dateStr);
+
+                        // LOGIC TÁCH PHIẾU: 
+                        // Tạo HĐ mới nếu chưa có, HOẶC ngày xuất kho hiện tại khác ngày xuất kho của HĐ đang chứa nó
+                        if (currentHD == null || ngayXuatKhoCon?.Date != currentHD.NgayXuatKho?.Date)
                         {
                             currentHD = new HoaDon
                             {
                                 DH = currentMaDH,
                                 Invoice = currentInvoice,
-                                Date = ParseDate(dateStr),
+                                NgayHoaDon = currentNgayHoaDon,     // Ngày bôi đậm (01/08)
+                                NgayXuatKho = ngayXuatKhoCon,       // Ngày của dòng con (21/07 hoặc 28/07)
                                 GiaTriHopDong = currentGiaTriHD
                             };
                             result.Add(currentHD);
                         }
 
+                        // Thêm chi tiết vào HĐ (Không cần lưu ngày trong chi tiết nữa)
                         currentHD.ChiTiets.Add(new ChiTietHoaDon
                         {
                             NoiDung = noiDung,
@@ -121,20 +143,17 @@ namespace SaovietTax.DTO
                 }
             }
 
-            // BƯỚC 2: Đặt mã Phiếu xuất thông minh
-            // Nhóm các hóa đơn theo Invoice (Số hóa đơn)
+            // BƯỚC 2: Đặt mã Phiếu xuất thông minh (XVT162-1, XVT162-2)
             var groups = result.GroupBy(x => x.Invoice);
             foreach (var group in groups)
             {
                 var listHD = group.ToList();
                 if (listHD.Count == 1)
                 {
-                    // Nếu chỉ có 1 ngày duy nhất -> Không có đuôi -1
                     listHD[0].MaPhieuXuat = $"XVT{listHD[0].Invoice}";
                 }
                 else
                 {
-                    // Nếu có nhiều ngày -> Đánh số -1, -2
                     for (int i = 0; i < listHD.Count; i++)
                     {
                         listHD[i].MaPhieuXuat = $"XVT{listHD[i].Invoice}-{i + 1}";

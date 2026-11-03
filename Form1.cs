@@ -300,7 +300,9 @@ namespace SaovietTax
             public int ID { get; set; }
             public string SHDon { get; set; }
             public string KHHDon { get; set; }
+            public string SohieuTP { get; set; }    
             public DateTime NLap { get; set; }
+            public DateTime NgayCT { get; set; }
             public string Ten { get; set; }
             public string Noidung { get; set; }
             public string TKCo { get; set; }
@@ -320,8 +322,7 @@ namespace SaovietTax
             public int Type { get; set; }
             public bool isAcess { get; set; }
             public bool isHaschild { get; set; }
-            public int InvoiceType { get; set; }
-            public string SoHieuTP { get; set; }
+            public int InvoiceType { get; set; } 
             public List<FileImportDetail2> fileImportDetails;
         }
         public class Nguyenlieu
@@ -1787,15 +1788,15 @@ namespace SaovietTax
 
                 // ============ 2. QUERY HEADER + DETAIL 1 LẦN ============
                 string queryImport = @"SELECT * FROM tbimport 
-            WHERE Status <> 1
-              AND Type = ?
-              AND NLap >= ? AND NLap <= ?";
+                       WHERE Status <> 1 
+                       AND (Type = ? OR Type =  '4') 
+                       AND NLap >= ? AND NLap <= ?";
 
                 var parameterss = new OleDbParameter[]
                 {
-            new OleDbParameter("?", type),
-            new OleDbParameter("?", dtTungay.DateTime.Date),
-            new OleDbParameter("?", dtDenngay.DateTime.Date)
+                    new OleDbParameter("?", type),
+                    new OleDbParameter("?", dtTungay.DateTime.Date),
+                    new OleDbParameter("?", dtDenngay.DateTime.Date)
                 };
 
                 var kq = ExecuteQuery(queryImport, parameterss);
@@ -42786,11 +42787,88 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
             // 4. Tất cả những thứ còn lại (Mũi khoan, Giẻ lau, Mũ bảo vệ...) mặc định là 1522
             return "1522";
         }
+        private string TruyXuatChungtu(string sohd,DateTime ngayct)
+        {
+            sohd = sohd.Replace("-1", "").Replace("-2", "").Replace("XVT","");
+            var getct = existingTbChungtu.AsEnumerable().Where(m => m.Field<string>("SoHieu").ToLower().Contains(sohd.ToLower()) && m.Field<DateTime>("NgayCT").Date == ngayct.Date).FirstOrDefault();
+            if (getct != null)
+            {
+                return getct["DienGiai"].ToString();
+            }
+            return "";
+        }
+        private string TruyXuatCongTrinh(string sohd,DateTime ngayct)
+        {
+            sohd = sohd.Replace("-1", "").Replace("-2", "").Replace("XVT", "");
+            var getct = existingTbChungtu.AsEnumerable().Where(m => m.Field<string>("SoHieu").ToLower().Contains(sohd.ToLower()) && m.Field<DateTime>("NgayCT").Date == ngayct.Date).FirstOrDefault();
+            string tenct154 = "";
+            if (getct != null)
+            {
+                tenct154 = getct["DienGiai"].ToString();
+            }
+                //Lấy ra maso phanloai154
+
+                string querycheckpl = @"SELECT MaSo FROM PhanLoai154 where SoHieu=? ";
+            OleDbParameter[] pr = new OleDbParameter[]
+                {
+                    new OleDbParameter("?", $"T{ngayct.Month}")
+                };
+            DataTable dtPhanLoai = ExecuteQuery(querycheckpl, pr);
+            int getmasopl = int.Parse(dtPhanLoai.Rows[0]["MaSo"].ToString());
+            //Kiểm tra công trình có mã chưa , nếu chưa thì tạo
+
+
+            string querycheck = @"SELECT COUNT(*) FROM TP154 where SoHieu=? ";
+
+            // Khởi tạo mảng parameter truyền vào câu lệnh
+            OleDbParameter[] parameters = new OleDbParameter[]
+            {
+    new OleDbParameter("?",sohd ?? "") // Truyền giá trị SoHieu cần check (tránh lỗi null)
+            };
+
+            DataTable getTablecheck = ExecuteQuery(querycheck, parameters);
+            int count = Convert.ToInt32(getTablecheck.Rows[0][0]);
+            if (count == 0)
+            {
+                // 1. Sửa lại câu lệnh SQL: Thêm GhiChu vào VALUES và dùng dấu ? (chuẩn OleDb)
+                string insertTP154 = @"
+                INSERT INTO TP154 (SoHieu, MaPhanLoai, Ten, DonVi, GhiChu)
+                VALUES (?, ?, ?, ?, ?)";
+
+                            // 2. Khai báo mảng parameter tương ứng 1-1 với các cột
+                            OleDbParameter[] parameters2 = new OleDbParameter[]
+                            {
+                                new OleDbParameter("?", "NHT"),          // SoHieu
+                                new OleDbParameter("?", getmasopl), // MaPhanLoai (tránh null)
+                                new OleDbParameter("?", tenct154),  // Ten (tránh null)
+                                new OleDbParameter("?", "lot"),           // DonVi
+                                new OleDbParameter("?", "ccc")            // GhiChu (Đã thêm vào)
+                            };
+
+                try
+                {
+                    // Thực thi
+                    int rowsAffected = ExecuteQueryResult(insertTP154, parameters2);
+
+                    // Kiểm tra xem đã insert thành công chưa
+                    if (rowsAffected > 0)
+                    {
+                        // XtraMessageBox.Show("Thêm nhóm hàng thành công!");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Nên hiển thị chi tiết lỗi ra để dễ sửa (thay vì chỉ "Lỗi...")
+                    XtraMessageBox.Show("Lỗi khi thêm nhóm hàng tạm:\n" + ex.Message, "Lỗi Database");
+                }
+            }
+            return sohd; 
+        }
         private async void simpleButton5_Click(object sender, EventArgs e)
         {
             if (isdesign)
                 return;
-            if (chkDaura.Checked)
+            if (chkDauvao.Checked)
             {
                 List<FileImport2> lstFileimport = new List<FileImport2>();
                 using (var ofd = new OpenFileDialog())
@@ -42815,7 +42893,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         int stt = 1;
                         foreach (var hd in dsHoaDon)
                         {
-                            sb.AppendLine($"ĐH: {hd.DH} | Ngày: {hd.Date:dd/MM/yyyy}");
+                            sb.AppendLine($"ĐH: {hd.DH} | Ngày: {hd.NgayHoaDon:dd/MM/yyyy}");
                             sb.AppendLine($" - Giá trị HĐ: {hd.GiaTriHopDong:N0}");
                             sb.AppendLine($" - Tổng vật tư: {hd.TongChiPhiVatTu:N0}");
                             sb.AppendLine($" - Tỷ lệ: {hd.TyLe:P2}"); // P2 là định dạng phần trăm
@@ -42823,17 +42901,19 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                             FileImport2 FileImport2 = new FileImport2();
                             FileImport2.SHDon= hd.MaPhieuXuat;
                             FileImport2.KHHDon = "";
-                            FileImport2.NLap= hd.Date.Value;
-                            FileImport2.Noidung= "Xuất vật tư Gia công chế tạo theo DH 616-26/PVDT-TC";
+                            FileImport2.NLap= hd.NgayXuatKho.Value;
+                            FileImport2.NgayCT= hd.NgayHoaDon.Value;
+                            FileImport2.Noidung= Helpers.ConvertUnicodeToVni("Xuất vật tư") +" "+ TruyXuatChungtu(FileImport2.SHDon, FileImport2.NgayCT);
                             FileImport2.Ten = "";
-                            FileImport2.TongTien= double.Parse(hd.GiaTriHopDong.ToString());
+                            FileImport2.TongTien= double.Parse(hd.TongChiPhiVatTu.ToString());
                             FileImport2.Mst = "00";
                             FileImport2.TKCo= "1522";
                             FileImport2.TKNo="1541";
                             FileImport2.ID = stt;
-                            FileImport2.Type = 2;
+                            FileImport2.Type =4;
                             FileImport2.Path = "";
-                            FileImport2.isAcess= true;  
+                            FileImport2.isAcess= true;
+                            FileImport2.SohieuTP = TruyXuatCongTrinh(FileImport2.SHDon, FileImport2.NgayCT);
                             FileImport2.fileImportDetails = new List<FileImportDetail2>();
                             stt++;
                             foreach (var ct in hd.ChiTiets)
@@ -42847,8 +42927,8 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                     Soluong = double.Parse(ct.SoLuong.ToString()),
                                     Dongia = double.Parse(ct.DonGia.ToString()),
                                     TTien = double.Parse(ct.ThanhTien.ToString()),
-                                    TKNo = "1541",
-                                    TKCo = "1522",
+                                    TKNo = FileImport2.TKNo,
+                                    TKCo = PhanLoaiTaiKhoan(findsohieu.TenVattu),
                                     ParentId=FileImport2.ID,
                                     SoHieu=findsohieu != null ? findsohieu.SoHieu : ""
                                 };
@@ -42868,7 +42948,7 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                 //Thực hiện insert vào tbimport và tbimportdetail
                 foreach(var fileip2 in lstFileimport)
                 {
-                    string sql = "INSERT INTO tbImport (SHDon, KHHDon, NLap, Ten, Noidung, TKCo, TKNo, TkThue, Mst, Status,Type, Ngaytao, TongTien, Vat, SohieuTP,TPhi,TgTCThue,TgTThue,Path,IsImport) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?,?,?,?,?,?)";
+                    string sql = "INSERT INTO tbImport (SHDon, KHHDon, NLap, Ten, Noidung, TKCo, TKNo, TkThue, Mst, Status,Type, Ngaytao, TongTien, Vat, SohieuTP,TPhi,TgTCThue,TgTThue,Path,IsImport,Macdinhstatus,IsHaschild) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?,?,?,?,?,?,?,?)";
                     OleDbParameter[] parameters = new OleDbParameter[]
                                                         {
                                 new OleDbParameter("?", fileip2.SHDon),
@@ -42881,23 +42961,26 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                                 new OleDbParameter("?", fileip2.TkThue.ToString()),
                                 new OleDbParameter("?", fileip2.Mst),
                                 new OleDbParameter("?", "0"),
-                                  new OleDbParameter("?", fileip2.Type.ToString()),
+                                new OleDbParameter("?", fileip2.Type.ToString()),
                                 new OleDbParameter("?", DateTime.Now.ToShortDateString()),
                                 new OleDbParameter("?", fileip2.TongTien.ToString()),
                                 new OleDbParameter("?", fileip2.Vat.ToString()),
-                                new OleDbParameter("?", ""),
+                                new OleDbParameter("?", fileip2.SohieuTP),
                                 new OleDbParameter("?", fileip2.TPhi.ToString()),
                                 new OleDbParameter("?", fileip2.TgTCThue.ToString()),
                                 new OleDbParameter("?", fileip2.TgTThue.ToString()),
                                 new OleDbParameter("?", fileip2.Path.ToString()),
-                                new OleDbParameter("?",1)
-                                    };
+                                new OleDbParameter("?",1),
+                                new OleDbParameter("?","1"),
+                                new OleDbParameter("?","1")
+                                };
 
                     try
                     {
                         //Kiểm tra đã có trong hoa đơn chưa
 
                         int a = ExecuteQueryResult(sql, parameters);
+                      
                     }
                     catch (Exception ex)
                     {
@@ -42914,18 +42997,18 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                        string  queryde = "INSERT INTO tbimportdetail(ParentId, SoHieu, SoLuong, DonGia, DVT, Ten, MaCT, TKNo, TKCo, TTien,[Percent],IsMacdinh)  VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)";
                         parameters = new OleDbParameter[]
                        {
-    new OleDbParameter("?",resutls.Rows[0]["ID"].ToString()),
-    new OleDbParameter("?", it.SoHieu),
-    new OleDbParameter("?", it.Soluong.ToString()),
-    new OleDbParameter("?",it.Dongia.ToString()),
-    new OleDbParameter("?", it.DVT),
-    new OleDbParameter("?",it.Ten),
-    new OleDbParameter("?", ""),
-    new OleDbParameter("?",fileip2.TKNo),
-    new OleDbParameter("?", fileip2.TKCo),
-    new OleDbParameter("?", it.TTien),
-     new OleDbParameter("?", "100"),
-     new OleDbParameter("?",1),
+                            new OleDbParameter("?",resutls.Rows[0]["ID"].ToString()),
+                            new OleDbParameter("?", it.SoHieu),
+                            new OleDbParameter("?", it.Soluong.ToString()),
+                            new OleDbParameter("?",it.Dongia.ToString()),
+                            new OleDbParameter("?", it.DVT),
+                            new OleDbParameter("?",it.Ten),
+                            new OleDbParameter("?",fileip2.SohieuTP),
+                            new OleDbParameter("?",it.TKNo),
+                            new OleDbParameter("?", it.TKCo),
+                            new OleDbParameter("?", it.TTien),
+                            new OleDbParameter("?", "100"),
+                            new OleDbParameter("?",1)
                        };
                         try
                         {
@@ -42937,7 +43020,11 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         }
                     } 
                 }
+                XtraMessageBox.Show("Insert thành công ");
+                return;
             }
+
+
             return;
             string queryct = "SELECT * FROM ChungTu"; // Giả sử bạn muốn lấy tất cả dữ liệu từ bảng KhachHang
             existingTbChungtu = ExecuteQuery(queryct);
