@@ -14527,6 +14527,18 @@ WHERE LCase(TenVattu) = LCase(?) AND LCase(DonVi) = LCase(?)";
                         d.TTien += reTotal;
                 }
             }
+            //Tìm xoá 711
+            // 1. Kiểm tra null trước khi thao tác để tránh lỗi sập app
+            var find711 = inv.tbImportDetails.Where(m => m.TKCo == "711").ToList();
+
+            if (find711.Any())
+            {
+                // Xóa từng phần tử một
+                foreach (var item in find711)
+                {
+                    inv.tbImportDetails.Remove(item);
+                }
+            }
         }
         /// <summary>
         /// Parse chi tiết 1 dòng hàng hóa — trả về null nếu bỏ qua
